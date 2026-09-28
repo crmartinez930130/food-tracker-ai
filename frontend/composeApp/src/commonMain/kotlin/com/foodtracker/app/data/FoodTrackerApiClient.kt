@@ -1,0 +1,116 @@
+package com.foodtracker.app.data
+
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.delete
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
+import io.ktor.client.request.get
+import io.ktor.client.request.patch
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
+import kotlinx.serialization.Serializable
+
+/** Thrown when the backend responds with a non-2xx status; [message] is the backend's own error text. */
+class ApiException(message: String) : Exception(message)
+
+@Serializable
+private data class ApiErrorBody(val error: String)
+
+/**
+ * Talks to the food-tracker backend over the REST contract defined in
+ * openspec/changes/setup-project-foundation/design.md. The backend base URL
+ * is resolved lazily on every call so changing [BackendConfig.baseUrl] at
+ * runtime (e.g. from a settings field) takes effect immediately.
+ */
+class FoodTrackerApiClient(
+    private val httpClient: HttpClient,
+    private val baseUrlProvider: () -> String = { BackendConfig.baseUrl },
+) {
+    private val baseUrl: String get() = baseUrlProvider()
+
+    /**
+     * Every backend error response is `{"error": "..."}` (see backend/src/app.ts). Ktor's content
+     * negotiation deserializes whatever body comes back regardless of status code, so a failed
+     * request must be checked *before* parsing it as the expected success type - otherwise the
+     * error JSON gets fed into the success type's deserializer and fails with a confusing
+     * "missing required fields" exception instead of the backend's actual error message.
+     */
+    private suspend inline fun <reified T> HttpResponse.parseOrThrow(): T {
+        if (!status.isSuccess()) {
+            val message = runCatching { body<ApiErrorBody>().error }
+                .getOrDefault("Request failed with status ${status.value}")
+            throw ApiException(message)
+        }
+        return body()
+    }
+
+    suspend fun analyzeMealPhoto(imageBytes: ByteArray, filename: String = "meal.jpg"): MealAnalysis {
+        return httpClient
+            .submitFormWithBinaryData(
+                url = "$baseUrl/api/meals/analyze",
+                formData = formData {
+                    append(
+                        "photo",
+                        imageBytes,
+                        Headers.build {
+                            append(HttpHeaders.ContentType, "image/jpeg")
+                            append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                        },
+                    )
+                },
+            )
+            .parseOrThrow()
+    }
+
+    suspend fun saveMeal(request: SaveMealRequest): MealEntry {
+        return httpClient
+            .post("$baseUrl/api/meals") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun listMeals(date: String): List<MealEntry> {
+        return httpClient
+            .get("$baseUrl/api/meals") { url { parameters.append("date", date) } }
+            .parseOrThrow()
+    }
+
+    suspend fun getMeal(id: Int): MealEntry {
+        return httpClient.get("$baseUrl/api/meals/$id").parseOrThrow()
+    }
+
+    suspend fun updateMeal(id: Int, request: UpdateMealRequest): MealEntry {
+        return httpClient
+            .patch("$baseUrl/api/meals/$id") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun deleteMeal(id: Int) {
+        httpClient.delete("$baseUrl/api/meals/$id").parseOrThrow<Unit>()
+    }
+
+    suspend fun dailySummary(date: String): NutritionTotals {
+        return httpClient
+            .get("$baseUrl/api/summary/daily") { url { parameters.append("date", date) } }
+            .parseOrThrow()
+    }
+
+    suspend fun weeklySummary(startDate: String): WeeklySummary {
+        return httpClient
+            .get("$baseUrl/api/summary/weekly") { url { parameters.append("startDate", startDate) } }
+            .parseOrThrow()
+    }
+}

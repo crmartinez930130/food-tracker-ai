@@ -1,0 +1,28 @@
+# Node / backend
+node_modules/
+backend/dist/
+backend/data/*.sqlite
+backend/data/*.sqlite-journal
+backend/data/*.sqlite-wal
+backend/data/*.sqlite-shm
+backend/.env
+backend/.env.*
+!backend/.env.example
+npm-debug.log*
+
+# Kotlin Multiplatform / Gradle / Android / iOS
+frontend/.gradle/
+frontend/.kotlin/
+frontend/**/build/
+frontend/local.properties
+frontend/**/*.iml
+frontend/captures/
+frontend/.cxx/
+frontend/iosApp/**/DerivedData/
+frontend/iosApp/**/*.xcuserstate
+frontend/iosApp/**/xcuserdata/
+
+# Editors / OS
+.idea/
+.DS_Store
+*.swp

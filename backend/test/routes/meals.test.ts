@@ -1,0 +1,154 @@
+import { describe, expect, it } from "vitest";
+import request from "supertest";
+import sharp from "sharp";
+import { buildTestApp } from "../helpers/test-app.js";
+
+async function sampleJpeg(): Promise<Buffer> {
+  return sharp({
+    create: { width: 100, height: 100, channels: 3, background: { r: 180, g: 140, b: 90 } },
+  })
+    .jpeg()
+    .toBuffer();
+}
+
+const sampleItem = {
+  name: "Grilled chicken breast",
+  estimatedGrams: 150,
+  confidence: "high" as const,
+  calories: 248,
+  proteinGrams: 46.5,
+  fatGrams: 5.4,
+  carbsGrams: 0,
+};
+
+describe("POST /api/meals/analyze", () => {
+  it("returns a structured analysis for a valid JPEG without persisting a meal", async () => {
+    const parsedAnalysis = {
+      items: [sampleItem],
+      totalCalories: 248,
+      totalProteinGrams: 46.5,
+      totalFatGrams: 5.4,
+      totalCarbsGrams: 0,
+    };
+    const { app, db } = buildTestApp(async () => ({
+      parsed_output: parsedAnalysis,
+      usage: { input_tokens: 100, output_tokens: 50 },
+    }));
+
+    const jpeg = await sampleJpeg();
+    const res = await request(app).post("/api/meals/analyze").attach("photo", jpeg, {
+      filename: "meal.jpg",
+      contentType: "image/jpeg",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(parsedAnalysis);
+
+    const { listMealsByDate } = await import("../../src/db/meal-repository.js");
+    const today = new Date().toISOString().slice(0, 10);
+    expect(listMealsByDate(db, today)).toEqual([]);
+  });
+
+  it("rejects an unsupported file type without calling the vision service", async () => {
+    let called = false;
+    const { app } = buildTestApp(async () => {
+      called = true;
+      return { parsed_output: null, usage: { input_tokens: 0, output_tokens: 0 } };
+    });
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", Buffer.from("not an image"), { filename: "notes.txt", contentType: "text/plain" });
+
+    expect(res.status).toBe(400);
+    expect(called).toBe(false);
+  });
+
+  it("returns an empty-items analysis rather than an error when no food is detected", async () => {
+    const { app } = buildTestApp(async () => ({
+      parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
+      usage: { input_tokens: 80, output_tokens: 10 },
+    }));
+
+    const jpeg = await sampleJpeg();
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", jpeg, { filename: "empty-plate.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+  });
+});
+
+describe("POST /api/meals", () => {
+  it("saves the corrected values when the client edits the analysis before confirming", async () => {
+    const { app } = buildTestApp();
+    const corrected = { ...sampleItem, estimatedGrams: 200, calories: 330 };
+
+    const res = await request(app).post("/api/meals").send({ items: [corrected] });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items[0].estimatedGrams).toBe(200);
+    expect(res.body.totalCalories).toBe(330);
+  });
+
+  it("accepts an explicit JSON null for occurredAt/notes, not just an omitted key", async () => {
+    // kotlinx.serialization (and other typed clients) send `"occurredAt": null`
+    // rather than omitting the key - the schema must accept null, not just undefined.
+    const { app } = buildTestApp();
+    const res = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], occurredAt: null, notes: null });
+
+    expect(res.status).toBe(201);
+    expect(res.body.notes).toBeNull();
+  });
+});
+
+describe("GET /api/meals", () => {
+  it("returns an empty list for a date with no saved meals", async () => {
+    const { app } = buildTestApp();
+    const res = await request(app).get("/api/meals").query({ date: "2026-01-01" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});
+
+describe("GET /api/meals/:id", () => {
+  it("returns 404 for an id that does not exist", async () => {
+    const { app } = buildTestApp();
+    const res = await request(app).get("/api/meals/999");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PATCH /api/meals/:id", () => {
+  it("reflects the edit on subsequent reads", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    const patched = await request(app)
+      .patch(`/api/meals/${created.body.id}`)
+      .send({ notes: "extra rice" });
+    expect(patched.status).toBe(200);
+    expect(patched.body.notes).toBe("extra rice");
+
+    const fetched = await request(app).get(`/api/meals/${created.body.id}`);
+    expect(fetched.body.notes).toBe("extra rice");
+  });
+});
+
+describe("DELETE /api/meals/:id", () => {
+  it("removes the entry so it no longer appears in date listings", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], occurredAt: "2026-01-05T12:00:00.000Z" });
+
+    const del = await request(app).delete(`/api/meals/${created.body.id}`);
+    expect(del.status).toBe(204);
+
+    const listed = await request(app).get("/api/meals").query({ date: "2026-01-05" });
+    expect(listed.body).toEqual([]);
+  });
+});

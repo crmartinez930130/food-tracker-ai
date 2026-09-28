@@ -1,0 +1,120 @@
+import { Router } from "express";
+import multer from "multer";
+import type Anthropic from "@anthropic-ai/sdk";
+import type { AppDatabase } from "../db/client.js";
+import {
+  createMeal,
+  deleteMeal,
+  getMealById,
+  listMealsByDate,
+  updateMeal,
+} from "../db/meal-repository.js";
+import { preprocessImage } from "../services/image-preprocessing.js";
+import { analyzeMealPhoto } from "../services/vision-analysis.js";
+import { NotFoundError, ValidationError } from "../errors.js";
+import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
+import { asyncHandler } from "./async-handler.js";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export interface MealsRouterDeps {
+  db: AppDatabase;
+  anthropicClient: Anthropic;
+  model: string;
+}
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+      cb(null, true);
+    } else {
+      cb(new ValidationError("Unsupported file type; only JPEG and PNG images are accepted"));
+    }
+  },
+});
+
+function parseId(raw: string): number {
+  const id = Number(raw);
+  if (!Number.isInteger(id)) {
+    throw new ValidationError(`Invalid meal id: ${raw}`);
+  }
+  return id;
+}
+
+export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDeps): Router {
+  const router = Router();
+
+  router.post(
+    "/analyze",
+    upload.single("photo"),
+    asyncHandler(async (req, res) => {
+      if (!req.file) {
+        throw new ValidationError("Missing 'photo' file in request");
+      }
+      const preprocessed = await preprocessImage(req.file.buffer);
+      const result = await analyzeMealPhoto(anthropicClient, preprocessed, model);
+      res.status(200).json(result.analysis);
+    }),
+  );
+
+  router.post(
+    "/",
+    asyncHandler(async (req, res) => {
+      const parsed = SaveMealRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ValidationError(parsed.error.message);
+      }
+      const entry = createMeal(db, parsed.data);
+      res.status(201).json(entry);
+    }),
+  );
+
+  router.get(
+    "/",
+    asyncHandler(async (req, res) => {
+      const date = req.query.date;
+      if (typeof date !== "string" || !DATE_RE.test(date)) {
+        throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
+      }
+      res.json(listMealsByDate(db, date));
+    }),
+  );
+
+  router.get(
+    "/:id",
+    asyncHandler(async (req, res) => {
+      const id = parseId(req.params.id);
+      const entry = getMealById(db, id);
+      if (!entry) throw new NotFoundError(`Meal ${id} not found`);
+      res.json(entry);
+    }),
+  );
+
+  router.patch(
+    "/:id",
+    asyncHandler(async (req, res) => {
+      const id = parseId(req.params.id);
+      const parsed = UpdateMealRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ValidationError(parsed.error.message);
+      }
+      const entry = updateMeal(db, id, parsed.data);
+      if (!entry) throw new NotFoundError(`Meal ${id} not found`);
+      res.json(entry);
+    }),
+  );
+
+  router.delete(
+    "/:id",
+    asyncHandler(async (req, res) => {
+      const id = parseId(req.params.id);
+      const deleted = deleteMeal(db, id);
+      if (!deleted) throw new NotFoundError(`Meal ${id} not found`);
+      res.status(204).send();
+    }),
+  );
+
+  return router;
+}
