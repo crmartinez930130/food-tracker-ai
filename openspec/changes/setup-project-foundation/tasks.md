@@ -43,4 +43,4 @@
 
 ## 7. End-to-end verification
 
-- [ ] 7.1 Run the full flow on a physical Android device against the backend on the local network — capture a real meal photo, review/correct, save, and confirm it appears in history and in the daily summary
+- [x] 7.1 Run the full flow on a physical Android device against the backend on the local network — capture a real meal photo, review/correct, save, and confirm it appears in history and in the daily summary

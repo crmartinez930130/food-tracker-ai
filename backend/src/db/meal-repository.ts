@@ -80,11 +80,16 @@ export function getMealById(db: AppDatabase, id: number): MealEntry | null {
   return toMealEntry(mealRow, itemRows);
 }
 
+// occurredAt is stored as a UTC ISO timestamp, but "which day" a meal belongs to must match
+// the user's own calendar day. This is a single-user, single-machine app (see design.md), so
+// the backend's local timezone *is* the user's timezone - 'localtime' converts the stored UTC
+// timestamp before comparing, instead of grouping by the UTC calendar date (which silently
+// shifts meals logged in the evening onto the wrong day for any timezone behind UTC).
 export function listMealsByDate(db: AppDatabase, date: string): MealEntry[] {
   const mealRows = db
     .select()
     .from(meals)
-    .where(sql`date(${meals.occurredAt}) = ${date}`)
+    .where(sql`date(${meals.occurredAt}, 'localtime') = ${date}`)
     .all();
 
   return mealRows.map((mealRow) => {
@@ -93,11 +98,13 @@ export function listMealsByDate(db: AppDatabase, date: string): MealEntry[] {
   });
 }
 
-export function listMealsBetween(db: AppDatabase, startIsoInclusive: string, endIsoExclusive: string): MealEntry[] {
+export function listMealsBetween(db: AppDatabase, startDateInclusive: string, endDateExclusive: string): MealEntry[] {
   const mealRows = db
     .select()
     .from(meals)
-    .where(sql`${meals.occurredAt} >= ${startIsoInclusive} AND ${meals.occurredAt} < ${endIsoExclusive}`)
+    .where(
+      sql`date(${meals.occurredAt}, 'localtime') >= ${startDateInclusive} AND date(${meals.occurredAt}, 'localtime') < ${endDateExclusive}`,
+    )
     .all();
 
   return mealRows.map((mealRow) => {

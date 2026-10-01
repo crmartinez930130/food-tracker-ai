@@ -27,8 +27,8 @@ describe("GET /api/summary/daily", () => {
 
   it("sums calories and macros across all entries for the date", async () => {
     const { app } = buildTestApp();
-    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-02-01T08:00:00.000Z" });
-    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-02-01T19:00:00.000Z" });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-02-01T10:00:00.000Z" });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-02-01T14:00:00.000Z" });
 
     const res = await request(app).get("/api/summary/daily").query({ date: "2026-02-01" });
     expect(res.body.totalCalories).toBe(496);

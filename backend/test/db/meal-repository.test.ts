@@ -67,9 +67,10 @@ describe("listMealsByDate", () => {
   });
 
   it("returns meals saved on the given date", () => {
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T08:00:00.000Z" });
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T19:30:00.000Z" });
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-02T08:00:00.000Z" });
+    // Times kept near noon UTC so the local calendar date is stable across server timezones.
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T10:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T14:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-02T12:00:00.000Z" });
 
     const results = listMealsByDate(db, "2026-01-01");
     expect(results).toHaveLength(2);
@@ -77,12 +78,13 @@ describe("listMealsByDate", () => {
 });
 
 describe("listMealsBetween", () => {
-  it("returns meals within the inclusive start / exclusive end range", () => {
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T08:00:00.000Z" });
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-07T08:00:00.000Z" });
-    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-08T00:00:00.000Z" });
+  it("returns meals within the inclusive start / exclusive end local date range", () => {
+    // Noon UTC keeps the local calendar date stable across any reasonable server timezone.
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T12:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-07T12:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-01-08T12:00:00.000Z" });
 
-    const results = listMealsBetween(db, "2026-01-01T00:00:00.000Z", "2026-01-08T00:00:00.000Z");
+    const results = listMealsBetween(db, "2026-01-01", "2026-01-08");
     expect(results).toHaveLength(2);
   });
 });
@@ -121,7 +123,7 @@ describe("deleteMeal", () => {
   });
 
   it("removes a deleted meal from date listings", () => {
-    const created = createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T08:00:00.000Z" });
+    const created = createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T12:00:00.000Z" });
     deleteMeal(db, created.id);
     expect(listMealsByDate(db, "2026-01-01")).toEqual([]);
   });

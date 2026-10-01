@@ -39,10 +39,9 @@ export interface WeeklySummary {
 const DAYS_IN_WEEK = 7;
 
 export function weeklySummary(db: AppDatabase, startDate: string): WeeklySummary {
-  const startIso = `${startDate}T00:00:00.000Z`;
-  const endIso = `${addDaysToDateString(startDate, DAYS_IN_WEEK)}T00:00:00.000Z`;
+  const endDateExclusive = addDaysToDateString(startDate, DAYS_IN_WEEK);
 
-  const total = sumTotals(listMealsBetween(db, startIso, endIso));
+  const total = sumTotals(listMealsBetween(db, startDate, endDateExclusive));
   const averagePerDay: MealTotals = {
     totalCalories: total.totalCalories / DAYS_IN_WEEK,
     totalProteinGrams: total.totalProteinGrams / DAYS_IN_WEEK,
