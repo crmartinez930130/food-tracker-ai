@@ -11,6 +11,14 @@ enum class Confidence {
 }
 
 @Serializable
+enum class MealType {
+    @SerialName("breakfast") BREAKFAST,
+    @SerialName("lunch") LUNCH,
+    @SerialName("dinner") DINNER,
+    @SerialName("snack") SNACK,
+}
+
+@Serializable
 data class MealItem(
     val name: String,
     val estimatedGrams: Double,
@@ -37,6 +45,7 @@ data class MealEntry(
     val occurredAt: String,
     val createdAt: String,
     val notes: String? = null,
+    val mealType: MealType? = null,
     val items: List<MealItem>,
     val totalCalories: Double,
     val totalProteinGrams: Double,
@@ -49,6 +58,7 @@ data class SaveMealRequest(
     val items: List<MealItem>,
     val notes: String? = null,
     val occurredAt: String? = null,
+    val mealType: MealType? = null,
 )
 
 @Serializable
@@ -56,6 +66,7 @@ data class UpdateMealRequest(
     val items: List<MealItem>? = null,
     val notes: String? = null,
     val occurredAt: String? = null,
+    val mealType: MealType? = null,
 )
 
 @Serializable

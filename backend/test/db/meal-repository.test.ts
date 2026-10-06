@@ -49,6 +49,30 @@ describe("createMeal", () => {
   });
 });
 
+describe("mealType", () => {
+  it("persists the meal type when provided on save", () => {
+    const entry = createMeal(db, { items: [sampleItem], mealType: "breakfast" });
+    expect(entry.mealType).toBe("breakfast");
+  });
+
+  it("defaults to null when no meal type is provided on save", () => {
+    const entry = createMeal(db, { items: [sampleItem] });
+    expect(entry.mealType).toBeNull();
+  });
+
+  it("updates the meal type on edit", () => {
+    const created = createMeal(db, { items: [sampleItem], mealType: "breakfast" });
+    const updated = updateMeal(db, created.id, { mealType: "lunch" });
+    expect(updated?.mealType).toBe("lunch");
+  });
+
+  it("reads back an entry with no meal type (as if saved before this change) without error", () => {
+    const created = createMeal(db, { items: [sampleItem] });
+    const fetched = getMealById(db, created.id);
+    expect(fetched?.mealType).toBeNull();
+  });
+});
+
 describe("getMealById", () => {
   it("returns null for a nonexistent id", () => {
     expect(getMealById(db, 999)).toBeNull();

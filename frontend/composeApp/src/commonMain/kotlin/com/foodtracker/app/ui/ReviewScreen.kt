@@ -1,5 +1,7 @@
 package com.foodtracker.app.ui
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,9 +34,19 @@ import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealItem
+import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.SaveMealRequest
+import com.foodtracker.app.util.currentLocalHour
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/** UI-only default (see design.md of the add-meal-type change) - the backend never derives a type from a timestamp. */
+private fun suggestedMealType(hourOfDay: Int): MealType = when {
+    hourOfDay < 11 -> MealType.BREAKFAST
+    hourOfDay < 15 -> MealType.LUNCH
+    hourOfDay < 19 -> MealType.SNACK
+    else -> MealType.DINNER
+}
 
 /** Mutable, text-field-friendly mirror of [MealItem] used while the user edits an analysis. */
 private class EditableItemState(item: MealItem) {
@@ -77,6 +89,7 @@ fun ReviewScreen(
         mutableStateListOf(*initialAnalysis.items.map { EditableItemState(it) }.toTypedArray())
     }
     var notes by remember { mutableStateOf(initialAnalysis.notes ?: "") }
+    var mealType by remember { mutableStateOf(suggestedMealType(currentLocalHour())) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -95,6 +108,7 @@ fun ReviewScreen(
                     SaveMealRequest(
                         items = items.map { it.toMealItem() },
                         notes = notes.ifBlank { null },
+                        mealType = mealType,
                     ),
                 )
                 onSaved()
@@ -108,6 +122,9 @@ fun ReviewScreen(
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Text("Review analysis", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(8.dp))
+
+        MealTypeSelector(selected = mealType, onSelect = { mealType = it })
         Spacer(Modifier.height(8.dp))
 
         if (items.isEmpty()) {
@@ -151,6 +168,21 @@ fun ReviewScreen(
                 } else {
                     Text("Confirm & Save")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MealTypeSelector(
+    selected: MealType,
+    onSelect: (MealType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        MealType.entries.forEach { type ->
+            TextButton(onClick = { onSelect(type) }) {
+                Text(if (type == selected) "[${type.displayLabel()}]" else type.displayLabel())
             }
         }
     }

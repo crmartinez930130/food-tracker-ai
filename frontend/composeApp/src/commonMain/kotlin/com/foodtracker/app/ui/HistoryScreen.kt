@@ -27,10 +27,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealEntry
+import com.foodtracker.app.data.MealType
 import com.foodtracker.app.util.plusDays
 import com.foodtracker.app.util.todayDateString
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/** Breakfast/lunch/dinner/snack first, in that order; untagged entries ("Other") last. */
+private val MEAL_TYPE_SECTION_ORDER: List<MealType?> =
+    listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK, null)
 
 @Composable
 fun HistoryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier) {
@@ -75,10 +80,23 @@ fun HistoryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
             isLoading -> CircularProgressIndicator()
             errorMessage != null -> Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
             meals.isEmpty() -> Text("No meals logged for this day yet.")
-            else -> LazyColumn(modifier = Modifier.weight(1f)) {
-                items(meals, key = { it.id }) { meal ->
-                    MealRow(meal, onDelete = { deleteMeal(meal.id) })
-                    HorizontalDivider()
+            else -> {
+                val grouped = meals.groupBy { it.mealType }
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    for (type in MEAL_TYPE_SECTION_ORDER) {
+                        val mealsOfType = grouped[type] ?: continue
+                        item(key = "header-${type?.name ?: "other"}") {
+                            Text(
+                                type.displayLabelOrOther(),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                            )
+                        }
+                        items(mealsOfType, key = { it.id }) { meal ->
+                            MealRow(meal, onDelete = { deleteMeal(meal.id) })
+                            HorizontalDivider()
+                        }
+                    }
                 }
             }
         }

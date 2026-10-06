@@ -29,6 +29,7 @@ function toMealEntry(
     occurredAt: mealRow.occurredAt,
     createdAt: mealRow.createdAt,
     notes: mealRow.notes,
+    mealType: mealRow.mealType,
     items,
     totalCalories: mealRow.totalCalories,
     totalProteinGrams: mealRow.totalProteinGrams,
@@ -60,6 +61,7 @@ export function createMeal(db: AppDatabase, input: SaveMealInput): MealEntry {
       occurredAt: input.occurredAt ?? now,
       createdAt: now,
       notes: input.notes ?? null,
+      mealType: input.mealType ?? null,
       ...totals,
     })
     .returning()
@@ -124,6 +126,7 @@ export function updateMeal(db: AppDatabase, id: number, input: UpdateMealInput):
     .set({
       occurredAt: input.occurredAt ?? existing.occurredAt,
       notes: input.notes !== undefined ? input.notes : existing.notes,
+      mealType: input.mealType !== undefined ? input.mealType : existing.mealType,
       ...totals,
     })
     .where(eq(meals.id, id))

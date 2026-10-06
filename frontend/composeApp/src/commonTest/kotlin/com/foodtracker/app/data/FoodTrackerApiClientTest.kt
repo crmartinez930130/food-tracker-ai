@@ -60,6 +60,33 @@ class FoodTrackerApiClientTest {
         assertEquals("Grilled chicken breast", meals[0].items[0].name)
         assertEquals(Confidence.HIGH, meals[0].items[0].confidence)
         assertEquals(248.0, meals[0].totalCalories)
+        assertEquals(null, meals[0].mealType)
+    }
+
+    @Test
+    fun `deserializes a mealType when present in the response`() = runBlocking {
+        val api = mockedApiClient(
+            """
+            [
+              {
+                "id": 2,
+                "occurredAt": "2026-01-01T08:00:00.000Z",
+                "createdAt": "2026-01-01T08:00:01.000Z",
+                "notes": null,
+                "mealType": "breakfast",
+                "items": [],
+                "totalCalories": 0,
+                "totalProteinGrams": 0,
+                "totalFatGrams": 0,
+                "totalCarbsGrams": 0
+              }
+            ]
+            """.trimIndent(),
+        )
+
+        val meals = api.listMeals("2026-01-01")
+
+        assertEquals(MealType.BREAKFAST, meals[0].mealType)
     }
 
     @Test

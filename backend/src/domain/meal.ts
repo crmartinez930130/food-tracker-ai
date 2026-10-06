@@ -1,4 +1,5 @@
 export type Confidence = "low" | "medium" | "high";
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface MealItemInput {
   name: string;
@@ -26,6 +27,7 @@ export interface MealEntry extends MealTotals {
   occurredAt: string;
   createdAt: string;
   notes: string | null;
+  mealType: MealType | null;
   items: MealItem[];
 }
 
@@ -33,12 +35,14 @@ export interface SaveMealInput {
   items: MealItemInput[];
   notes?: string | null;
   occurredAt?: string | null;
+  mealType?: MealType | null;
 }
 
 export interface UpdateMealInput {
   items?: MealItemInput[];
   notes?: string | null;
   occurredAt?: string | null;
+  mealType?: MealType | null;
 }
 
 export function computeTotals(items: MealItemInput[]): MealTotals {

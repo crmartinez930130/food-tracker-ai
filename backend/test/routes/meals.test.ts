@@ -103,6 +103,22 @@ describe("POST /api/meals", () => {
     expect(res.status).toBe(201);
     expect(res.body.notes).toBeNull();
   });
+
+  it("persists the mealType when provided", async () => {
+    const { app } = buildTestApp();
+    const res = await request(app).post("/api/meals").send({ items: [sampleItem], mealType: "breakfast" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.mealType).toBe("breakfast");
+  });
+
+  it("defaults mealType to null when omitted", async () => {
+    const { app } = buildTestApp();
+    const res = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    expect(res.status).toBe(201);
+    expect(res.body.mealType).toBeNull();
+  });
 });
 
 describe("GET /api/meals", () => {
@@ -112,6 +128,20 @@ describe("GET /api/meals", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
+
+  it("includes mealType in every returned entry", async () => {
+    const { app } = buildTestApp();
+    await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], mealType: "lunch", occurredAt: "2026-01-10T12:00:00.000Z" });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-01-10T18:00:00.000Z" });
+
+    const res = await request(app).get("/api/meals").query({ date: "2026-01-10" });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body.every((entry: { mealType: unknown }) => "mealType" in entry)).toBe(true);
+    expect(res.body.map((entry: { mealType: string | null }) => entry.mealType).sort()).toEqual(["lunch", null]);
+  });
 });
 
 describe("GET /api/meals/:id", () => {
@@ -119,6 +149,14 @@ describe("GET /api/meals/:id", () => {
     const { app } = buildTestApp();
     const res = await request(app).get("/api/meals/999");
     expect(res.status).toBe(404);
+  });
+
+  it("includes mealType (null) for an entry saved without one", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    const fetched = await request(app).get(`/api/meals/${created.body.id}`);
+    expect(fetched.body.mealType).toBeNull();
   });
 });
 
@@ -135,6 +173,17 @@ describe("PATCH /api/meals/:id", () => {
 
     const fetched = await request(app).get(`/api/meals/${created.body.id}`);
     expect(fetched.body.notes).toBe("extra rice");
+  });
+
+  it("updates the mealType", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], mealType: "breakfast" });
+
+    const patched = await request(app).patch(`/api/meals/${created.body.id}`).send({ mealType: "snack" });
+    expect(patched.status).toBe(200);
+    expect(patched.body.mealType).toBe("snack");
   });
 });
 

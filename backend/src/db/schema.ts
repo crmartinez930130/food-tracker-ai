@@ -1,6 +1,9 @@
 import { sqliteTable, integer, real, text } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+
 export const meals = sqliteTable("meals", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   occurredAt: text("occurred_at").notNull(),
@@ -10,6 +13,7 @@ export const meals = sqliteTable("meals", {
   totalFatGrams: real("total_fat_grams").notNull(),
   totalCarbsGrams: real("total_carbs_grams").notNull(),
   notes: text("notes"),
+  mealType: text("meal_type", { enum: MEAL_TYPES }),
 });
 
 export const mealItems = sqliteTable("meal_items", {
