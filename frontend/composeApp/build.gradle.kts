@@ -47,6 +47,7 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.compose.ui.backhandler)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

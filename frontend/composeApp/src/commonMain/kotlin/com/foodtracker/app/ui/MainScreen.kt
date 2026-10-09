@@ -15,18 +15,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.ui.home.HomeScreen
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.ic_add
 import food_tracker_frontend.composeapp.generated.resources.ic_bar_chart
-import food_tracker_frontend.composeapp.generated.resources.ic_flag
-import food_tracker_frontend.composeapp.generated.resources.ic_list_alt
+import food_tracker_frontend.composeapp.generated.resources.ic_home
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun MainScreen(
     initialTab: MainTab,
     apiClient: FoodTrackerApiClient,
+    homeDate: String,
+    onHomeDateChange: (String) -> Unit,
     onStartCapture: () -> Unit,
+    onEditGoal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tab by remember(initialTab) { mutableStateOf(initialTab) }
@@ -41,10 +44,10 @@ fun MainScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = tab == MainTab.HISTORY,
-                    onClick = { tab = MainTab.HISTORY },
-                    icon = { Icon(painterResource(Res.drawable.ic_list_alt), contentDescription = null) },
-                    label = { Text("History") },
+                    selected = tab == MainTab.HOME,
+                    onClick = { tab = MainTab.HOME },
+                    icon = { Icon(painterResource(Res.drawable.ic_home), contentDescription = null) },
+                    label = { Text("Home") },
                 )
                 NavigationBarItem(
                     selected = tab == MainTab.SUMMARY,
@@ -52,20 +55,18 @@ fun MainScreen(
                     icon = { Icon(painterResource(Res.drawable.ic_bar_chart), contentDescription = null) },
                     label = { Text("Summary") },
                 )
-                NavigationBarItem(
-                    selected = tab == MainTab.GOALS,
-                    onClick = { tab = MainTab.GOALS },
-                    icon = { Icon(painterResource(Res.drawable.ic_flag), contentDescription = null) },
-                    label = { Text("Goals") },
-                )
             }
         },
     ) { contentPadding ->
         Box(modifier = Modifier.padding(contentPadding)) {
             when (tab) {
-                MainTab.HISTORY -> HistoryScreen(apiClient)
+                MainTab.HOME -> HomeScreen(
+                    apiClient = apiClient,
+                    date = homeDate,
+                    onDateChange = onHomeDateChange,
+                    onEditGoal = onEditGoal,
+                )
                 MainTab.SUMMARY -> SummaryScreen(apiClient)
-                MainTab.GOALS -> GoalsScreen(apiClient)
             }
         }
     }

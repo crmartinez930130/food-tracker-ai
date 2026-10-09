@@ -6,8 +6,8 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.AppState
 import com.foodtracker.app.ui.CaptureScreen
+import com.foodtracker.app.ui.GoalsScreen
 import com.foodtracker.app.ui.MainScreen
-import com.foodtracker.app.ui.MainTab
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
 import com.foodtracker.app.ui.theme.FoodTrackerTheme
@@ -31,16 +31,24 @@ fun App() {
                     ReviewScreen(
                         initialAnalysis = analysis,
                         apiClient = apiClient,
-                        onSaved = { appState.openMain(MainTab.HISTORY) },
+                        onSaved = { appState.openHomeAfterSave() },
                         onCancel = { appState.openMain() },
                     )
                 }
             }
 
+            is Screen.Goals -> GoalsScreen(
+                apiClient = apiClient,
+                onBack = { appState.openMain() },
+            )
+
             is Screen.Main -> MainScreen(
                 initialTab = screen.tab,
                 apiClient = apiClient,
+                homeDate = appState.homeDate,
+                onHomeDateChange = { appState.homeDate = it },
                 onStartCapture = { appState.openCapture() },
+                onEditGoal = { appState.openGoals() },
             )
         }
     }
