@@ -44,7 +44,7 @@ The system SHALL reject a goal that is missing any of the four targets, has a no
 - **THEN** the system responds with a 400-style validation error and the stored goal is unchanged
 
 ### Requirement: Edit the goal from the app
-The app SHALL provide a screen, reachable from its main navigation at any time, that shows the current goal loaded from the backend and lets the user edit and save all four targets.
+The app SHALL provide a screen, reachable from Home at any time (through an edit-goal action in Home's header and by tapping the calorie progress indicator), that shows the current goal loaded from the backend and lets the user edit and save all four targets. The screen SHALL offer a back action, and going back SHALL return to Home on the day that was being viewed, with progress measured against the latest saved goal.
 
 #### Scenario: Open the goal screen
 - **WHEN** the user opens the goal screen
@@ -57,3 +57,7 @@ The app SHALL provide a screen, reachable from its main navigation at any time, 
 #### Scenario: Backend rejects the values
 - **WHEN** the user saves values that the backend rejects, or the request fails
 - **THEN** the app shows an error message and keeps the user's edits on screen so they can correct them
+
+#### Scenario: Return to Home
+- **WHEN** the user goes back from the goal screen (back arrow or system back) after viewing a past day on Home and saving a new goal
+- **THEN** Home shows the same day it was showing before, with progress measured against the newly saved goal
