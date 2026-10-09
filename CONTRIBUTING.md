@@ -37,7 +37,7 @@ Corre al abrir un PR, al reabrirlo, al sacarlo de draft y en cada push. Los PRs 
 - Publica una review formal: `APPROVE` si no hay bloqueantes, `REQUEST_CHANGES` si los hay.
 - **Límite de 3 rondas:** cuando ya pidió cambios 3 veces en el mismo PR y siguen quedando bloqueantes, deja de pedir cambios. En su lugar agrega la label `needs-human` y deja un comentario para que decida el dueño.
 
-La primera vez que se agrega o se modifica el workflow del reviewer, el review de ese mismo PR falla con un error de validación del workflow. Es esperado: la action solo confía en el workflow que ya está en `master`.
+En un PR que agrega o modifica el workflow del reviewer, la action no revisa: se saltea por un error de validación del workflow y el job queda en verde igual, sin publicar ninguna review. Es esperado, porque la action solo confía en el workflow que ya está en `master`.
 
 ## Ciclo de corrección automática
 
