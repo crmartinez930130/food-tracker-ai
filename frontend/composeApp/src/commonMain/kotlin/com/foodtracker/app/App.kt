@@ -1,6 +1,5 @@
 package com.foodtracker.app
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.foodtracker.app.data.FoodTrackerApiClient
@@ -11,13 +10,14 @@ import com.foodtracker.app.ui.MainScreen
 import com.foodtracker.app.ui.MainTab
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
+import com.foodtracker.app.ui.theme.FoodTrackerTheme
 
 @Composable
 fun App() {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
     val appState = remember { AppState() }
 
-    MaterialTheme {
+    FoodTrackerTheme {
         when (val screen = appState.screen) {
             is Screen.Capture -> CaptureScreen(
                 apiClient = apiClient,
