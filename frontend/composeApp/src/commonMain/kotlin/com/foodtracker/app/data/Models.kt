@@ -82,3 +82,21 @@ data class WeeklySummary(
     val total: NutritionTotals,
     val averagePerDay: NutritionTotals,
 )
+
+@Serializable
+data class DailyGoal(
+    val targetCalories: Double,
+    val targetProteinGrams: Double,
+    val targetFatGrams: Double,
+    val targetCarbsGrams: Double,
+    /** True when the user has never saved a goal and these are the backend's built-in defaults. */
+    val isDefault: Boolean,
+)
+
+@Serializable
+data class UpdateGoalsRequest(
+    val targetCalories: Double,
+    val targetProteinGrams: Double,
+    val targetFatGrams: Double,
+    val targetCarbsGrams: Double,
+)

@@ -41,4 +41,12 @@ En un PR que agrega o modifica el workflow del reviewer, la action no revisa: se
 
 ## Ciclo de corrección automática
 
-La sesión dev de la app de escritorio de Claude tiene que tener activado el **monitor de PR con auto-fix**. Con eso, la app la despierta cuando llegan comentarios de review o falla la CI, y la sesión corrige y vuelve a subir.
+En este setup (app de escritorio de Claude en Linux) no hay panel de PR, así que la app no puede vincular el PR a la sesión ni usar su monitor de auto-fix. Por eso el seguimiento lo hace la propia sesión dev:
+
+1. Después de abrir el PR (o de cada push con correcciones), la sesión deja un **proceso en segundo plano** que consulta las reviews del PR cada 30 s hasta que el bot de Claude publique una review formal (`APPROVED` o `CHANGES_REQUESTED`). También espera a que termine la CI.
+2. Cuando ese proceso termina, la sesión se despierta y lee la review y los comentarios inline (`gh api repos/<owner>/<repo>/pulls/<N>/reviews` y `.../comments`).
+3. Si hay **[Bloqueante]**s, los corrige, corre los tests, hace push y vuelve al paso 1. Si está aprobado y la CI en verde, avisa al dueño para que haga el merge.
+
+**La sesión dev tiene que seguir abierta mientras el PR esté en review.** Si se cierra, el ciclo se corta: hay que retomarlo pidiéndole a una sesión que lea la última review del PR.
+
+Para contar solo las reviews formales del bot, se ignoran las de tipo `COMMENTED`. La herramienta de comentarios inline de la action crea una de esas vacía por cada comentario.

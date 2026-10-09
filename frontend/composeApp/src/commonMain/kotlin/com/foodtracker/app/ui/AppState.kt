@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.foodtracker.app.data.MealAnalysis
 
-enum class MainTab { HISTORY, SUMMARY }
+enum class MainTab { HISTORY, SUMMARY, GOALS }
 
 sealed interface Screen {
     data object Capture : Screen

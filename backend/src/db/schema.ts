@@ -30,6 +30,18 @@ export const mealItems = sqliteTable("meal_items", {
   carbsGrams: real("carbs_grams").notNull(),
 });
 
+/** Single-user app: at most one row, always with id = GOALS_ROW_ID. */
+export const GOALS_ROW_ID = 1;
+
+export const goals = sqliteTable("goals", {
+  id: integer("id").primaryKey(),
+  targetCalories: real("target_calories").notNull(),
+  targetProteinGrams: real("target_protein_grams").notNull(),
+  targetFatGrams: real("target_fat_grams").notNull(),
+  targetCarbsGrams: real("target_carbs_grams").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const mealsRelations = relations(meals, ({ many }) => ({
   items: many(mealItems),
 }));
@@ -45,3 +57,4 @@ export type MealRow = typeof meals.$inferSelect;
 export type NewMealRow = typeof meals.$inferInsert;
 export type MealItemRow = typeof mealItems.$inferSelect;
 export type NewMealItemRow = typeof mealItems.$inferInsert;
+export type GoalsRow = typeof goals.$inferSelect;
