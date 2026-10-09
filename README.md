@@ -59,3 +59,7 @@ There is no automatic backup. The entire history lives in `backend/data/food-tra
 ## Frontend
 
 The Kotlin Multiplatform + Compose Multiplatform app (Android-first, iOS as a secondary target) has not been scaffolded yet — see `openspec/changes/setup-project-foundation/tasks.md` for its status. Once set up, it will live under `frontend/` and this section will cover how to build and run it.
+
+## Workflow
+
+Every issue is delivered as a Pull Request, checked by CI and reviewed by an automated Claude reviewer before a manual merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
