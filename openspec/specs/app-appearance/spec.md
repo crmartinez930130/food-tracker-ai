@@ -44,7 +44,7 @@ The main navigation and the primary capture action SHALL use Material Symbols ic
 
 #### Scenario: Bottom navigation
 - **WHEN** the user views the main screen
-- **THEN** the History, Summary and Goals destinations each show a Material icon with its label, and the selected destination is visually distinguished
+- **THEN** the bottom navigation shows exactly two destinations, Home and Summary, each with a Material icon and its label, and the selected destination is visually distinguished
 
 #### Scenario: Capture action
 - **WHEN** the user views the main screen
