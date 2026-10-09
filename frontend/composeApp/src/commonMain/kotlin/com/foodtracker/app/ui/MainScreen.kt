@@ -43,6 +43,12 @@ fun MainScreen(
                     icon = { Text("📊") },
                     label = { Text("Summary") },
                 )
+                NavigationBarItem(
+                    selected = tab == MainTab.GOALS,
+                    onClick = { tab = MainTab.GOALS },
+                    icon = { Text("🎯") },
+                    label = { Text("Goals") },
+                )
             }
         },
     ) { contentPadding ->
@@ -50,6 +56,7 @@ fun MainScreen(
             when (tab) {
                 MainTab.HISTORY -> HistoryScreen(apiClient)
                 MainTab.SUMMARY -> SummaryScreen(apiClient)
+                MainTab.GOALS -> GoalsScreen(apiClient)
             }
         }
     }

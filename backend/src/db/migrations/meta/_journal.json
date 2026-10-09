@@ -15,6 +15,13 @@
       "when": 1791248030981,
       "tag": "0001_robust_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791507781902,
+      "tag": "0002_sticky_vivisector",
+      "breakpoints": true
     }
   ]
 }
