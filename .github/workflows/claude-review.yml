@@ -47,6 +47,10 @@ jobs:
             out in the working directory. Write the whole review in Spanish (rioplatense is
             fine), since that is the language of this repo's issues.
 
+            You review by reading code, not by running it. Do NOT try to run builds, tests,
+            gradle, npm or `gh pr checks`: a separate CI job already runs them on this PR, and
+            those commands aren't available to you anyway, so attempts only burn turns.
+
             ## 1. Gather context
             - `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}`.
             - Find the linked issue (`Closes #N` in the PR body) and read it with `gh issue view N`.
@@ -78,5 +82,5 @@ jobs:
             - Don't post anything else (no extra PR comments, no review text as chat output).
           claude_args: |
             --model claude-sonnet-5
-            --max-turns 30
+            --max-turns 45
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr edit:*),Bash(gh issue view:*)"
