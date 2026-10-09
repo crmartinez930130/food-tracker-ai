@@ -1,6 +1,6 @@
 /** Atwater factors, in kcal per gram. */
 const PROTEIN_KCAL_PER_GRAM = 4;
-const FAT_KCAL_PER_GRAM = 4;
+const FAT_KCAL_PER_GRAM = 9;
 const CARBS_KCAL_PER_GRAM = 4;
 
 export function caloriesFromMacros(proteinGrams: number, fatGrams: number, carbsGrams: number): number {
