@@ -11,7 +11,9 @@ export interface PreprocessedImage {
 }
 
 export async function preprocessImage(input: Buffer): Promise<PreprocessedImage> {
-  const pipeline = sharp(input).resize({
+  // rotate() with no angle applies the EXIF orientation (and drops the tag): phone photos are
+  // often stored sideways with only a tag saying how to display them.
+  const pipeline = sharp(input).rotate().resize({
     width: MAX_LONG_EDGE_PX,
     height: MAX_LONG_EDGE_PX,
     fit: "inside",
