@@ -1,0 +1,82 @@
+name: Claude Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      # Counted here, deterministically, instead of asking the model to count.
+      - name: Count previous change requests from Claude
+        id: rounds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          count=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --paginate \
+            --jq '[.[] | select(.user.type == "Bot" and (.user.login | startswith("claude")) and .state == "CHANGES_REQUESTED")] | length')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            PREVIOUS CHANGE REQUESTS FROM YOU ON THIS PR: ${{ steps.rounds.outputs.count }}
+            MAX ROUNDS: 3
+
+            You are the independent reviewer for this PR. Another Claude session wrote the
+            code; it will read your review and push fixes. The PR branch is already checked
+            out in the working directory. Write the whole review in Spanish (rioplatense is
+            fine), since that is the language of this repo's issues.
+
+            ## 1. Gather context
+            - `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}`.
+            - Find the linked issue (`Closes #N` in the PR body) and read it with `gh issue view N`.
+              Its "Criterios de aceptación" checklist is the contract for this PR.
+            - If the diff touches `openspec/changes/<name>/`, read that change's proposal,
+              design, specs and tasks, and check the implementation matches them.
+            - Read surrounding code as needed to judge correctness, not just the diff lines.
+
+            ## 2. Classify findings
+            - BLOCKER: an acceptance criterion not met, a real bug, missing tests for new
+              behavior, a security problem, or a mismatch with the OpenSpec change.
+            - SUGGESTION: style, naming, optional refactors, nice-to-haves. Never block on these.
+            Only report what you can point to concretely. Don't invent problems to look thorough.
+
+            ## 3. Publish
+            - One inline comment per finding on the exact line, using
+              `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`),
+              prefixed with **[Bloqueante]** or **[Sugerencia]**.
+            - Then submit exactly ONE formal review with `gh pr review`, whose body has:
+              a short summary, the acceptance-criteria checklist marked ✅/❌ one by one,
+              and the list of blockers (if any).
+              - No blockers → `gh pr review ${{ github.event.pull_request.number }} --approve --body "..."`
+              - Blockers, and PREVIOUS CHANGE REQUESTS < MAX ROUNDS →
+                `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "..."`
+              - Blockers, and PREVIOUS CHANGE REQUESTS >= MAX ROUNDS → do NOT request changes
+                again. Run `gh pr edit ${{ github.event.pull_request.number }} --add-label needs-human`
+                and submit `gh pr review ${{ github.event.pull_request.number }} --comment --body "..."`
+                explaining which blockers remain after the round limit, so the repo owner decides.
+            - Don't post anything else (no extra PR comments, no review text as chat output).
+          claude_args: |
+            --model claude-sonnet-5
+            --max-turns 30
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr edit:*),Bash(gh issue view:*)"
