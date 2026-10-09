@@ -31,7 +31,7 @@ Corre en cada PR hacia `master` y en cada push a `master`:
 
 Corre al abrir un PR, al reabrirlo, al sacarlo de draft y en cada push. Los PRs en draft se saltean.
 
-- Usa `anthropics/claude-code-action` con la suscripción Claude Pro del dueño (secret `CLAUDE_CODE_OAUTH_TOKEN`). Consume la misma cuota que el uso interactivo, por eso usa Sonnet y tiene tope de turnos.
+- Usa `anthropics/claude-code-action` con la suscripción Claude Pro del dueño (secret `CLAUDE_CODE_OAUTH_TOKEN`). Consume la misma cuota que el uso interactivo, por eso usa Sonnet y tiene un tope de 45 turnos. El reviewer solo lee el código, no corre builds ni tests: eso lo hace la CI. Si supera el tope, la action marca el job en rojo aunque haya publicado la review.
 - Revisa el diff contra los **criterios de aceptación del issue vinculado** y, si el PR trae un change de OpenSpec, contra sus specs y tasks.
 - Clasifica los hallazgos en **[Bloqueante]** (criterio no cumplido, bug, faltan tests, seguridad) o **[Sugerencia]**. Solo los bloqueantes piden cambios.
 - Publica una review formal: `APPROVE` si no hay bloqueantes, `REQUEST_CHANGES` si los hay.
