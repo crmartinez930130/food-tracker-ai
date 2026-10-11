@@ -38,6 +38,8 @@ kotlin {
             implementation(libs.androidx.camera.lifecycle)
             implementation(libs.androidx.camera.compose)
             implementation(libs.androidx.exifinterface)
+            // FileProvider, for sharing the CSV export (already transitive via activity-compose).
+            implementation(libs.androidx.core)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

@@ -316,6 +316,38 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `exportMealsCsv requests the range and returns the CSV text unchanged`() = runBlocking {
+        val csv = "\uFEFFdate,time,meal_type,item\r\n2026-03-01,13:15,lunch,\"Ñoquis, con jamón\"\r\n"
+        var path: String? = null
+        var query: Pair<String?, String?>? = null
+        val engine = MockEngine { request ->
+            path = request.url.encodedPath
+            query = request.url.parameters["startDate"] to request.url.parameters["endDate"]
+            respond(
+                content = ByteReadChannel(csv.encodeToByteArray()),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "text/csv; charset=utf-8"),
+            )
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+
+        val result = api.exportMealsCsv("2026-03-01", "2026-03-07")
+
+        assertEquals("/api/meals/export", path)
+        assertEquals("2026-03-01" to "2026-03-07", query)
+        assertEquals(csv, result)
+    }
+
+    @Test
+    fun `exportMealsCsv surfaces the backend error message`() = runBlocking {
+        val api = capturingClient("""{"error":"The range can't be longer than 366 days"}""", HttpStatusCode.BadRequest) {}
+
+        val error = assertFailsWith<ApiException> { api.exportMealsCsv("2025-01-01", "2026-06-01") }
+
+        assertEquals("The range can't be longer than 366 days", error.message)
+    }
+
+    @Test
     fun `listWeight requests the range and deserializes the entries`() = runBlocking {
         var query: Pair<String?, String?>? = null
         val api = capturingClient(

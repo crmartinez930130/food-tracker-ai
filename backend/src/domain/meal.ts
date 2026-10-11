@@ -58,3 +58,21 @@ export function computeTotals(items: MealItemInput[]): MealTotals {
     { totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
   );
 }
+
+/** One exported row: a meal item, or a whole meal (item fields null) when the meal has no items. */
+export interface ExportRow {
+  /** The meal's local calendar day, YYYY-MM-DD. */
+  date: string;
+  /** The meal's local time, HH:MM. */
+  time: string;
+  mealType: MealType | null;
+  notes: string | null;
+  item: {
+    name: string;
+    grams: number;
+    calories: number;
+    proteinGrams: number;
+    fatGrams: number;
+    carbsGrams: number;
+  } | null;
+}

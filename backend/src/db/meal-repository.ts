@@ -1,8 +1,9 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "./client.js";
 import { meals, mealItems, type NewMealItemRow } from "./schema.js";
 import {
   computeTotals,
+  type ExportRow,
   type MealEntry,
   type MealItem,
   type MealTotals,
@@ -140,6 +141,53 @@ export function dailyTotalsBetween(db: AppDatabase, startDateInclusive: string, 
     .groupBy(day)
     .orderBy(day)
     .all();
+}
+
+/**
+ * The CSV export's rows for meals whose local day is in [startDateInclusive, endDateExclusive):
+ * one per item, in chronological order. The LEFT JOIN gives an item-less meal a single row with
+ * null item columns, so it isn't dropped. Local date and time come from SQLite's 'localtime', the
+ * same conversion that decides which day a meal is listed under.
+ */
+export function exportRowsBetween(db: AppDatabase, startDateInclusive: string, endDateExclusive: string): ExportRow[] {
+  const day = sql<string>`date(${meals.occurredAt}, 'localtime')`;
+  const rows = db
+    .select({
+      date: day,
+      time: sql<string>`strftime('%H:%M', ${meals.occurredAt}, 'localtime')`,
+      mealType: meals.mealType,
+      notes: meals.notes,
+      itemId: mealItems.id,
+      name: mealItems.name,
+      grams: mealItems.estimatedGrams,
+      calories: mealItems.calories,
+      proteinGrams: mealItems.proteinGrams,
+      fatGrams: mealItems.fatGrams,
+      carbsGrams: mealItems.carbsGrams,
+    })
+    .from(meals)
+    .leftJoin(mealItems, eq(mealItems.mealId, meals.id))
+    .where(sql`${day} >= ${startDateInclusive} AND ${day} < ${endDateExclusive}`)
+    .orderBy(asc(meals.occurredAt), asc(meals.id), asc(mealItems.id))
+    .all();
+
+  return rows.map((row) => ({
+    date: row.date,
+    time: row.time,
+    mealType: row.mealType,
+    notes: row.notes,
+    item:
+      row.itemId === null
+        ? null
+        : {
+            name: row.name!,
+            grams: row.grams!,
+            calories: row.calories!,
+            proteinGrams: row.proteinGrams!,
+            fatGrams: row.fatGrams!,
+            carbsGrams: row.carbsGrams!,
+          },
+  }));
 }
 
 /** Every meal marked as favorite, whatever day it belongs to, ordered by when it occurred (newest first). */
