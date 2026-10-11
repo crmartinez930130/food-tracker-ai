@@ -5,6 +5,7 @@
 ## What Changes
 
 - **Capture screen, system back:**
+  - While a photo is being analyzed, it is ignored, so the in-flight analysis can't later open Review for a "discarded" photo.
   - With a photo awaiting confirmation, it discards the photo and returns to the photo options and favorites.
   - Otherwise it returns to Home, the same as "Cancel".
   - The in-app camera keeps its own back handling from #5.

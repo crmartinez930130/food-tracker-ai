@@ -26,7 +26,7 @@ The project has no Compose UI test harness that runs in CI. Android instrumented
 
 **1. Pure decision functions, tested in `commonTest`; thin Compose wiring.**
 `ui/BackNavigation.kt` holds:
-- `captureBackAction(hasPhotoToConfirm: Boolean): CaptureBack`, which returns `DISCARD_PHOTO` or `EXIT`.
+- `captureBackAction(hasPhotoToConfirm: Boolean, isAnalyzing: Boolean): CaptureBack`, which returns `IGNORE`, `DISCARD_PHOTO` or `EXIT`. `IGNORE` takes precedence while analyzing. *Correction from the PR review:* without it, back during an analysis cleared the photo while the in-flight request still went on to open Review with the "discarded" photo, or showed its error on the reset screen. This mirrors `IGNORE` while saving in Review.
 - `reviewBackAction(isSaving: Boolean, isDiscardPromptShown: Boolean): ReviewBack`, which returns `IGNORE`, `DISMISS_PROMPT` or `SHOW_PROMPT`. `IGNORE` takes precedence while saving.
 
 The screens map these results to state changes. The functions are trivial on purpose: they turn every spec scenario into a deterministic unit test, and the emulator check covers the wiring.

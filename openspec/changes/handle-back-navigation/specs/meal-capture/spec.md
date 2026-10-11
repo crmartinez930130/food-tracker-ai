@@ -11,6 +11,10 @@ While logging a meal, the system back action SHALL navigate within the app inste
 - **WHEN** the user presses system back while a captured or chosen photo is shown for confirmation
 - **THEN** the photo is discarded and the capture screen shows the photo options again, and a further back returns to Home
 
+#### Scenario: Back while the photo is being analyzed
+- **WHEN** the user presses system back while the chosen photo is being analyzed
+- **THEN** the app ignores it, so it doesn't discard the photo while the analysis still completes and opens the review
+
 #### Scenario: Back or cancel on the review screen
 - **WHEN** the user presses system back or the cancel action on the review screen
 - **THEN** the app asks whether to discard the meal, and nothing is discarded yet

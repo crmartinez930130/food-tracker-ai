@@ -148,7 +148,8 @@ fun CaptureScreen(
 
     // Composed only outside the camera, which handles its own back (CameraCapture).
     BackHandler {
-        when (captureBackAction(hasPhotoToConfirm = photo != null)) {
+        when (captureBackAction(hasPhotoToConfirm = photo != null, isAnalyzing = isAnalyzing)) {
+            CaptureBack.IGNORE -> Unit
             CaptureBack.DISCARD_PHOTO -> photo = null
             CaptureBack.EXIT -> onCancel()
         }

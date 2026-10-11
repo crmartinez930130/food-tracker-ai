@@ -7,12 +7,17 @@ class BackNavigationTest {
 
     @Test
     fun `capture back discards a photo awaiting confirmation`() {
-        assertEquals(CaptureBack.DISCARD_PHOTO, captureBackAction(hasPhotoToConfirm = true))
+        assertEquals(CaptureBack.DISCARD_PHOTO, captureBackAction(hasPhotoToConfirm = true, isAnalyzing = false))
     }
 
     @Test
     fun `capture back exits when there is no photo`() {
-        assertEquals(CaptureBack.EXIT, captureBackAction(hasPhotoToConfirm = false))
+        assertEquals(CaptureBack.EXIT, captureBackAction(hasPhotoToConfirm = false, isAnalyzing = false))
+    }
+
+    @Test
+    fun `capture back is ignored while the photo is being analyzed`() {
+        assertEquals(CaptureBack.IGNORE, captureBackAction(hasPhotoToConfirm = true, isAnalyzing = true))
     }
 
     @Test
