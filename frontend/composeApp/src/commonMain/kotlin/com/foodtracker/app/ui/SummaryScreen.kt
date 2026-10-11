@@ -36,6 +36,7 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.LogWeightRequest
 import com.foodtracker.app.data.WeightEntry
 import com.foodtracker.app.ui.summary.CalorieChart
+import com.foodtracker.app.ui.summary.ExportSection
 import com.foodtracker.app.ui.summary.WeightSection
 import com.foodtracker.app.ui.summary.isOverGoal
 import com.foodtracker.app.util.isBeforeDay
@@ -182,6 +183,11 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
                 onDelete = { entry -> changeWeight { apiClient.deleteWeight(entry.id) } },
             )
         }
+
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp))
+        ExportSection(apiClient = apiClient, periodStart = startDate, periodEnd = endDate, today = today)
     }
 }
 

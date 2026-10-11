@@ -10,12 +10,13 @@ import {
   listMealsByDate,
   updateMeal,
 } from "../db/meal-repository.js";
+import { exportFileName, exportMealsCsv } from "../services/csv-export.js";
 import { preprocessImage } from "../services/image-preprocessing.js";
 import { analyzeMealPhoto } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
-import { isCalendarDate } from "./dates.js";
+import { isCalendarDate, parseDateRange } from "./dates.js";
 import { validationErrorFrom } from "./validation.js";
 
 
@@ -81,6 +82,19 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
         throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
       }
       res.json(listMealsByDate(db, date));
+    }),
+  );
+
+  // Like "/favorites", must stay above "/:id".
+  router.get(
+    "/export",
+    asyncHandler(async (req, res) => {
+      const { startDate, endDate } = parseDateRange(req.query);
+      res
+        .status(200)
+        .attachment(exportFileName(startDate, endDate))
+        .type("text/csv; charset=utf-8")
+        .send(exportMealsCsv(db, startDate, endDate));
     }),
   );
 

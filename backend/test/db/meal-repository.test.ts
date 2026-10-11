@@ -4,6 +4,7 @@ import {
   createMeal,
   dailyTotalsBetween,
   deleteMeal,
+  exportRowsBetween,
   getMealById,
   listMealsBetween,
   listFavoriteMeals,
@@ -210,5 +211,64 @@ describe("dailyTotalsBetween", () => {
     expect(days[0].totalCalories).toBe(2 * sampleItem.calories);
     expect(days[0].totalProteinGrams).toBeCloseTo(2 * sampleItem.proteinGrams);
     expect(days[1].totalCalories).toBe(sampleItem.calories);
+  });
+});
+
+describe("exportRowsBetween", () => {
+  // Built from local wall-clock values, so the expected local date/time hold in any test timezone.
+  const local = (y: number, m: number, d: number, h: number, min: number) =>
+    new Date(y, m - 1, d, h, min).toISOString();
+  const rice: MealItemInput = { ...sampleItem, name: "Rice", calories: 200 };
+
+  it("returns one row per item with the meal's local date, time, type and notes", () => {
+    createMeal(db, {
+      items: [sampleItem, rice],
+      occurredAt: local(2026, 3, 5, 13, 15),
+      mealType: "lunch",
+      notes: "office",
+    });
+
+    const rows = exportRowsBetween(db, "2026-03-05", "2026-03-06");
+
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.item?.name)).toEqual(["Grilled chicken breast", "Rice"]);
+    for (const r of rows) {
+      expect(r).toMatchObject({ date: "2026-03-05", time: "13:15", mealType: "lunch", notes: "office" });
+    }
+    expect(rows[0].item).toEqual({
+      name: "Grilled chicken breast",
+      grams: 150,
+      calories: 248,
+      proteinGrams: 46.5,
+      fatGrams: 5.4,
+      carbsGrams: 0,
+    });
+  });
+
+  it("gives a meal without items a single row with no item", () => {
+    createMeal(db, { items: [], occurredAt: local(2026, 3, 5, 9, 0), notes: "forgot the photo" });
+
+    expect(exportRowsBetween(db, "2026-03-05", "2026-03-06")).toEqual([
+      { date: "2026-03-05", time: "09:00", mealType: null, notes: "forgot the photo", item: null },
+    ]);
+  });
+
+  it("uses the local day for a late-evening meal", () => {
+    createMeal(db, { items: [sampleItem], occurredAt: local(2026, 3, 5, 22, 30) });
+
+    const rows = exportRowsBetween(db, "2026-03-05", "2026-03-06");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ date: "2026-03-05", time: "22:30" });
+    expect(exportRowsBetween(db, "2026-03-06", "2026-03-07")).toEqual([]);
+  });
+
+  it("orders rows chronologically regardless of insertion order, and respects the range bounds", () => {
+    createMeal(db, { items: [rice], occurredAt: local(2026, 3, 6, 20, 0) });
+    createMeal(db, { items: [rice], occurredAt: local(2026, 3, 4, 12, 0) }); // before the range
+    createMeal(db, { items: [rice], occurredAt: local(2026, 3, 5, 8, 0) });
+    createMeal(db, { items: [rice], occurredAt: local(2026, 3, 7, 8, 0) }); // end is exclusive
+
+    const rows = exportRowsBetween(db, "2026-03-05", "2026-03-07");
+    expect(rows.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-03-05 08:00", "2026-03-06 20:00"]);
   });
 });

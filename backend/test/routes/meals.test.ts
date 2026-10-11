@@ -311,3 +311,64 @@ describe("GET /api/meals date validation", () => {
     expect((await request(app).get("/api/meals").query({ date: "2026-02-28" })).status).toBe(200);
   });
 });
+
+describe("GET /api/meals/export", () => {
+  const HEADER = "date,time,meal_type,item,grams,calories,protein_g,fat_g,carbs_g,notes";
+  // Local wall-clock 13:15, so the expected local date/time hold in any test timezone.
+  const localNoon = (date: string) => new Date(`${date}T13:15:00`).toISOString();
+
+  it("returns the range's meals as a CSV attachment, one row per item", async () => {
+    const { app } = buildTestApp();
+    await request(app)
+      .post("/api/meals")
+      .send({
+        items: [sampleItem, { ...sampleItem, name: "Ñoquis con jamón", calories: 300 }],
+        occurredAt: localNoon("2026-10-02"),
+        mealType: "lunch",
+        notes: 'with "salsa", extra',
+      });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: localNoon("2026-10-09") });
+
+    const res = await request(app).get("/api/meals/export").query({ startDate: "2026-10-01", endDate: "2026-10-07" });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/csv; charset=utf-8");
+    expect(res.headers["content-disposition"]).toBe('attachment; filename="food-tracker-2026-10-01_2026-10-07.csv"');
+    expect(res.text).toBe(
+      `﻿${HEADER}\r\n` +
+        '2026-10-02,13:15,lunch,Grilled chicken breast,150,248,46.5,5.4,0,"with ""salsa"", extra"\r\n' +
+        '2026-10-02,13:15,lunch,Ñoquis con jamón,150,300,46.5,5.4,0,"with ""salsa"", extra"\r\n',
+    );
+  });
+
+  it("returns only the header for a range without meals", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).get("/api/meals/export").query({ startDate: "2026-10-01", endDate: "2026-10-01" });
+
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(`﻿${HEADER}\r\n`);
+  });
+
+  it.each([
+    ["a missing date", { startDate: "2026-10-01" }],
+    ["an impossible date", { startDate: "2026-02-30", endDate: "2026-03-01" }],
+    ["an end before the start", { startDate: "2026-10-07", endDate: "2026-10-01" }],
+    ["a range over 366 days", { startDate: "2025-01-01", endDate: "2026-01-02" }],
+  ])("rejects %s with 400", async (_label, query) => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).get("/api/meals/export").query(query);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTypeOf("string");
+  });
+
+  it("accepts exactly 366 days", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).get("/api/meals/export").query({ startDate: "2025-01-01", endDate: "2026-01-01" });
+
+    expect(res.status).toBe(200);
+  });
+});

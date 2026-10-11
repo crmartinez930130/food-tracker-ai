@@ -153,6 +153,21 @@ class FoodTrackerApiClient(
             .parseOrThrow()
     }
 
+    /**
+     * The CSV export of meals from [startDate] to [endDate] (inclusive), as the backend's raw text -
+     * including its UTF-8 byte-order mark, which spreadsheets need to read accents correctly.
+     */
+    suspend fun exportMealsCsv(startDate: String, endDate: String): String {
+        return httpClient
+            .get("$baseUrl/api/meals/export") {
+                url {
+                    parameters.append("startDate", startDate)
+                    parameters.append("endDate", endDate)
+                }
+            }
+            .parseOrThrow()
+    }
+
     /** Weight entries with a day from [startDate] to [endDate] (inclusive), oldest first. */
     suspend fun listWeight(startDate: String, endDate: String): List<WeightEntry> {
         return httpClient
