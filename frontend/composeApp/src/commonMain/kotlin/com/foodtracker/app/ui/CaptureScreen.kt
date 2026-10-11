@@ -37,7 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -56,6 +58,7 @@ import kotlin.math.roundToInt
 
 private enum class PhotoSource { CAMERA, GALLERY }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CaptureScreen(
     apiClient: FoodTrackerApiClient,
@@ -141,6 +144,14 @@ fun CaptureScreen(
             },
         )
         return
+    }
+
+    // Composed only outside the camera, which handles its own back (CameraCapture).
+    BackHandler {
+        when (captureBackAction(hasPhotoToConfirm = photo != null)) {
+            CaptureBack.DISCARD_PHOTO -> photo = null
+            CaptureBack.EXIT -> onCancel()
+        }
     }
 
     Column(

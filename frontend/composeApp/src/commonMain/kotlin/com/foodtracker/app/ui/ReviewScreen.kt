@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -32,7 +33,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
@@ -80,6 +83,7 @@ private class EditableItemState(item: MealItem) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ReviewScreen(
     initialAnalysis: MealAnalysis,
@@ -94,6 +98,7 @@ fun ReviewScreen(
     var notes by remember { mutableStateOf(initialAnalysis.notes ?: "") }
     var mealType by remember { mutableStateOf(suggestedMealType(currentLocalHour())) }
     var isSaving by remember { mutableStateOf(false) }
+    var showDiscardPrompt by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -121,6 +126,32 @@ fun ReviewScreen(
                 isSaving = false
             }
         }
+    }
+
+    // Always enabled while this screen is shown, so back never falls through to the activity
+    // (which would close the app and lose the unsaved analysis).
+    BackHandler {
+        when (reviewBackAction(isSaving = isSaving, isDiscardPromptShown = showDiscardPrompt)) {
+            ReviewBack.IGNORE -> Unit
+            ReviewBack.DISMISS_PROMPT -> showDiscardPrompt = false
+            ReviewBack.SHOW_PROMPT -> showDiscardPrompt = true
+        }
+    }
+
+    if (showDiscardPrompt) {
+        AlertDialog(
+            onDismissRequest = { showDiscardPrompt = false },
+            title = { Text("Discard this meal?") },
+            text = { Text("The analysis and your edits will be lost.") },
+            confirmButton = {
+                TextButton(onClick = onCancel) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardPrompt = false }) { Text("Keep editing") }
+            },
+        )
     }
 
     Column(modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp)) {
@@ -163,7 +194,7 @@ fun ReviewScreen(
 
         Spacer(Modifier.height(8.dp))
         Row {
-            OutlinedButton(onClick = onCancel, enabled = !isSaving) { Text("Cancel") }
+            OutlinedButton(onClick = { showDiscardPrompt = true }, enabled = !isSaving) { Text("Cancel") }
             Spacer(Modifier.width(12.dp))
             Button(onClick = { save() }, enabled = !isSaving) {
                 if (isSaving) {
