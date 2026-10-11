@@ -116,7 +116,7 @@ export function listMealsBetween(db: AppDatabase, startDateInclusive: string, en
   });
 }
 
-/** Every meal marked as favorite, whatever day it was logged on, most recently logged first. */
+/** Every meal marked as favorite, whatever day it belongs to, ordered by when it occurred (newest first). */
 export function listFavoriteMeals(db: AppDatabase): MealEntry[] {
   const mealRows = db.select().from(meals).where(eq(meals.isFavorite, true)).orderBy(desc(meals.occurredAt)).all();
 
