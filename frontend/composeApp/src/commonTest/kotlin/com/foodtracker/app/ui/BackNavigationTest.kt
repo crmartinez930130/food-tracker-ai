@@ -18,6 +18,8 @@ class BackNavigationTest {
     @Test
     fun `capture back is ignored while the photo is being analyzed`() {
         assertEquals(CaptureBack.IGNORE, captureBackAction(hasPhotoToConfirm = true, isAnalyzing = true))
+        // Not reachable from the UI today (analysis needs a photo), but pins down that IGNORE wins.
+        assertEquals(CaptureBack.IGNORE, captureBackAction(hasPhotoToConfirm = false, isAnalyzing = true))
     }
 
     @Test
