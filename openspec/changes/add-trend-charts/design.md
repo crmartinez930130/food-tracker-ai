@@ -24,7 +24,7 @@ See proposal.md for motivation.
 **1. The aggregation is done in SQL, and zero-filling in the service.**
 - `dailyTotalsBetween(db, start, endExclusive)` runs `SELECT date(occurred_at,'localtime') AS day, SUM(total_calories)… GROUP BY day ORDER BY day` over `meals`. Only the stored totals are needed, so it avoids loading every item, which `listMealsBetween` does.
 - `rangeSummary(db, start, end)` walks every date from `start` to `end` inclusive, using the existing `addDaysToDateString`, and puts a zero entry where SQL returned no row.
-- The route validates both dates with the same `DATE_RE` regex, requires `end >= start`, and caps the range at 366 days. A request without a cap could ask for decades of zero-filled entries.
+- The route validates both dates with the same `DATE_RE` regex **plus a calendar round-trip**: the regex alone accepts `2026-02-30`. It also requires `end >= start` and caps the range at 366 days. A request without a cap could ask for decades of zero-filled entries.
 - *Alternative:* reuse `listMealsBetween` and group in JS, as the issue suggests. It works, but it loads every meal's items for nothing, and grouping in SQL keeps the "local day" rule in the same place as the other queries.
 
 **2. The response shape is a flat array of `{ date, totalCalories, totalProteinGrams, totalFatGrams, totalCarbsGrams }`.** It reuses the `MealTotals` field names, so the frontend's `NutritionTotals` vocabulary stays consistent. The new `DailyTotals` model adds `date`.
