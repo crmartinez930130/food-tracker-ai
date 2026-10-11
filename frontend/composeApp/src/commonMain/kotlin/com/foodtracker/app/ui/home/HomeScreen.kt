@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +41,9 @@ import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealEntry
+import com.foodtracker.app.data.LogWaterRequest
 import com.foodtracker.app.data.MealType
+import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.displayLabelOrOther
 import com.foodtracker.app.ui.loadingPresentation
@@ -54,6 +57,8 @@ import food_tracker_frontend.composeapp.generated.resources.ic_edit
 import food_tracker_frontend.composeapp.generated.resources.ic_star
 import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
@@ -84,6 +89,11 @@ fun HomeScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
+    var water by remember { mutableStateOf<WaterDay?>(null) }
+    var waterError by remember { mutableStateOf<String?>(null) }
+    // Serializes water taps, so each refetch reflects every earlier log/undo (taps can be rapid).
+    val waterMutex = remember { Mutex() }
+    val currentDate by rememberUpdatedState(date)
     val scope = rememberCoroutineScope()
     val today = todayDateString()
 
@@ -93,6 +103,8 @@ fun HomeScreen(
         try {
             meals = apiClient.listMeals(date)
             goal = apiClient.getGoals()
+            water = apiClient.getWater(date)
+            waterError = null
         } catch (e: Exception) {
             errorMessage = "Couldn't load this day: ${e.message ?: "unknown error"}"
         } finally {
@@ -118,6 +130,24 @@ fun HomeScreen(
                 reloadKey++
             } catch (e: Exception) {
                 errorMessage = "Couldn't delete meal: ${e.message ?: "unknown error"}"
+            }
+        }
+    }
+
+    // Only water is refetched afterwards, not the day's meals.
+    fun changeWater(action: suspend (day: String) -> Unit) {
+        val day = date
+        scope.launch {
+            waterMutex.withLock {
+                try {
+                    action(day)
+                    val refreshed = apiClient.getWater(day)
+                    // The user may have moved to another day meanwhile; don't show this one there.
+                    if (currentDate == day) water = refreshed
+                    waterError = null
+                } catch (e: Exception) {
+                    waterError = "Couldn't update water: ${e.message ?: "unknown error"}"
+                }
             }
         }
     }
@@ -159,6 +189,25 @@ fun HomeScreen(
                                 MacroBar("Fat", totals.fat, currentGoal.targetFatGrams)
                                 MacroBar("Carbs", totals.carbs, currentGoal.targetCarbsGrams)
                                 Spacer(Modifier.height(8.dp))
+                                WaterCard(
+                                    water = water,
+                                    targetMl = currentGoal.targetWaterMl,
+                                    glassMl = currentGoal.waterGlassMl,
+                                    onAddGlass = {
+                                        changeWater { day ->
+                                            apiClient.logWater(LogWaterRequest(currentGoal.waterGlassMl, loggedAtFor(day, today)))
+                                        }
+                                    },
+                                    onUndo = {
+                                        // Picked under the lock from fresh data, so rapid undos each remove a different entry.
+                                        changeWater { day ->
+                                            apiClient.getWater(day).entries.lastOrNull()?.let { apiClient.deleteWater(it.id) }
+                                        }
+                                    },
+                                )
+                                waterError?.let {
+                                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         }
                         if (meals.isEmpty()) {

@@ -50,6 +50,8 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
     var protein by remember { mutableStateOf("") }
     var fat by remember { mutableStateOf("") }
     var carbs by remember { mutableStateOf("") }
+    var water by remember { mutableStateOf("") }
+    var glass by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
@@ -62,6 +64,8 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
         protein = goal.targetProteinGrams.toFieldText()
         fat = goal.targetFatGrams.toFieldText()
         carbs = goal.targetCarbsGrams.toFieldText()
+        water = goal.targetWaterMl.toString()
+        glass = goal.waterGlassMl.toString()
         isDefault = goal.isDefault
     }
 
@@ -82,6 +86,8 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
             targetProteinGrams = protein.toDoubleOrNull() ?: Double.NaN,
             targetFatGrams = fat.toDoubleOrNull() ?: Double.NaN,
             targetCarbsGrams = carbs.toDoubleOrNull() ?: Double.NaN,
+            targetWaterMl = water.trim().toIntOrNull() ?: -1,
+            waterGlassMl = glass.trim().toIntOrNull() ?: -1,
         )
         // Same rules the backend enforces, checked here first for a friendlier message.
         val clientError = when {
@@ -90,6 +96,8 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
             request.targetCalories <= 0 -> "Calories must be greater than 0."
             listOf(request.targetProteinGrams, request.targetFatGrams, request.targetCarbsGrams).any { it < 0 } ->
                 "Protein, fat and carbs can't be negative."
+            request.targetWaterMl !in 1..20000 -> "Daily water must be a whole number from 1 to 20000 ml."
+            request.waterGlassMl !in 1..5000 -> "Glass size must be a whole number from 1 to 5000 ml."
             else -> null
         }
         if (clientError != null) {
@@ -147,6 +155,16 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
             GoalField("Fat (g)", fat, onValueChange = { fat = it })
             GoalField("Carbs (g)", carbs, onValueChange = { carbs = it })
 
+            Spacer(Modifier.height(16.dp))
+            Text("Water", style = MaterialTheme.typography.titleMedium)
+            GoalField("Daily water (ml)", water, onValueChange = { water = it }, keyboardType = KeyboardType.Number)
+            GoalField("Glass size (ml)", glass, onValueChange = { glass = it }, keyboardType = KeyboardType.Number)
+            Text(
+                "Each tap of the water button on Home adds one glass.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             errorMessage?.let { message ->
                 Spacer(Modifier.height(8.dp))
                 Text(message, color = MaterialTheme.colorScheme.error)
@@ -174,13 +192,14 @@ private fun GoalField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Decimal,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     )
 }

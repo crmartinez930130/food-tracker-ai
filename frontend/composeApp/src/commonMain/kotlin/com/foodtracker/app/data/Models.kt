@@ -108,6 +108,10 @@ data class DailyGoal(
     val targetProteinGrams: Double,
     val targetFatGrams: Double,
     val targetCarbsGrams: Double,
+    /** Daily water target, in ml. */
+    val targetWaterMl: Int,
+    /** How much one "add a glass" tap logs, in ml. */
+    val waterGlassMl: Int,
     /** True when the user has never saved a goal and these are the backend's built-in defaults. */
     val isDefault: Boolean,
 )
@@ -118,6 +122,8 @@ data class UpdateGoalsRequest(
     val targetProteinGrams: Double,
     val targetFatGrams: Double,
     val targetCarbsGrams: Double,
+    val targetWaterMl: Int,
+    val waterGlassMl: Int,
 )
 
 /**
@@ -152,4 +158,28 @@ data class LogWeightRequest(
     val weightKg: Double,
     /** Omitted (not sent as null) when absent, so the backend defaults it to today. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val day: String? = null,
+)
+
+/** One water entry; it counts toward the local calendar day of [loggedAt] (UTC ISO timestamp). */
+@Serializable
+data class WaterEntry(
+    val id: Int,
+    val amountMl: Int,
+    val loggedAt: String,
+)
+
+/** The water logged on one local day ([date], YYYY-MM-DD), oldest entry first. */
+@Serializable
+data class WaterDay(
+    val date: String,
+    val totalMl: Int,
+    val entries: List<WaterEntry>,
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class LogWaterRequest(
+    val amountMl: Int,
+    /** Omitted (not sent as null) when absent, so the backend logs it now. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val loggedAt: String? = null,
 )

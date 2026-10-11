@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { AppDatabase } from "./client.js";
 import { goals, GOALS_ROW_ID } from "./schema.js";
-import { DEFAULT_DAILY_GOAL, type DailyGoal, type DailyGoalInput } from "../domain/goals.js";
+import { DEFAULT_DAILY_GOAL, type DailyGoal, type DailyGoalUpdate } from "../domain/goals.js";
 
 /** The stored goal, or the built-in defaults (not persisted) when none has been saved. */
 export function getDailyGoal(db: AppDatabase): DailyGoal {
@@ -14,17 +14,25 @@ export function getDailyGoal(db: AppDatabase): DailyGoal {
     targetProteinGrams: row.targetProteinGrams,
     targetFatGrams: row.targetFatGrams,
     targetCarbsGrams: row.targetCarbsGrams,
+    targetWaterMl: row.targetWaterMl,
+    waterGlassMl: row.waterGlassMl,
     isDefault: false,
   };
 }
 
-/** Creates the goal or replaces the existing one - there is never more than one row. */
-export function saveDailyGoal(db: AppDatabase, input: DailyGoalInput): DailyGoal {
+/**
+ * Creates the goal or replaces the existing one - there is never more than one row. Water settings
+ * left out of [input] keep their current value (the defaults when nothing was saved yet).
+ */
+export function saveDailyGoal(db: AppDatabase, input: DailyGoalUpdate): DailyGoal {
+  const current = getDailyGoal(db);
   const values = {
     targetCalories: input.targetCalories,
     targetProteinGrams: input.targetProteinGrams,
     targetFatGrams: input.targetFatGrams,
     targetCarbsGrams: input.targetCarbsGrams,
+    targetWaterMl: input.targetWaterMl ?? current.targetWaterMl,
+    waterGlassMl: input.waterGlassMl ?? current.waterGlassMl,
     updatedAt: new Date().toISOString(),
   };
   db.insert(goals)

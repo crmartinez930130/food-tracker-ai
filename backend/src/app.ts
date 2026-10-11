@@ -4,6 +4,7 @@ import type { AppDatabase } from "./db/client.js";
 import { createMealsRouter } from "./routes/meals.js";
 import { createSummaryRouter } from "./routes/summary.js";
 import { createGoalsRouter } from "./routes/goals.js";
+import { createWaterRouter } from "./routes/water.js";
 import { createWeightRouter } from "./routes/weight.js";
 import { AnalysisError, NotFoundError, ValidationError } from "./errors.js";
 import { logger } from "./logger.js";
@@ -22,6 +23,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/api/summary", createSummaryRouter(deps));
   app.use("/api/goals", createGoalsRouter(deps));
   app.use("/api/weight", createWeightRouter(deps));
+  app.use("/api/water", createWaterRouter(deps));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof ValidationError) {

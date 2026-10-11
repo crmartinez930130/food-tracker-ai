@@ -40,6 +40,9 @@ export const goals = sqliteTable("goals", {
   targetProteinGrams: real("target_protein_grams").notNull(),
   targetFatGrams: real("target_fat_grams").notNull(),
   targetCarbsGrams: real("target_carbs_grams").notNull(),
+  // Added after the nutrition targets; SQL defaults keep a goal saved before them valid.
+  targetWaterMl: integer("target_water_ml").notNull().default(2000),
+  waterGlassMl: integer("water_glass_ml").notNull().default(250),
   updatedAt: text("updated_at").notNull(),
 });
 
@@ -53,6 +56,17 @@ export const weightLogs = sqliteTable(
     createdAt: text("created_at").notNull(),
   },
   (table) => ({ dayIdx: index("weight_logs_day_idx").on(table.day) }),
+);
+
+/** One water entry. It belongs to the local calendar day of `loggedAt` (UTC ISO), like meals. */
+export const waterLogs = sqliteTable(
+  "water_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    amountMl: integer("amount_ml").notNull(),
+    loggedAt: text("logged_at").notNull(),
+  },
+  (table) => ({ loggedAtIdx: index("water_logs_logged_at_idx").on(table.loggedAt) }),
 );
 
 export const mealsRelations = relations(meals, ({ many }) => ({
@@ -72,3 +86,4 @@ export type MealItemRow = typeof mealItems.$inferSelect;
 export type NewMealItemRow = typeof mealItems.$inferInsert;
 export type GoalsRow = typeof goals.$inferSelect;
 export type WeightLogRow = typeof weightLogs.$inferSelect;
+export type WaterLogRow = typeof waterLogs.$inferSelect;

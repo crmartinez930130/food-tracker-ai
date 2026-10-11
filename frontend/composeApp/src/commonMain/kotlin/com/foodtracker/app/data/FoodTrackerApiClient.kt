@@ -192,4 +192,26 @@ class FoodTrackerApiClient(
     suspend fun deleteWeight(id: Int) {
         httpClient.delete("$baseUrl/api/weight/$id").parseOrThrow<Unit>()
     }
+
+    /** The water logged on the local day [date] (YYYY-MM-DD), with its total. */
+    suspend fun getWater(date: String): WaterDay {
+        return httpClient
+            .get("$baseUrl/api/water") {
+                url { parameters.append("date", date) }
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun logWater(request: LogWaterRequest): WaterEntry {
+        return httpClient
+            .post("$baseUrl/api/water") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun deleteWater(id: Int) {
+        httpClient.delete("$baseUrl/api/water/$id").parseOrThrow<Unit>()
+    }
 }
