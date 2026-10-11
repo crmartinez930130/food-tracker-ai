@@ -91,9 +91,15 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
     LaunchedEffect(startDate, endDate, weightReloadKey) {
         weightError = null
         try {
-            weightEntries = apiClient.listWeight(startDate, endDate)
-            // For the log dialog's pre-fill: the latest entry overall, not just this period's.
-            lastKnownWeight = apiClient.listWeight(today.plusDays(-365), today).lastOrNull()?.weightKg
+            val entries = apiClient.listWeight(startDate, endDate)
+            weightEntries = entries
+            // For the log dialog's pre-fill: the latest entry overall. When the period ends today and
+            // has entries, its last one already is (there are no future entries), so skip the lookup.
+            lastKnownWeight = if (endDate == today && entries.isNotEmpty()) {
+                entries.last().weightKg
+            } else {
+                apiClient.listWeight(today.plusDays(-365), today).lastOrNull()?.weightKg
+            }
         } catch (e: Exception) {
             weightError = "Couldn't load weight: ${e.message ?: "unknown error"}"
         }

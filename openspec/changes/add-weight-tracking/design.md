@@ -39,7 +39,7 @@ Summary is already the place for trends, and showing weight below the calorie ch
 - `WeightChart`;
 - the period's entries, newest first, each with its date, the weight and a delete icon button.
 
-"Log weight" opens an `AlertDialog` with a decimal `OutlinedTextField`, pre-filled with the last weight because it rarely changes much, and Save and Cancel buttons. Invalid input shows an error in the dialog. On success, Summary reloads the weight data.
+"Log weight" opens an `AlertDialog` with a decimal `OutlinedTextField`, pre-filled with the last weight because it rarely changes much, and Save and Cancel buttons. That last weight comes from the visible period when it ends today and has entries; otherwise it costs one extra lookup over the last year. Skipping that lookup when it isn't needed was a PR review suggestion. Invalid input shows an error in the dialog. On success, Summary reloads the weight data.
 - *Alternative:* a dedicated screen reached from Home. It would add a route and back handling for a single numeric field.
 
 **6. `WeightChart` is a `Canvas` line aligned to the calorie chart's day slots.**
