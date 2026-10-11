@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,8 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,7 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyTotals
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.LogWeightRequest
+import com.foodtracker.app.data.WeightEntry
 import com.foodtracker.app.ui.summary.CalorieChart
+import com.foodtracker.app.ui.summary.WeightSection
 import com.foodtracker.app.ui.summary.isOverGoal
 import com.foodtracker.app.util.isBeforeDay
 import com.foodtracker.app.util.plusDays
@@ -39,6 +45,7 @@ import com.foodtracker.app.util.todayDateString
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_left
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
@@ -60,6 +67,12 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
     var goalCalories by remember { mutableStateOf(0.0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var weightEntries by remember { mutableStateOf<List<WeightEntry>>(emptyList()) }
+    var lastKnownWeight by remember { mutableStateOf<Double?>(null) }
+    var weightError by remember { mutableStateOf<String?>(null) }
+    var weightReloadKey by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val periodDays = (0 until period.days).map { startDate.plusDays(it) }
 
     LaunchedEffect(startDate, endDate) {
         isLoading = true
@@ -71,6 +84,35 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
             errorMessage = "Couldn't load summary: ${e.message ?: "unknown error"}"
         } finally {
             isLoading = false
+        }
+    }
+
+    // Weight reloads on its own key, so logging or deleting doesn't refetch the calorie chart.
+    LaunchedEffect(startDate, endDate, weightReloadKey) {
+        weightError = null
+        try {
+            val entries = apiClient.listWeight(startDate, endDate)
+            weightEntries = entries
+            // For the log dialog's pre-fill: the latest entry overall. When the period ends today and
+            // has entries, its last one already is (there are no future entries), so skip the lookup.
+            lastKnownWeight = if (endDate == today && entries.isNotEmpty()) {
+                entries.last().weightKg
+            } else {
+                apiClient.listWeight(today.plusDays(-365), today).lastOrNull()?.weightKg
+            }
+        } catch (e: Exception) {
+            weightError = "Couldn't load weight: ${e.message ?: "unknown error"}"
+        }
+    }
+
+    fun changeWeight(action: suspend () -> Unit) {
+        scope.launch {
+            try {
+                action()
+                weightReloadKey++
+            } catch (e: Exception) {
+                weightError = "Couldn't save weight: ${e.message ?: "unknown error"}"
+            }
         }
     }
 
@@ -115,6 +157,18 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
                 PeriodAverages(days = days, goalCalories = goalCalories)
             }
         }
+
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp))
+        weightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        WeightSection(
+            periodDays = periodDays,
+            entries = weightEntries,
+            lastKnownWeight = lastKnownWeight,
+            onLog = { kg -> changeWeight { apiClient.logWeight(LogWeightRequest(weightKg = kg)) } },
+            onDelete = { entry -> changeWeight { apiClient.deleteWeight(entry.id) } },
+        )
     }
 }
 

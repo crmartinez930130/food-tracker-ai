@@ -1,4 +1,4 @@
-import { sqliteTable, integer, real, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, real, text, index } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
 export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -43,6 +43,18 @@ export const goals = sqliteTable("goals", {
   updatedAt: text("updated_at").notNull(),
 });
 
+/** One weighing. `day` is the user's local calendar day (YYYY-MM-DD); several per day are allowed. */
+export const weightLogs = sqliteTable(
+  "weight_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    weightKg: real("weight_kg").notNull(),
+    day: text("day").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => ({ dayIdx: index("weight_logs_day_idx").on(table.day) }),
+);
+
 export const mealsRelations = relations(meals, ({ many }) => ({
   items: many(mealItems),
 }));
@@ -59,3 +71,4 @@ export type NewMealRow = typeof meals.$inferInsert;
 export type MealItemRow = typeof mealItems.$inferSelect;
 export type NewMealItemRow = typeof mealItems.$inferInsert;
 export type GoalsRow = typeof goals.$inferSelect;
+export type WeightLogRow = typeof weightLogs.$inferSelect;

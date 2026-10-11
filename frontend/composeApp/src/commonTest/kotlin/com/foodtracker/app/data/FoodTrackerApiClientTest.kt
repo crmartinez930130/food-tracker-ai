@@ -3,6 +3,7 @@ package com.foodtracker.app.data
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -300,5 +301,74 @@ class FoodTrackerApiClientTest {
         assertEquals(listOf("2026-03-01", "2026-03-02"), days.map { it.date })
         assertEquals(0.0, days[0].totalCalories)
         assertEquals(1850.5, days[1].totalCalories)
+    }
+
+    private fun capturingClient(responseBody: String, status: HttpStatusCode = HttpStatusCode.OK, onRequest: (HttpRequestData) -> Unit): FoodTrackerApiClient {
+        val engine = MockEngine { request ->
+            onRequest(request)
+            respond(
+                content = ByteReadChannel(responseBody),
+                status = status,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        return FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+    }
+
+    @Test
+    fun `listWeight requests the range and deserializes the entries`() = runBlocking {
+        var query: Pair<String?, String?>? = null
+        val api = capturingClient(
+            """[{"id":1,"weightKg":72.4,"day":"2026-03-01","createdAt":"2026-03-01T07:00:00.000Z"}]""",
+        ) { request -> query = request.url.parameters["startDate"] to request.url.parameters["endDate"] }
+
+        val entries = api.listWeight("2026-03-01", "2026-03-07")
+
+        assertEquals("2026-03-01" to "2026-03-07", query)
+        assertEquals(72.4, entries.single().weightKg)
+        assertEquals("2026-03-01", entries.single().day)
+    }
+
+    @Test
+    fun `logWeight omits day when not given instead of sending null`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":5,"weightKg":72.4,"day":"2026-03-07","createdAt":"2026-03-07T07:00:00.000Z"}""",
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        api.logWeight(LogWeightRequest(weightKg = 72.4))
+
+        assertEquals(mapOf("weightKg" to JsonPrimitive(72.4)), Json.parseToJsonElement(sentBody).jsonObject.toMap())
+    }
+
+    @Test
+    fun `logWeight sends day when given`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":6,"weightKg":71.0,"day":"2026-03-01","createdAt":"2026-03-07T07:00:00.000Z"}""",
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        api.logWeight(LogWeightRequest(weightKg = 71.0, day = "2026-03-01"))
+
+        assertEquals(JsonPrimitive("2026-03-01"), Json.parseToJsonElement(sentBody).jsonObject["day"])
+    }
+
+    @Test
+    fun `deleteWeight sends DELETE to the entry path`() = runBlocking {
+        var method: HttpMethod? = null
+        var path: String? = null
+        val engine = MockEngine { request ->
+            method = request.method
+            path = request.url.encodedPath
+            respond(content = ByteReadChannel(""), status = HttpStatusCode.NoContent)
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+
+        api.deleteWeight(9)
+
+        assertEquals(HttpMethod.Delete, method)
+        assertEquals("/api/weight/9", path)
     }
 }

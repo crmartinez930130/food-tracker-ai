@@ -152,4 +152,29 @@ class FoodTrackerApiClient(
             }
             .parseOrThrow()
     }
+
+    /** Weight entries with a day from [startDate] to [endDate] (inclusive), oldest first. */
+    suspend fun listWeight(startDate: String, endDate: String): List<WeightEntry> {
+        return httpClient
+            .get("$baseUrl/api/weight") {
+                url {
+                    parameters.append("startDate", startDate)
+                    parameters.append("endDate", endDate)
+                }
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun logWeight(request: LogWeightRequest): WeightEntry {
+        return httpClient
+            .post("$baseUrl/api/weight") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            .parseOrThrow()
+    }
+
+    suspend fun deleteWeight(id: Int) {
+        httpClient.delete("$baseUrl/api/weight/$id").parseOrThrow<Unit>()
+    }
 }
