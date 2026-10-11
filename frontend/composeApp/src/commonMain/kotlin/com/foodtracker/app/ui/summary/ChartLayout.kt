@@ -1,9 +1,11 @@
 package com.foodtracker.app.ui.summary
 
+import com.foodtracker.app.data.WeightEntry
 import com.foodtracker.app.ui.home.progressOf
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * Top of the chart's value axis: covers both the highest bar and the goal line with a little
@@ -51,4 +53,31 @@ private fun DayOfWeek.shortName(): String = when (this) {
     DayOfWeek.FRIDAY -> "Fr"
     DayOfWeek.SATURDAY -> "Sa"
     DayOfWeek.SUNDAY -> "Su"
+}
+
+/**
+ * One weight per day for charting: the last entry logged that day (by creation time), in day
+ * order. Expects the API's ordering (by day, then creation time) but doesn't rely on it.
+ */
+fun latestPerDay(entries: List<WeightEntry>): List<WeightEntry> =
+    entries
+        .groupBy { it.day }
+        .map { (_, sameDay) -> sameDay.maxBy { it.createdAt } }
+        .sortedBy { it.day }
+
+/**
+ * Value range for the weight axis. Not zero-based - weight moves by small amounts relative to its
+ * size - so it pads the data by 0.5 kg each side, widened to at least 2 kg so a flat series
+ * doesn't exaggerate noise, with bounds on whole kilos.
+ */
+fun weightScale(values: List<Double>): ClosedFloatingPointRange<Double> {
+    if (values.isEmpty()) return 0.0..1.0
+    var low = floor(values.min() - 0.5)
+    var high = ceil(values.max() + 0.5)
+    val missing = 2.0 - (high - low)
+    if (missing > 0) {
+        low -= floor(missing / 2)
+        high += ceil(missing / 2)
+    }
+    return low..high
 }

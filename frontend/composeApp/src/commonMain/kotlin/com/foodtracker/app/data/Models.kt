@@ -1,5 +1,7 @@
 package com.foodtracker.app.data
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -127,4 +129,21 @@ fun MealEntry.toReviewAnalysis(): MealAnalysis = MealAnalysis(
     totalFatGrams = totalFatGrams,
     totalCarbsGrams = totalCarbsGrams,
     notes = notes,
+)
+
+/** One weighing; [day] is the user's local calendar day (YYYY-MM-DD). */
+@Serializable
+data class WeightEntry(
+    val id: Int,
+    val weightKg: Double,
+    val day: String,
+    val createdAt: String,
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class LogWeightRequest(
+    val weightKg: Double,
+    /** Omitted (not sent as null) when absent, so the backend defaults it to today. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val day: String? = null,
 )

@@ -26,3 +26,9 @@ export const UpdateMealRequestSchema = z.object({
   mealType: MealTypeSchema.nullable().optional(),
   isFavorite: z.boolean().optional(),
 });
+
+/** `day` is optional (defaults to today) and checked as a real, non-future date in the route. */
+export const LogWeightRequestSchema = z.object({
+  weightKg: z.number().positive().max(500),
+  day: z.string().optional(),
+});
