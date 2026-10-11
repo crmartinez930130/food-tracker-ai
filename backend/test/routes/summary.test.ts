@@ -124,3 +124,14 @@ describe("GET /api/summary/range", () => {
     expect(res.body.error).toEqual(expect.any(String));
   });
 });
+
+describe("summary date validation", () => {
+  it.each(["/api/summary/daily?date=2026-02-30", "/api/summary/weekly?startDate=2026-02-30"])(
+    "rejects an impossible date on %s",
+    async (path) => {
+      const { app } = buildTestApp();
+
+      expect((await request(app).get(path)).status).toBe(400);
+    },
+  );
+});

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -68,8 +67,13 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var weightEntries by remember { mutableStateOf<List<WeightEntry>>(emptyList()) }
+    // The days the loaded entries belong to; kept with them so a stale (dimmed) chart still lines up.
+    var weightDays by remember { mutableStateOf<List<String>>(emptyList()) }
     var lastKnownWeight by remember { mutableStateOf<Double?>(null) }
     var weightError by remember { mutableStateOf<String?>(null) }
+    var isWeightLoading by remember { mutableStateOf(true) }
+    // An empty list is a valid result, so "has content" means "loaded at least once".
+    var weightLoadedOnce by remember { mutableStateOf(false) }
     var weightReloadKey by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val periodDays = (0 until period.days).map { startDate.plusDays(it) }
@@ -90,9 +94,11 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
     // Weight reloads on its own key, so logging or deleting doesn't refetch the calorie chart.
     LaunchedEffect(startDate, endDate, weightReloadKey) {
         weightError = null
+        isWeightLoading = true
         try {
             val entries = apiClient.listWeight(startDate, endDate)
             weightEntries = entries
+            weightDays = periodDays
             // For the log dialog's pre-fill: the latest entry overall. When the period ends today and
             // has entries, its last one already is (there are no future entries), so skip the lookup.
             lastKnownWeight = if (endDate == today && entries.isNotEmpty()) {
@@ -100,8 +106,11 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
             } else {
                 apiClient.listWeight(today.plusDays(-365), today).lastOrNull()?.weightKg
             }
+            weightLoadedOnce = true
         } catch (e: Exception) {
             weightError = "Couldn't load weight: ${e.message ?: "unknown error"}"
+        } finally {
+            isWeightLoading = false
         }
     }
 
@@ -149,12 +158,14 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
         Spacer(Modifier.height(8.dp))
 
         when {
-            isLoading && days.isEmpty() -> CircularProgressIndicator()
             errorMessage != null -> Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
-            else -> {
-                CalorieChart(days = days, goalCalories = goalCalories)
-                Spacer(Modifier.height(16.dp))
-                PeriodAverages(days = days, goalCalories = goalCalories)
+            // Dims the previous period while the new one loads, instead of showing it unmarked.
+            else -> LoadingAware(loadingPresentation(isLoading, hasContent = days.isNotEmpty())) {
+                Column {
+                    CalorieChart(days = days, goalCalories = goalCalories)
+                    Spacer(Modifier.height(16.dp))
+                    PeriodAverages(days = days, goalCalories = goalCalories)
+                }
             }
         }
 
@@ -162,13 +173,15 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(16.dp))
         weightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        WeightSection(
-            periodDays = periodDays,
-            entries = weightEntries,
-            lastKnownWeight = lastKnownWeight,
-            onLog = { kg -> changeWeight { apiClient.logWeight(LogWeightRequest(weightKg = kg)) } },
-            onDelete = { entry -> changeWeight { apiClient.deleteWeight(entry.id) } },
-        )
+        LoadingAware(loadingPresentation(isWeightLoading, hasContent = weightLoadedOnce)) {
+            WeightSection(
+                periodDays = weightDays,
+                entries = weightEntries,
+                lastKnownWeight = lastKnownWeight,
+                onLog = { kg -> changeWeight { apiClient.logWeight(LogWeightRequest(weightKg = kg)) } },
+                onDelete = { entry -> changeWeight { apiClient.deleteWeight(entry.id) } },
+            )
+        }
     }
 }
 

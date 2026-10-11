@@ -15,8 +15,9 @@ import { analyzeMealPhoto } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
+import { isCalendarDate } from "./dates.js";
+import { validationErrorFrom } from "./validation.js";
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface MealsRouterDeps {
   db: AppDatabase;
@@ -65,7 +66,7 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
     asyncHandler(async (req, res) => {
       const parsed = SaveMealRequestSchema.safeParse(req.body);
       if (!parsed.success) {
-        throw new ValidationError(parsed.error.message);
+        throw validationErrorFrom(parsed.error);
       }
       const entry = createMeal(db, parsed.data);
       res.status(201).json(entry);
@@ -76,7 +77,7 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
     "/",
     asyncHandler(async (req, res) => {
       const date = req.query.date;
-      if (typeof date !== "string" || !DATE_RE.test(date)) {
+      if (!isCalendarDate(date)) {
         throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
       }
       res.json(listMealsByDate(db, date));
@@ -107,7 +108,7 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
       const id = parseId(req.params.id);
       const parsed = UpdateMealRequestSchema.safeParse(req.body);
       if (!parsed.success) {
-        throw new ValidationError(parsed.error.message);
+        throw validationErrorFrom(parsed.error);
       }
       const entry = updateMeal(db, id, parsed.data);
       if (!entry) throw new NotFoundError(`Meal ${id} not found`);

@@ -64,12 +64,18 @@ data class SaveMealRequest(
     val mealType: MealType? = null,
 )
 
+/**
+ * Partial update: only the fields that are set are sent, and the backend keeps the rest. Absent
+ * fields are omitted rather than sent as null (the client encodes defaults), so this can't clear a
+ * field by sending null - nothing in the app needs that yet.
+ */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class UpdateMealRequest(
-    val items: List<MealItem>? = null,
-    val notes: String? = null,
-    val occurredAt: String? = null,
-    val mealType: MealType? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val items: List<MealItem>? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val notes: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val occurredAt: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val mealType: MealType? = null,
 )
 
 @Serializable

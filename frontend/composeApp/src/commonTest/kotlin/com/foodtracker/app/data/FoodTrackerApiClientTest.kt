@@ -371,4 +371,19 @@ class FoodTrackerApiClientTest {
         assertEquals(HttpMethod.Delete, method)
         assertEquals("/api/weight/9", path)
     }
+
+    @Test
+    fun `updateMeal sends only the fields that are set`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":3,"occurredAt":"2026-01-01T08:00:00.000Z","createdAt":"2026-01-01T08:00:01.000Z",""" +
+                """"notes":"x","items":[],"totalCalories":0,"totalProteinGrams":0,"totalFatGrams":0,"totalCarbsGrams":0}""",
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        api.updateMeal(3, UpdateMealRequest(notes = "x"))
+
+        // Any null for items/notes/mealType would be rejected or would clear data on the backend.
+        assertEquals(mapOf("notes" to JsonPrimitive("x")), Json.parseToJsonElement(sentBody).jsonObject.toMap())
+    }
 }
+
