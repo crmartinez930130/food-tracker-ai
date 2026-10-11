@@ -126,26 +126,30 @@ class FoodTrackerApiClientTest {
     @Test
     fun `deserializes the default goal`() = runBlocking {
         val api = mockedApiClient(
-            """{"targetCalories":2000,"targetProteinGrams":125,"targetFatGrams":67,"targetCarbsGrams":225,"isDefault":true}""",
+            """{"targetCalories":2000,"targetProteinGrams":125,"targetFatGrams":67,"targetCarbsGrams":225,"targetWaterMl":2000,"waterGlassMl":250,"isDefault":true}""",
         )
 
         val goal = api.getGoals()
 
         assertEquals(2000.0, goal.targetCalories)
         assertEquals(67.0, goal.targetFatGrams)
+        assertEquals(2000, goal.targetWaterMl)
+        assertEquals(250, goal.waterGlassMl)
         assertTrue(goal.isDefault)
     }
 
     @Test
     fun `deserializes a configured goal`() = runBlocking {
         val api = mockedApiClient(
-            """{"targetCalories":1800,"targetProteinGrams":140.5,"targetFatGrams":60,"targetCarbsGrams":170,"isDefault":false}""",
+            """{"targetCalories":1800,"targetProteinGrams":140.5,"targetFatGrams":60,"targetCarbsGrams":170,"targetWaterMl":2500,"waterGlassMl":330,"isDefault":false}""",
         )
 
         val goal = api.getGoals()
 
         assertEquals(1800.0, goal.targetCalories)
         assertEquals(140.5, goal.targetProteinGrams)
+        assertEquals(2500, goal.targetWaterMl)
+        assertEquals(330, goal.waterGlassMl)
         assertFalse(goal.isDefault)
     }
 
@@ -160,7 +164,7 @@ class FoodTrackerApiClientTest {
             sentBody = request.body.toByteArray().decodeToString()
             respond(
                 content = ByteReadChannel(
-                    """{"targetCalories":1800,"targetProteinGrams":140,"targetFatGrams":60,"targetCarbsGrams":170,"isDefault":false}""",
+                    """{"targetCalories":1800,"targetProteinGrams":140,"targetFatGrams":60,"targetCarbsGrams":170,"targetWaterMl":2500,"waterGlassMl":330,"isDefault":false}""",
                 ),
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
@@ -168,7 +172,7 @@ class FoodTrackerApiClientTest {
         }
         val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
 
-        val saved = api.updateGoals(UpdateGoalsRequest(1800.0, 140.0, 60.0, 170.0))
+        val saved = api.updateGoals(UpdateGoalsRequest(1800.0, 140.0, 60.0, 170.0, targetWaterMl = 2500, waterGlassMl = 330))
 
         assertEquals(HttpMethod.Put, sentMethod)
         assertEquals("/api/goals", sentPath)
@@ -177,6 +181,9 @@ class FoodTrackerApiClientTest {
         assertEquals(JsonPrimitive(140.0), body["targetProteinGrams"])
         assertEquals(JsonPrimitive(60.0), body["targetFatGrams"])
         assertEquals(JsonPrimitive(170.0), body["targetCarbsGrams"])
+        assertEquals(JsonPrimitive(2500), body["targetWaterMl"])
+        assertEquals(JsonPrimitive(330), body["waterGlassMl"])
+        assertEquals(330, saved.waterGlassMl)
         assertFalse(saved.isDefault)
     }
 
@@ -192,7 +199,7 @@ class FoodTrackerApiClientTest {
         val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
 
         val exception = assertFailsWith<ApiException> {
-            api.updateGoals(UpdateGoalsRequest(0.0, 140.0, 60.0, 170.0))
+            api.updateGoals(UpdateGoalsRequest(0.0, 140.0, 60.0, 170.0, targetWaterMl = 2000, waterGlassMl = 250))
         }
         assertEquals("targetCalories: Number must be greater than 0", exception.message)
     }
@@ -345,6 +352,71 @@ class FoodTrackerApiClientTest {
         val error = assertFailsWith<ApiException> { api.exportMealsCsv("2025-01-01", "2026-06-01") }
 
         assertEquals("The range can't be longer than 366 days", error.message)
+    }
+
+    @Test
+    fun `getWater requests the day and deserializes total and entries`() = runBlocking {
+        var path: String? = null
+        var date: String? = null
+        val api = capturingClient(
+            """{"date":"2026-03-05","totalMl":500,"entries":[""" +
+                """{"id":1,"amountMl":250,"loggedAt":"2026-03-05T11:00:00.000Z"},""" +
+                """{"id":2,"amountMl":250,"loggedAt":"2026-03-05T15:00:00.000Z"}]}""",
+        ) { request ->
+            path = request.url.encodedPath
+            date = request.url.parameters["date"]
+        }
+
+        val day = api.getWater("2026-03-05")
+
+        assertEquals("/api/water", path)
+        assertEquals("2026-03-05", date)
+        assertEquals(500, day.totalMl)
+        assertEquals(listOf(1, 2), day.entries.map { it.id })
+    }
+
+    @Test
+    fun `logWater omits loggedAt when not given instead of sending null`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":3,"amountMl":250,"loggedAt":"2026-03-05T11:00:00.000Z"}""",
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        val entry = api.logWater(LogWaterRequest(amountMl = 250))
+
+        assertEquals(mapOf("amountMl" to JsonPrimitive(250)), Json.parseToJsonElement(sentBody).jsonObject.toMap())
+        assertEquals(3, entry.id)
+    }
+
+    @Test
+    fun `logWater sends loggedAt when given`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":4,"amountMl":330,"loggedAt":"2026-03-04T15:00:00.000Z"}""",
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        api.logWater(LogWaterRequest(amountMl = 330, loggedAt = "2026-03-04T15:00:00Z"))
+
+        assertEquals(JsonPrimitive("2026-03-04T15:00:00Z"), Json.parseToJsonElement(sentBody).jsonObject["loggedAt"])
+    }
+
+    @Test
+    fun `deleteWater sends DELETE to the entry path`() = runBlocking {
+        var method: HttpMethod? = null
+        var path: String? = null
+        val engine = MockEngine { request ->
+            method = request.method
+            path = request.url.encodedPath
+            respond(content = ByteReadChannel(""), status = HttpStatusCode.NoContent)
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+
+        api.deleteWater(7)
+
+        assertEquals(HttpMethod.Delete, method)
+        assertEquals("/api/water/7", path)
     }
 
     @Test
