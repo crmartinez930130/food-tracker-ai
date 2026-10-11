@@ -1,5 +1,5 @@
 import type { AppDatabase } from "../db/client.js";
-import { listMealsBetween, listMealsByDate } from "../db/meal-repository.js";
+import { dailyTotalsBetween, listMealsBetween, listMealsByDate, type DayTotals } from "../db/meal-repository.js";
 import type { MealTotals } from "../domain/meal.js";
 
 const ZERO_TOTALS: MealTotals = {
@@ -50,4 +50,17 @@ export function weeklySummary(db: AppDatabase, startDate: string): WeeklySummary
   };
 
   return { total, averagePerDay };
+}
+
+/** One entry per day from startDate to endDate (both inclusive), zero-filled where nothing was logged. */
+export function rangeSummary(db: AppDatabase, startDate: string, endDate: string): DayTotals[] {
+  const loggedDays = new Map(
+    dailyTotalsBetween(db, startDate, addDaysToDateString(endDate, 1)).map((day) => [day.date, day]),
+  );
+
+  const days: DayTotals[] = [];
+  for (let date = startDate; date <= endDate; date = addDaysToDateString(date, 1)) {
+    days.push(loggedDays.get(date) ?? { date, ...ZERO_TOTALS });
+  }
+  return days;
 }

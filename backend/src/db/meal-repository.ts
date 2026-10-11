@@ -5,6 +5,7 @@ import {
   computeTotals,
   type MealEntry,
   type MealItem,
+  type MealTotals,
   type SaveMealInput,
   type UpdateMealInput,
 } from "../domain/meal.js";
@@ -114,6 +115,31 @@ export function listMealsBetween(db: AppDatabase, startDateInclusive: string, en
     const itemRows = db.select().from(mealItems).where(eq(mealItems.mealId, mealRow.id)).all();
     return toMealEntry(mealRow, itemRows);
   });
+}
+
+export interface DayTotals extends MealTotals {
+  date: string;
+}
+
+/**
+ * Summed totals per local calendar day in [startDateInclusive, endDateExclusive), only for days
+ * that have meals, in date order. Aggregates in SQL so items don't need to be loaded.
+ */
+export function dailyTotalsBetween(db: AppDatabase, startDateInclusive: string, endDateExclusive: string): DayTotals[] {
+  const day = sql<string>`date(${meals.occurredAt}, 'localtime')`;
+  return db
+    .select({
+      date: day,
+      totalCalories: sql<number>`sum(${meals.totalCalories})`,
+      totalProteinGrams: sql<number>`sum(${meals.totalProteinGrams})`,
+      totalFatGrams: sql<number>`sum(${meals.totalFatGrams})`,
+      totalCarbsGrams: sql<number>`sum(${meals.totalCarbsGrams})`,
+    })
+    .from(meals)
+    .where(sql`${day} >= ${startDateInclusive} AND ${day} < ${endDateExclusive}`)
+    .groupBy(day)
+    .orderBy(day)
+    .all();
 }
 
 /** Every meal marked as favorite, whatever day it belongs to, ordered by when it occurred (newest first). */

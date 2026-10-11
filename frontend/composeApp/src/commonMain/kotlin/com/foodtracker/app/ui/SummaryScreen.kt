@@ -7,10 +7,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,9 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.foodtracker.app.data.DailyTotals
 import com.foodtracker.app.data.FoodTrackerApiClient
-import com.foodtracker.app.data.NutritionTotals
-import com.foodtracker.app.data.WeeklySummary
+import com.foodtracker.app.ui.summary.CalorieChart
+import com.foodtracker.app.ui.summary.isOverGoal
+import com.foodtracker.app.util.isBeforeDay
 import com.foodtracker.app.util.plusDays
 import com.foodtracker.app.util.todayDateString
 import food_tracker_frontend.composeapp.generated.resources.Res
@@ -34,20 +42,31 @@ import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
-/** Weekly trends. The single-day view lives on Home. */
+/** Rolling windows ending on the selected day (see the add-trend-charts design). */
+private enum class SummaryPeriod(val days: Int, val label: String) {
+    WEEK(7, "Week"),
+    MONTH(30, "Month"),
+}
+
+/** Trends over a week or a month. The single-day view lives on Home. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier) {
-    // The week shown ends today by default: the 7 days starting 6 days ago.
-    var startDate by rememberSaveable { mutableStateOf(todayDateString().plusDays(-6)) }
-    var weekly by remember { mutableStateOf<WeeklySummary?>(null) }
+    val today = todayDateString()
+    var period by rememberSaveable { mutableStateOf(SummaryPeriod.WEEK) }
+    var endDate by rememberSaveable { mutableStateOf(today) }
+    val startDate = endDate.plusDays(-(period.days - 1))
+    var days by remember { mutableStateOf<List<DailyTotals>>(emptyList()) }
+    var goalCalories by remember { mutableStateOf(0.0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(startDate) {
+    LaunchedEffect(startDate, endDate) {
         isLoading = true
         errorMessage = null
         try {
-            weekly = apiClient.weeklySummary(startDate)
+            days = apiClient.rangeSummary(startDate, endDate)
+            goalCalories = apiClient.getGoals().targetCalories
         } catch (e: Exception) {
             errorMessage = "Couldn't load summary: ${e.message ?: "unknown error"}"
         } finally {
@@ -55,43 +74,71 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SummaryPeriod.entries.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = period == option,
+                    onClick = { period = option },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = SummaryPeriod.entries.size),
+                ) { Text(option.label) }
+            }
+        }
+
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { startDate = startDate.plusDays(-7) }) {
-                Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = "Previous week")
+            IconButton(onClick = { endDate = endDate.plusDays(-period.days) }) {
+                Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = "Previous ${period.label.lowercase()}")
             }
             Text(
-                "${startDate} – ${startDate.plusDays(6)}",
+                "$startDate – $endDate",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
             )
-            IconButton(onClick = { startDate = startDate.plusDays(7) }) {
-                Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = "Next week")
+            IconButton(
+                // Never past today; a jump that would overshoot lands on today instead.
+                onClick = { endDate = endDate.plusDays(period.days).let { if (today.isBeforeDay(it)) today else it } },
+                enabled = endDate.isBeforeDay(today),
+            ) {
+                Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = "Next ${period.label.lowercase()}")
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         when {
-            isLoading -> CircularProgressIndicator()
+            isLoading && days.isEmpty() -> CircularProgressIndicator()
             errorMessage != null -> Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
-            else -> weekly?.let { summary ->
-                TotalsCard("Total for the week", summary.total)
+            else -> {
+                CalorieChart(days = days, goalCalories = goalCalories)
                 Spacer(Modifier.height(16.dp))
-                TotalsCard("Average per day", summary.averagePerDay)
+                PeriodAverages(days = days, goalCalories = goalCalories)
             }
         }
     }
 }
 
 @Composable
-private fun TotalsCard(title: String, totals: NutritionTotals, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text("${totals.totalCalories.roundToInt()} kcal")
-        Text("Protein: ${totals.totalProteinGrams.roundToInt()} g")
-        Text("Fat: ${totals.totalFatGrams.roundToInt()} g")
-        Text("Carbs: ${totals.totalCarbsGrams.roundToInt()} g")
+private fun PeriodAverages(days: List<DailyTotals>, goalCalories: Double, modifier: Modifier = Modifier) {
+    val count = days.size.coerceAtLeast(1)
+    // Empty days count as zero, matching the backend's weekly average semantics.
+    val totalCalories = days.sumOf { it.totalCalories }
+    val overGoal = days.count { isOverGoal(it.totalCalories, goalCalories) }
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text("Daily average", style = MaterialTheme.typography.titleMedium)
+        Text("${(totalCalories / count).roundToInt()} kcal", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Protein ${(days.sumOf { it.totalProteinGrams } / count).roundToInt()} g · " +
+                "Fat ${(days.sumOf { it.totalFatGrams } / count).roundToInt()} g · " +
+                "Carbs ${(days.sumOf { it.totalCarbsGrams } / count).roundToInt()} g",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "${totalCalories.roundToInt()} kcal over ${days.size} days · $overGoal over goal",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
