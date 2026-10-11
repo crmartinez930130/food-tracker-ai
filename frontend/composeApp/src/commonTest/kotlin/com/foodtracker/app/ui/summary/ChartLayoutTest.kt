@@ -46,11 +46,11 @@ class ChartLayoutTest {
     }
 
     @Test
-    fun `a week labels every bar with its weekday initial`() {
+    fun `a week labels every bar with an unambiguous two-letter weekday`() {
         // 2026-10-05 is a Monday.
         val labels = (0 until 7).map { i -> xAxisLabel("2026-10-" + (5 + i).toString().padStart(2, '0'), i, 7) }
 
-        assertEquals(listOf("M", "T", "W", "T", "F", "S", "S"), labels)
+        assertEquals(listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"), labels)
     }
 
     @Test

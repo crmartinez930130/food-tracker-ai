@@ -36,7 +36,7 @@ See proposal.md for motivation.
   - `isOverGoal(value, goal)` follows the same rule as `progressOf` on Home: over only when strictly above a positive goal.
 - `CalorieChart.kt` draws the bars with rounded tops: `primary` for days at or under the goal and `error` for days over it. The goal is a dashed `outline` line, with "goal N" labelled on the left, and the baseline uses `outlineVariant`.
 - **X labels:**
-  - A week shows the weekday initial for every bar.
+  - A week shows a two-letter weekday for every bar (Mo, Tu, …). Single initials would repeat T/T and S/S, as the PR review pointed out.
   - A month shows the day of the month every 5 bars, so the labels don't collide.
 - Whole-chart semantics give a `contentDescription` such as "Calories per day, May 3 to May 9; average 1830 kcal; 2 days over goal" for TalkBack.
 - *Alternative:* Vico 2.5 (`com.patrykandpatrick.vico:multiplatform`). It is mature and multiplatform, but it is a sizeable dependency with its own model and producer API for two simple charts, and #11's line chart can follow the same Canvas approach. Revisit it if we ever need scrolling or zoomable charts or tooltips.

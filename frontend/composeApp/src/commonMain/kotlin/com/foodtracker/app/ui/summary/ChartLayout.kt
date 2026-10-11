@@ -30,24 +30,25 @@ fun barFraction(value: Double, scaleMax: Double): Float =
 fun isOverGoal(value: Double, goal: Double): Boolean = progressOf(value, goal).isOver
 
 /**
- * X-axis label for the bar at [index] of [count]: the weekday initial for a week, the day of the
+ * X-axis label for the bar at [index] of [count]: a two-letter weekday for a week (one letter would
+ * repeat T/T and S/S), the day of the
  * month every 5th bar for longer periods (so labels don't collide), or null for no label.
  */
 fun xAxisLabel(date: String, index: Int, count: Int): String? {
     val day = LocalDate.parse(date)
     return when {
-        count <= 7 -> day.dayOfWeek.initial()
+        count <= 7 -> day.dayOfWeek.shortName()
         index % 5 == 0 -> day.day.toString()
         else -> null
     }
 }
 
-private fun DayOfWeek.initial(): String = when (this) {
-    DayOfWeek.MONDAY -> "M"
-    DayOfWeek.TUESDAY -> "T"
-    DayOfWeek.WEDNESDAY -> "W"
-    DayOfWeek.THURSDAY -> "T"
-    DayOfWeek.FRIDAY -> "F"
-    DayOfWeek.SATURDAY -> "S"
-    DayOfWeek.SUNDAY -> "S"
+private fun DayOfWeek.shortName(): String = when (this) {
+    DayOfWeek.MONDAY -> "Mo"
+    DayOfWeek.TUESDAY -> "Tu"
+    DayOfWeek.WEDNESDAY -> "We"
+    DayOfWeek.THURSDAY -> "Th"
+    DayOfWeek.FRIDAY -> "Fr"
+    DayOfWeek.SATURDAY -> "Sa"
+    DayOfWeek.SUNDAY -> "Su"
 }
