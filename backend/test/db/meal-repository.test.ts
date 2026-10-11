@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type AppDatabase } from "../../src/db/client.js";
 import {
   createMeal,
+  dailyTotalsBetween,
   deleteMeal,
   getMealById,
   listMealsBetween,
@@ -193,5 +194,21 @@ describe("favorites", () => {
   it("returns an empty list when there are no favorites", () => {
     createMeal(db, { items: [sampleItem] });
     expect(listFavoriteMeals(db)).toEqual([]);
+  });
+});
+
+describe("dailyTotalsBetween", () => {
+  it("sums each day's meals, omits days without meals, and orders by day", () => {
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-03-03T12:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-03-01T12:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-03-01T13:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-03-10T12:00:00.000Z" }); // outside the range
+
+    const days = dailyTotalsBetween(db, "2026-03-01", "2026-03-05");
+
+    expect(days.map((d) => d.date)).toEqual(["2026-03-01", "2026-03-03"]);
+    expect(days[0].totalCalories).toBe(2 * sampleItem.calories);
+    expect(days[0].totalProteinGrams).toBeCloseTo(2 * sampleItem.proteinGrams);
+    expect(days[1].totalCalories).toBe(sampleItem.calories);
   });
 });

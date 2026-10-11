@@ -271,4 +271,34 @@ class FoodTrackerApiClientTest {
         assertEquals(50.0, analysis.totalCarbsGrams)
         assertEquals("with honey", analysis.notes)
     }
+
+    @Test
+    fun `rangeSummary requests the range and deserializes one entry per day`() = runBlocking {
+        var sentPath: String? = null
+        var sentStart: String? = null
+        var sentEnd: String? = null
+        val engine = MockEngine { request ->
+            sentPath = request.url.encodedPath
+            sentStart = request.url.parameters["startDate"]
+            sentEnd = request.url.parameters["endDate"]
+            respond(
+                content = ByteReadChannel(
+                    """[{"date":"2026-03-01","totalCalories":0,"totalProteinGrams":0,"totalFatGrams":0,"totalCarbsGrams":0},""" +
+                        """{"date":"2026-03-02","totalCalories":1850.5,"totalProteinGrams":90,"totalFatGrams":60,"totalCarbsGrams":200}]""",
+                ),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+
+        val days = api.rangeSummary("2026-03-01", "2026-03-02")
+
+        assertEquals("/api/summary/range", sentPath)
+        assertEquals("2026-03-01", sentStart)
+        assertEquals("2026-03-02", sentEnd)
+        assertEquals(listOf("2026-03-01", "2026-03-02"), days.map { it.date })
+        assertEquals(0.0, days[0].totalCalories)
+        assertEquals(1850.5, days[1].totalCalories)
+    }
 }

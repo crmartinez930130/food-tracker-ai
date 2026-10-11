@@ -140,4 +140,16 @@ class FoodTrackerApiClient(
             }
             .parseOrThrow()
     }
+
+    /** One entry per day from [startDate] to [endDate], both inclusive (`YYYY-MM-DD`). */
+    suspend fun rangeSummary(startDate: String, endDate: String): List<DailyTotals> {
+        return httpClient
+            .get("$baseUrl/api/summary/range") {
+                url {
+                    parameters.append("startDate", startDate)
+                    parameters.append("endDate", endDate)
+                }
+            }
+            .parseOrThrow()
+    }
 }
