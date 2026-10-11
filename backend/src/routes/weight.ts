@@ -3,6 +3,7 @@ import type { AppDatabase } from "../db/client.js";
 import { createWeightLog, deleteWeightLog, listWeightLogs } from "../db/weight-repository.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { asyncHandler } from "./async-handler.js";
+import { validationErrorFrom } from "./validation.js";
 import { isCalendarDate, localToday, parseDateRange } from "./dates.js";
 import { LogWeightRequestSchema } from "./schemas.js";
 
@@ -26,9 +27,7 @@ export function createWeightRouter({ db }: WeightRouterDeps): Router {
     asyncHandler(async (req, res) => {
       const parsed = LogWeightRequestSchema.safeParse(req.body);
       if (!parsed.success) {
-        throw new ValidationError(
-          parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "),
-        );
+        throw validationErrorFrom(parsed.error);
       }
       const today = localToday();
       const day = parsed.data.day ?? today;

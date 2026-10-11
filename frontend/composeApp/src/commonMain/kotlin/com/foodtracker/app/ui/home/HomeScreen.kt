@@ -41,7 +41,9 @@ import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
+import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.displayLabelOrOther
+import com.foodtracker.app.ui.loadingPresentation
 import com.foodtracker.app.util.isBeforeDay
 import com.foodtracker.app.util.plusDays
 import com.foodtracker.app.util.todayDateString
@@ -131,56 +133,58 @@ fun HomeScreen(
 
         val currentGoal = goal
         when {
-            isLoading && currentGoal == null -> CircularProgressIndicator(Modifier.padding(16.dp))
             errorMessage != null -> Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
-            currentGoal != null -> {
-                val totals = meals.dayTotals()
-                val grouped = meals.groupBy { it.mealType }
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    item(key = "progress") {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            CalorieRing(
-                                consumed = totals.calories,
-                                target = currentGoal.targetCalories,
-                                onClick = onEditGoal,
-                            )
-                            if (currentGoal.isDefault) {
-                                AssistChip(
+            // Dims the previous day while the new one loads, instead of showing it unmarked.
+            else -> LoadingAware(loadingPresentation(isLoading, hasContent = currentGoal != null), Modifier.weight(1f)) {
+                if (currentGoal != null) {
+                    val totals = meals.dayTotals()
+                    val grouped = meals.groupBy { it.mealType }
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        item(key = "progress") {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                CalorieRing(
+                                    consumed = totals.calories,
+                                    target = currentGoal.targetCalories,
                                     onClick = onEditGoal,
-                                    label = { Text("Using default goal — set yours") },
-                                    leadingIcon = { Icon(painterResource(Res.drawable.ic_edit), contentDescription = null) },
+                                )
+                                if (currentGoal.isDefault) {
+                                    AssistChip(
+                                        onClick = onEditGoal,
+                                        label = { Text("Using default goal — set yours") },
+                                        leadingIcon = { Icon(painterResource(Res.drawable.ic_edit), contentDescription = null) },
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                MacroBar("Protein", totals.protein, currentGoal.targetProteinGrams)
+                                MacroBar("Fat", totals.fat, currentGoal.targetFatGrams)
+                                MacroBar("Carbs", totals.carbs, currentGoal.targetCarbsGrams)
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+                        if (meals.isEmpty()) {
+                            item(key = "empty") {
+                                Text(
+                                    "Nothing logged this day yet.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 16.dp),
                                 )
                             }
-                            Spacer(Modifier.height(8.dp))
-                            MacroBar("Protein", totals.protein, currentGoal.targetProteinGrams)
-                            MacroBar("Fat", totals.fat, currentGoal.targetFatGrams)
-                            MacroBar("Carbs", totals.carbs, currentGoal.targetCarbsGrams)
-                            Spacer(Modifier.height(8.dp))
                         }
-                    }
-                    if (meals.isEmpty()) {
-                        item(key = "empty") {
-                            Text(
-                                "Nothing logged this day yet.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 16.dp),
-                            )
-                        }
-                    }
-                    for (type in MEAL_TYPE_SECTION_ORDER) {
-                        val mealsOfType = grouped[type] ?: continue
-                        item(key = "header-${type?.name ?: "other"}") {
-                            Text(
-                                type.displayLabelOrOther(),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                            )
-                        }
-                        items(mealsOfType, key = { it.id }) { meal ->
-                            MealRow(meal, onToggleFavorite = { toggleFavorite(meal) }, onDelete = { deleteMeal(meal.id) })
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        for (type in MEAL_TYPE_SECTION_ORDER) {
+                            val mealsOfType = grouped[type] ?: continue
+                            item(key = "header-${type?.name ?: "other"}") {
+                                Text(
+                                    type.displayLabelOrOther(),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                                )
+                            }
+                            items(mealsOfType, key = { it.id }) { meal ->
+                                MealRow(meal, onToggleFavorite = { toggleFavorite(meal) }, onDelete = { deleteMeal(meal.id) })
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
                         }
                     }
                 }

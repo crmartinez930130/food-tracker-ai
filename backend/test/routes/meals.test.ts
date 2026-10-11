@@ -263,3 +263,51 @@ describe("favorites", () => {
     expect((await request(app).get(`/api/meals/${created.body.id}`)).body.isFavorite).toBe(false);
   });
 });
+
+describe("readable validation errors", () => {
+  it("POST with malformed items returns 400 with field: message and no raw JSON", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/meals").send({ items: [{ name: "x", calories: "lots" }] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/^items\.0\.\w+: /);
+    expect(res.body.error).not.toContain("{");
+  });
+
+  it("POST with a non-object body names the body", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/meals").set("content-type", "application/json").send("[1,2]");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/^body: /);
+  });
+
+  it("PATCH with a wrong-typed field names it and leaves the meal unchanged", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app).post("/api/meals").send({ items: [sampleItem], notes: "keep" });
+
+    const res = await request(app).patch(`/api/meals/${created.body.id}`).send({ isFavorite: "yes" });
+    const after = await request(app).get(`/api/meals/${created.body.id}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/^isFavorite: /);
+    expect(after.body.isFavorite).toBe(false);
+    expect(after.body.notes).toBe("keep");
+  });
+});
+
+describe("GET /api/meals date validation", () => {
+  it("rejects an impossible date with 400", async () => {
+    const { app } = buildTestApp();
+
+    expect((await request(app).get("/api/meals").query({ date: "2026-02-30" })).status).toBe(400);
+  });
+
+  it("still accepts a real date", async () => {
+    const { app } = buildTestApp();
+
+    expect((await request(app).get("/api/meals").query({ date: "2026-02-28" })).status).toBe(200);
+  });
+});
