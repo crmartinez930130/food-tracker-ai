@@ -201,3 +201,65 @@ describe("DELETE /api/meals/:id", () => {
     expect(listed.body).toEqual([]);
   });
 });
+
+describe("favorites", () => {
+  it("includes isFavorite (false) on newly saved meals", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    expect(res.body.isFavorite).toBe(false);
+  });
+
+  it("marks and unmarks a meal as favorite via PATCH", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    const marked = await request(app).patch(`/api/meals/${created.body.id}`).send({ isFavorite: true });
+    expect(marked.status).toBe(200);
+    expect(marked.body.isFavorite).toBe(true);
+
+    const unmarked = await request(app).patch(`/api/meals/${created.body.id}`).send({ isFavorite: false });
+    expect(unmarked.body.isFavorite).toBe(false);
+    expect((await request(app).get(`/api/meals/${created.body.id}`)).body.isFavorite).toBe(false);
+  });
+
+  it("GET /api/meals/favorites returns only favorites, from any date, newest first", async () => {
+    const { app } = buildTestApp();
+    const older = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], occurredAt: "2026-01-01T12:00:00.000Z" });
+    const newer = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], occurredAt: "2026-03-15T12:00:00.000Z" });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: "2026-02-10T12:00:00.000Z" });
+    await request(app).patch(`/api/meals/${older.body.id}`).send({ isFavorite: true });
+    await request(app).patch(`/api/meals/${newer.body.id}`).send({ isFavorite: true });
+
+    const res = await request(app).get("/api/meals/favorites");
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((m: { id: number }) => m.id)).toEqual([newer.body.id, older.body.id]);
+    expect(res.body[0].items[0].name).toBe(sampleItem.name);
+  });
+
+  it("GET /api/meals/favorites returns an empty list when there are none (not routed to /:id)", async () => {
+    const { app } = buildTestApp();
+    await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    const res = await request(app).get("/api/meals/favorites");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it("rejects a non-boolean isFavorite with 400 and leaves the meal unchanged", async () => {
+    const { app } = buildTestApp();
+    const created = await request(app).post("/api/meals").send({ items: [sampleItem] });
+
+    const res = await request(app).patch(`/api/meals/${created.body.id}`).send({ isFavorite: "yes" });
+
+    expect(res.status).toBe(400);
+    expect((await request(app).get(`/api/meals/${created.body.id}`)).body.isFavorite).toBe(false);
+  });
+});

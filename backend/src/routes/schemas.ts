@@ -24,4 +24,5 @@ export const UpdateMealRequestSchema = z.object({
   notes: z.string().nullable().optional(),
   occurredAt: z.string().nullable().optional(),
   mealType: MealTypeSchema.nullable().optional(),
+  isFavorite: z.boolean().optional(),
 });

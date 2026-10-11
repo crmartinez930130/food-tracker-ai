@@ -127,4 +127,17 @@ class FoodTrackerApiClient(
             }
             .parseOrThrow()
     }
+
+    suspend fun listFavorites(): List<MealEntry> {
+        return httpClient.get("$baseUrl/api/meals/favorites").parseOrThrow()
+    }
+
+    suspend fun setFavorite(id: Int, isFavorite: Boolean): MealEntry {
+        return httpClient
+            .patch("$baseUrl/api/meals/$id") {
+                contentType(ContentType.Application.Json)
+                setBody(FavoriteUpdateRequest(isFavorite))
+            }
+            .parseOrThrow()
+    }
 }
