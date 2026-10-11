@@ -28,6 +28,7 @@ export interface MealEntry extends MealTotals {
   createdAt: string;
   notes: string | null;
   mealType: MealType | null;
+  isFavorite: boolean;
   items: MealItem[];
 }
 
@@ -43,6 +44,7 @@ export interface UpdateMealInput {
   notes?: string | null;
   occurredAt?: string | null;
   mealType?: MealType | null;
+  isFavorite?: boolean;
 }
 
 export function computeTotals(items: MealItemInput[]): MealTotals {

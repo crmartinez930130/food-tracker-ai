@@ -83,3 +83,17 @@ describe("UpdateGoalsRequestSchema", () => {
     expect(UpdateGoalsRequestSchema.safeParse({ ...validGoal, targetFatGrams: -1 }).success).toBe(false);
   });
 });
+
+describe("UpdateMealRequestSchema isFavorite", () => {
+  it.each([true, false])("accepts isFavorite %s", (isFavorite) => {
+    expect(UpdateMealRequestSchema.safeParse({ isFavorite }).success).toBe(true);
+  });
+
+  it("accepts an update without isFavorite", () => {
+    expect(UpdateMealRequestSchema.safeParse({ notes: "x" }).success).toBe(true);
+  });
+
+  it.each(["true", 1, null])("rejects a non-boolean isFavorite (%s)", (isFavorite) => {
+    expect(UpdateMealRequestSchema.safeParse({ isFavorite }).success).toBe(false);
+  });
+});

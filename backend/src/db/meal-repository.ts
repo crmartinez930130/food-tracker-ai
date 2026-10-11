@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "./client.js";
 import { meals, mealItems, type NewMealItemRow } from "./schema.js";
 import {
@@ -30,6 +30,7 @@ function toMealEntry(
     createdAt: mealRow.createdAt,
     notes: mealRow.notes,
     mealType: mealRow.mealType,
+    isFavorite: mealRow.isFavorite,
     items,
     totalCalories: mealRow.totalCalories,
     totalProteinGrams: mealRow.totalProteinGrams,
@@ -115,6 +116,16 @@ export function listMealsBetween(db: AppDatabase, startDateInclusive: string, en
   });
 }
 
+/** Every meal marked as favorite, whatever day it was logged on, most recently logged first. */
+export function listFavoriteMeals(db: AppDatabase): MealEntry[] {
+  const mealRows = db.select().from(meals).where(eq(meals.isFavorite, true)).orderBy(desc(meals.occurredAt)).all();
+
+  return mealRows.map((mealRow) => {
+    const itemRows = db.select().from(mealItems).where(eq(mealItems.mealId, mealRow.id)).all();
+    return toMealEntry(mealRow, itemRows);
+  });
+}
+
 export function updateMeal(db: AppDatabase, id: number, input: UpdateMealInput): MealEntry | null {
   const existing = getMealById(db, id);
   if (!existing) return null;
@@ -127,6 +138,7 @@ export function updateMeal(db: AppDatabase, id: number, input: UpdateMealInput):
       occurredAt: input.occurredAt ?? existing.occurredAt,
       notes: input.notes !== undefined ? input.notes : existing.notes,
       mealType: input.mealType !== undefined ? input.mealType : existing.mealType,
+      isFavorite: input.isFavorite !== undefined ? input.isFavorite : existing.isFavorite,
       ...totals,
     })
     .where(eq(meals.id, id))

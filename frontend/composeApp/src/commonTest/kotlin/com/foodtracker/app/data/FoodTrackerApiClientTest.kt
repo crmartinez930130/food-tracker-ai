@@ -195,4 +195,80 @@ class FoodTrackerApiClientTest {
         }
         assertEquals("targetCalories: Number must be greater than 0", exception.message)
     }
+
+    @Test
+    fun `deserializes favorites, defaulting isFavorite to false when absent`() = runBlocking {
+        val api = mockedApiClient(
+            """
+            [
+              {"id": 7, "occurredAt": "2026-01-01T08:00:00.000Z", "createdAt": "2026-01-01T08:00:01.000Z",
+               "isFavorite": true, "items": [], "totalCalories": 300, "totalProteinGrams": 20,
+               "totalFatGrams": 10, "totalCarbsGrams": 30},
+              {"id": 8, "occurredAt": "2026-01-02T08:00:00.000Z", "createdAt": "2026-01-02T08:00:01.000Z",
+               "items": [], "totalCalories": 0, "totalProteinGrams": 0, "totalFatGrams": 0, "totalCarbsGrams": 0}
+            ]
+            """.trimIndent(),
+        )
+
+        val meals = api.listFavorites()
+
+        assertTrue(meals[0].isFavorite)
+        assertFalse(meals[1].isFavorite)
+    }
+
+    @Test
+    fun `setFavorite sends a PATCH with only isFavorite in the body`() = runBlocking {
+        var sentMethod: HttpMethod? = null
+        var sentPath: String? = null
+        var sentBody = ""
+        val engine = MockEngine { request ->
+            sentMethod = request.method
+            sentPath = request.url.encodedPath
+            sentBody = request.body.toByteArray().decodeToString()
+            respond(
+                content = ByteReadChannel(
+                    """{"id":7,"occurredAt":"2026-01-01T08:00:00.000Z","createdAt":"2026-01-01T08:00:01.000Z",""" +
+                        """"isFavorite":true,"items":[],"totalCalories":0,"totalProteinGrams":0,"totalFatGrams":0,"totalCarbsGrams":0}""",
+                ),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
+
+        val updated = api.setFavorite(7, true)
+
+        assertEquals(HttpMethod.Patch, sentMethod)
+        assertEquals("/api/meals/7", sentPath)
+        // Exactly one key: any extra (e.g. "notes": null) would clear data on the backend.
+        assertEquals(mapOf("isFavorite" to JsonPrimitive(true)), Json.parseToJsonElement(sentBody).jsonObject.toMap())
+        assertTrue(updated.isFavorite)
+    }
+
+    @Test
+    fun `toReviewAnalysis carries items, totals and notes over`() {
+        val item = MealItem("Oatmeal", 250.0, Confidence.HIGH, 300.0, 10.0, 6.0, 50.0)
+        val entry = MealEntry(
+            id = 3,
+            occurredAt = "2026-01-01T08:00:00.000Z",
+            createdAt = "2026-01-01T08:00:01.000Z",
+            notes = "with honey",
+            mealType = MealType.BREAKFAST,
+            isFavorite = true,
+            items = listOf(item),
+            totalCalories = 300.0,
+            totalProteinGrams = 10.0,
+            totalFatGrams = 6.0,
+            totalCarbsGrams = 50.0,
+        )
+
+        val analysis = entry.toReviewAnalysis()
+
+        assertEquals(listOf(item), analysis.items)
+        assertEquals(300.0, analysis.totalCalories)
+        assertEquals(10.0, analysis.totalProteinGrams)
+        assertEquals(6.0, analysis.totalFatGrams)
+        assertEquals(50.0, analysis.totalCarbsGrams)
+        assertEquals("with honey", analysis.notes)
+    }
 }

@@ -46,6 +46,7 @@ data class MealEntry(
     val createdAt: String,
     val notes: String? = null,
     val mealType: MealType? = null,
+    val isFavorite: Boolean = false,
     val items: List<MealItem>,
     val totalCalories: Double,
     val totalProteinGrams: Double,
@@ -99,4 +100,21 @@ data class UpdateGoalsRequest(
     val targetProteinGrams: Double,
     val targetFatGrams: Double,
     val targetCarbsGrams: Double,
+)
+
+/**
+ * Body for toggling a favorite. Deliberately not [UpdateMealRequest]: the client serializes with
+ * `encodeDefaults`, so its null fields would be sent too and clear the meal's notes and type.
+ */
+@Serializable
+data class FavoriteUpdateRequest(val isFavorite: Boolean)
+
+/** Starting data for the review screen when re-logging a saved meal: same foods, no new analysis. */
+fun MealEntry.toReviewAnalysis(): MealAnalysis = MealAnalysis(
+    items = items,
+    totalCalories = totalCalories,
+    totalProteinGrams = totalProteinGrams,
+    totalFatGrams = totalFatGrams,
+    totalCarbsGrams = totalCarbsGrams,
+    notes = notes,
 )

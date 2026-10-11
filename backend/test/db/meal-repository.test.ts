@@ -5,6 +5,7 @@ import {
   deleteMeal,
   getMealById,
   listMealsBetween,
+  listFavoriteMeals,
   listMealsByDate,
   updateMeal,
 } from "../../src/db/meal-repository.js";
@@ -150,5 +151,47 @@ describe("deleteMeal", () => {
     const created = createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T12:00:00.000Z" });
     deleteMeal(db, created.id);
     expect(listMealsByDate(db, "2026-01-01")).toEqual([]);
+  });
+});
+
+describe("favorites", () => {
+  it("saves new meals as not favorite", () => {
+    expect(createMeal(db, { items: [sampleItem] }).isFavorite).toBe(false);
+  });
+
+  it("marks and unmarks a meal as favorite", () => {
+    const created = createMeal(db, { items: [sampleItem] });
+
+    expect(updateMeal(db, created.id, { isFavorite: true })?.isFavorite).toBe(true);
+    expect(getMealById(db, created.id)?.isFavorite).toBe(true);
+
+    expect(updateMeal(db, created.id, { isFavorite: false })?.isFavorite).toBe(false);
+    expect(getMealById(db, created.id)?.isFavorite).toBe(false);
+  });
+
+  it("keeps the favorite flag when an update doesn't mention it", () => {
+    const created = createMeal(db, { items: [sampleItem] });
+    updateMeal(db, created.id, { isFavorite: true });
+
+    expect(updateMeal(db, created.id, { notes: "edited" })?.isFavorite).toBe(true);
+  });
+
+  it("lists only favorites, from any date, newest first", () => {
+    const older = createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T12:00:00.000Z" });
+    const newer = createMeal(db, { items: [sampleItem], occurredAt: "2026-03-15T12:00:00.000Z" });
+    createMeal(db, { items: [sampleItem], occurredAt: "2026-02-10T12:00:00.000Z" }); // not a favorite
+    updateMeal(db, older.id, { isFavorite: true });
+    updateMeal(db, newer.id, { isFavorite: true });
+
+    const favorites = listFavoriteMeals(db);
+
+    expect(favorites.map((m) => m.id)).toEqual([newer.id, older.id]);
+    expect(favorites.every((m) => m.isFavorite)).toBe(true);
+    expect(favorites[0].items[0].name).toBe(sampleItem.name);
+  });
+
+  it("returns an empty list when there are no favorites", () => {
+    createMeal(db, { items: [sampleItem] });
+    expect(listFavoriteMeals(db)).toEqual([]);
   });
 });

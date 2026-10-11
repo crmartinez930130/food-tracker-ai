@@ -49,6 +49,8 @@ import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_left
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
 import food_tracker_frontend.composeapp.generated.resources.ic_edit
+import food_tracker_frontend.composeapp.generated.resources.ic_star
+import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
@@ -93,6 +95,17 @@ fun HomeScreen(
             errorMessage = "Couldn't load this day: ${e.message ?: "unknown error"}"
         } finally {
             isLoading = false
+        }
+    }
+
+    fun toggleFavorite(meal: MealEntry) {
+        scope.launch {
+            try {
+                apiClient.setFavorite(meal.id, !meal.isFavorite)
+                reloadKey++
+            } catch (e: Exception) {
+                errorMessage = "Couldn't update favorite: ${e.message ?: "unknown error"}"
+            }
         }
     }
 
@@ -166,7 +179,7 @@ fun HomeScreen(
                             )
                         }
                         items(mealsOfType, key = { it.id }) { meal ->
-                            MealRow(meal, onDelete = { deleteMeal(meal.id) })
+                            MealRow(meal, onToggleFavorite = { toggleFavorite(meal) }, onDelete = { deleteMeal(meal.id) })
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
@@ -270,7 +283,12 @@ private fun MacroBar(name: String, consumed: Double, target: Double, modifier: M
 }
 
 @Composable
-private fun MealRow(meal: MealEntry, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+private fun MealRow(
+    meal: MealEntry,
+    onToggleFavorite: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(meal.items.joinToString(", ") { it.name }.ifBlank { "(no items)" })
@@ -279,6 +297,13 @@ private fun MealRow(meal: MealEntry, onDelete: () -> Unit, modifier: Modifier = 
                     "F ${meal.totalFatGrams.roundToInt()}g · C ${meal.totalCarbsGrams.roundToInt()}g",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onToggleFavorite) {
+            Icon(
+                painterResource(if (meal.isFavorite) Res.drawable.ic_star_filled else Res.drawable.ic_star),
+                contentDescription = if (meal.isFavorite) "Remove from favorites" else "Add to favorites",
+                tint = if (meal.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = onDelete) { Text("Delete") }

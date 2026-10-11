@@ -14,6 +14,7 @@ export const meals = sqliteTable("meals", {
   totalCarbsGrams: real("total_carbs_grams").notNull(),
   notes: text("notes"),
   mealType: text("meal_type", { enum: MEAL_TYPES }),
+  isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
 });
 
 export const mealItems = sqliteTable("meal_items", {

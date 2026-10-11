@@ -6,6 +6,7 @@ import {
   createMeal,
   deleteMeal,
   getMealById,
+  listFavoriteMeals,
   listMealsByDate,
   updateMeal,
 } from "../db/meal-repository.js";
@@ -79,6 +80,14 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
         throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
       }
       res.json(listMealsByDate(db, date));
+    }),
+  );
+
+  // Must stay above "/:id", or Express would route "favorites" there as an (invalid) id.
+  router.get(
+    "/favorites",
+    asyncHandler(async (_req, res) => {
+      res.json(listFavoriteMeals(db));
     }),
   );
 
