@@ -30,6 +30,7 @@ fun MainScreen(
     onHomeDateChange: (String) -> Unit,
     onStartCapture: () -> Unit,
     onEditGoal: () -> Unit,
+    onOpenReminders: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tab by remember(initialTab) { mutableStateOf(initialTab) }
@@ -65,6 +66,7 @@ fun MainScreen(
                     date = homeDate,
                     onDateChange = onHomeDateChange,
                     onEditGoal = onEditGoal,
+                    onOpenReminders = onOpenReminders,
                 )
                 MainTab.SUMMARY -> SummaryScreen(apiClient)
             }
