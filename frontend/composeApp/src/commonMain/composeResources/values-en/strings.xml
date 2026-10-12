@@ -173,4 +173,16 @@
         <item quantity="one">Pick at most %1$d days (this range has %2$d)</item>
         <item quantity="other">Pick at most %1$d days (this range has %2$d)</item>
     </plurals>
+    <string name="settings_server">Server</string>
+    <string name="settings_server_hint">Backend address. On a phone, use the PC's IP on your network, for example http://192.168.1.50:3000.</string>
+    <string name="settings_server_field">Server address</string>
+    <string name="settings_server_save">Save</string>
+    <string name="settings_server_test">Test connection</string>
+    <string name="settings_server_restore">Restore default</string>
+    <string name="settings_server_invalid">Enter an address like http://192.168.1.50:3000</string>
+    <string name="settings_server_saved">Address saved.</string>
+    <string name="settings_server_testing">Testing…</string>
+    <string name="settings_server_connected">Connected.</string>
+    <string name="settings_server_timeout">The server didn't answer in time.</string>
+    <string name="settings_server_failed">Couldn't connect: %1$s</string>
 </resources>

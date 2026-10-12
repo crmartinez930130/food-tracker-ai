@@ -173,4 +173,16 @@
         <item quantity="one">Elegí como máximo %1$d días (este rango tiene %2$d)</item>
         <item quantity="other">Elegí como máximo %1$d días (este rango tiene %2$d)</item>
     </plurals>
+    <string name="settings_server">Servidor</string>
+    <string name="settings_server_hint">Dirección del backend. En el teléfono, usá la IP de la PC en tu red, por ejemplo http://192.168.1.50:3000.</string>
+    <string name="settings_server_field">Dirección del servidor</string>
+    <string name="settings_server_save">Guardar</string>
+    <string name="settings_server_test">Probar conexión</string>
+    <string name="settings_server_restore">Restablecer</string>
+    <string name="settings_server_invalid">Ingresá una dirección como http://192.168.1.50:3000</string>
+    <string name="settings_server_saved">Dirección guardada.</string>
+    <string name="settings_server_testing">Probando…</string>
+    <string name="settings_server_connected">Conectado.</string>
+    <string name="settings_server_timeout">El servidor no respondió a tiempo.</string>
+    <string name="settings_server_failed">No se pudo conectar: %1$s</string>
 </resources>
