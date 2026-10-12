@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { analyzeMealPhoto } from "../../src/services/vision-analysis.js";
+import { analysisPrompt, analyzeMealPhoto, parseAnalysisLanguage } from "../../src/services/vision-analysis.js";
 import { AnalysisError } from "../../src/errors.js";
 import type { PreprocessedImage } from "../../src/services/image-preprocessing.js";
 
@@ -78,5 +78,41 @@ describe("analyzeMealPhoto", () => {
     }));
 
     await expect(analyzeMealPhoto(client, sampleImage, "claude-opus-5")).rejects.toThrow(AnalysisError);
+  });
+});
+
+describe("analysis language", () => {
+  it("accepts es and en case-insensitively and falls back to English", () => {
+    expect(parseAnalysisLanguage("es")).toBe("es");
+    expect(parseAnalysisLanguage(" ES ")).toBe("es");
+    expect(parseAnalysisLanguage("en")).toBe("en");
+    expect(parseAnalysisLanguage(undefined)).toBe("en");
+    expect(parseAnalysisLanguage("fr")).toBe("en");
+    expect(parseAnalysisLanguage(42)).toBe("en");
+    expect(parseAnalysisLanguage(["es"])).toBe("en");
+  });
+
+  it("asks for Spanish or English names and notes, keeping the rest of the instruction", () => {
+    expect(analysisPrompt("es")).toContain("in Spanish (es)");
+    expect(analysisPrompt("en")).toContain("in English");
+    expect(analysisPrompt("es").startsWith("You are a nutrition analysis assistant.")).toBe(true);
+    expect(analysisPrompt("en")).not.toContain("Spanish");
+  });
+
+  it("sends the prompt for the requested language, English by default", async () => {
+    const prompts: string[] = [];
+    const client = fakeClient(async (request: unknown) => {
+      const content = (request as { messages: { content: { type: string; text?: string }[] }[] }).messages[0].content;
+      prompts.push(content.find((part) => part.type === "text")!.text!);
+      return {
+        parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
+        usage: { input_tokens: 1, output_tokens: 1 },
+      };
+    });
+
+    await analyzeMealPhoto(client, sampleImage, "claude-opus-5", "es");
+    await analyzeMealPhoto(client, sampleImage, "claude-opus-5");
+
+    expect(prompts).toEqual([analysisPrompt("es"), analysisPrompt("en")]);
   });
 });

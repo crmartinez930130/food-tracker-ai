@@ -48,6 +48,7 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.toReviewAnalysis
+import com.foodtracker.app.ui.settings.LocalAppLocale
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
 import food_tracker_frontend.composeapp.generated.resources.capture_analyze
@@ -135,13 +136,16 @@ fun CaptureScreen(
         }
     }
 
+    // The language the app is showing, so the analysis names and notes come back in it.
+    val language = LocalAppLocale.current
+
     fun analyze() {
         val bytes = photo ?: return
         isAnalyzing = true
         errorMessage = null
         scope.launch {
             try {
-                onAnalyzed(apiClient.analyzeMealPhoto(bytes))
+                onAnalyzed(apiClient.analyzeMealPhoto(bytes, language))
             } catch (e: Exception) {
                 errorMessage = errorText(Res.string.error_analyze_photo, e)
             } finally {
