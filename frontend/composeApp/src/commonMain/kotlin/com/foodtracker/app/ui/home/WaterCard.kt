@@ -18,12 +18,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.WaterDay
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.water_add_glass
+import food_tracker_frontend.composeapp.generated.resources.water_title
+import food_tracker_frontend.composeapp.generated.resources.water_undo
+import kotlin.time.ExperimentalTime
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
-import kotlin.time.ExperimentalTime
+import org.jetbrains.compose.resources.stringResource
 
 fun waterLabel(totalMl: Int, targetMl: Int): String = "$totalMl / $targetMl ml"
 
@@ -49,7 +54,7 @@ fun WaterCard(
     val progress = progressOf(totalMl.toDouble(), targetMl.toDouble())
     Column(modifier = modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("Water", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(Res.string.water_title), style = MaterialTheme.typography.labelLarge)
             Text(
                 waterLabel(totalMl, targetMl),
                 style = MaterialTheme.typography.labelLarge,
@@ -70,8 +75,8 @@ fun WaterCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         ) {
-            TextButton(onClick = onUndo, enabled = !water?.entries.isNullOrEmpty()) { Text("Undo") }
-            FilledTonalButton(onClick = onAddGlass, enabled = water != null) { Text("+ $glassMl ml") }
+            TextButton(onClick = onUndo, enabled = !water?.entries.isNullOrEmpty()) { Text(stringResource(Res.string.water_undo)) }
+            FilledTonalButton(onClick = onAddGlass, enabled = water != null) { Text(stringResource(Res.string.water_add_glass, glassMl)) }
         }
     }
 }

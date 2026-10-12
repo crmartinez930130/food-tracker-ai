@@ -2,7 +2,10 @@ package com.foodtracker.app.ui.reminders
 
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
-import com.foodtracker.app.ui.displayLabel
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_breakfast
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_dinner
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_lunch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -12,6 +15,7 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.StringResource
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -86,8 +90,12 @@ fun nextTriggerAt(now: Instant, hour: Int, minute: Int, timeZone: TimeZone): Ins
 fun shouldShowReminder(meal: MealType, mealsToday: List<MealEntry>?): Boolean =
     mealsToday == null || mealsToday.none { it.mealType == meal }
 
-fun reminderTitle(meal: MealType): String = "Did you log your ${meal.displayLabel().lowercase()}?"
-
-const val REMINDER_TEXT = "Tap to snap a photo of it."
+/** The notification's question for [meal], e.g. "¿Ya registraste tu almuerzo?" (only reminder meals). */
+fun reminderTitle(meal: MealType): StringResource = when (meal) {
+    MealType.BREAKFAST -> Res.string.reminder_title_breakfast
+    MealType.LUNCH -> Res.string.reminder_title_lunch
+    MealType.DINNER -> Res.string.reminder_title_dinner
+    MealType.SNACK -> error("Snacks have no reminder")
+}
 
 fun timeLabel(hour: Int, minute: Int): String = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"

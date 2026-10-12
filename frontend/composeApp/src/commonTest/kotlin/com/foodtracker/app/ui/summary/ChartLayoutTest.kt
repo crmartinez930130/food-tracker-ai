@@ -1,6 +1,7 @@
 package com.foodtracker.app.ui.summary
 
 import com.foodtracker.app.data.WeightEntry
+import kotlinx.datetime.DayOfWeek
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,14 +52,14 @@ class ChartLayoutTest {
         // 2026-10-05 is a Monday.
         val labels = (0 until 7).map { i -> xAxisLabel("2026-10-" + (5 + i).toString().padStart(2, '0'), i, 7) }
 
-        assertEquals(listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"), labels)
+        assertEquals(DayOfWeek.entries.map { AxisLabel.Weekday(it) }, labels)
     }
 
     @Test
     fun `a month labels every fifth bar with the day of the month`() {
-        assertEquals("1", xAxisLabel("2026-10-01", index = 0, count = 30))
+        assertEquals(AxisLabel.DayOfMonth(1), xAxisLabel("2026-10-01", index = 0, count = 30))
         assertNull(xAxisLabel("2026-10-02", index = 1, count = 30))
-        assertEquals("6", xAxisLabel("2026-10-06", index = 5, count = 30))
+        assertEquals(AxisLabel.DayOfMonth(6), xAxisLabel("2026-10-06", index = 5, count = 30))
         assertNull(xAxisLabel("2026-10-30", index = 29, count = 30))
     }
 

@@ -2,6 +2,10 @@ package com.foodtracker.app.ui.reminders
 
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_breakfast
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_dinner
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_lunch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -93,8 +97,9 @@ class ReminderSettingsTest {
 
     @Test
     fun `notification texts name the meal`() {
-        assertEquals("Did you log your lunch?", reminderTitle(MealType.LUNCH))
-        assertEquals("Did you log your breakfast?", reminderTitle(MealType.BREAKFAST))
+        assertEquals(Res.string.reminder_title_lunch, reminderTitle(MealType.LUNCH))
+        assertEquals(Res.string.reminder_title_breakfast, reminderTitle(MealType.BREAKFAST))
+        assertEquals(Res.string.reminder_title_dinner, reminderTitle(MealType.DINNER))
         assertEquals("07:05", timeLabel(7, 5))
     }
 

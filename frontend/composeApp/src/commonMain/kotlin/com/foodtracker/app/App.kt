@@ -1,5 +1,6 @@
 package com.foodtracker.app
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -12,6 +13,12 @@ import com.foodtracker.app.ui.MainScreen
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
 import com.foodtracker.app.ui.reminders.RemindersScreen
+import com.foodtracker.app.ui.settings.AppEnvironment
+import com.foodtracker.app.ui.settings.AppPreferences
+import com.foodtracker.app.ui.settings.SettingsScreen
+import com.foodtracker.app.ui.settings.deviceLanguage
+import com.foodtracker.app.ui.settings.resolveDarkTheme
+import com.foodtracker.app.ui.settings.resolveLanguage
 import com.foodtracker.app.ui.theme.FoodTrackerTheme
 
 /**
@@ -19,50 +26,66 @@ import com.foodtracker.app.ui.theme.FoodTrackerTheme
  * value asks to open Capture (see AppState.openCaptureFromReminder).
  */
 @Composable
-fun App(openCaptureRequests: Int = 0) {
+fun App(
+    preferences: AppPreferences = AppPreferences(),
+    onPreferencesChange: (AppPreferences) -> Unit = {},
+    openCaptureRequests: Int = 0,
+) {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
+    // Outside AppEnvironment's language key, so switching language keeps the current screen.
     val appState = remember { AppState() }
+    val language = resolveLanguage(preferences.language, deviceLanguage())
+    val darkTheme = resolveDarkTheme(preferences.theme, isSystemInDarkTheme())
 
     LaunchedEffect(openCaptureRequests) {
         if (openCaptureRequests > 0) appState.openCaptureFromReminder()
     }
 
-    FoodTrackerTheme {
-        when (val screen = appState.screen) {
-            is Screen.Capture -> CaptureScreen(
-                apiClient = apiClient,
-                onAnalyzed = { analysis -> appState.openReview(analysis) },
-                onCancel = { appState.openMain() },
-            )
+    AppEnvironment(language) {
+        FoodTrackerTheme(darkTheme = darkTheme) {
+            when (val screen = appState.screen) {
+                is Screen.Capture -> CaptureScreen(
+                    apiClient = apiClient,
+                    onAnalyzed = { analysis -> appState.openReview(analysis) },
+                    onCancel = { appState.openMain() },
+                )
 
-            is Screen.Review -> {
-                val analysis = appState.pendingAnalysis
-                if (analysis != null) {
-                    ReviewScreen(
-                        initialAnalysis = analysis,
-                        apiClient = apiClient,
-                        onSaved = { appState.openHomeAfterSave() },
-                        onCancel = { appState.openMain() },
-                    )
+                is Screen.Review -> {
+                    val analysis = appState.pendingAnalysis
+                    if (analysis != null) {
+                        ReviewScreen(
+                            initialAnalysis = analysis,
+                            apiClient = apiClient,
+                            onSaved = { appState.openHomeAfterSave() },
+                            onCancel = { appState.openMain() },
+                        )
+                    }
                 }
+
+                is Screen.Goals -> GoalsScreen(
+                    apiClient = apiClient,
+                    onBack = { appState.openMain() },
+                )
+
+                is Screen.Settings -> SettingsScreen(
+                    preferences = preferences,
+                    onPreferencesChange = onPreferencesChange,
+                    onOpenReminders = { appState.openReminders() },
+                    onBack = { appState.openMain() },
+                )
+
+                is Screen.Reminders -> RemindersScreen(onBack = { appState.openSettings() })
+
+                is Screen.Main -> MainScreen(
+                    initialTab = screen.tab,
+                    apiClient = apiClient,
+                    homeDate = appState.homeDate,
+                    onHomeDateChange = { appState.homeDate = it },
+                    onStartCapture = { appState.openCapture() },
+                    onEditGoal = { appState.openGoals() },
+                    onOpenSettings = { appState.openSettings() },
+                )
             }
-
-            is Screen.Goals -> GoalsScreen(
-                apiClient = apiClient,
-                onBack = { appState.openMain() },
-            )
-
-            is Screen.Reminders -> RemindersScreen(onBack = { appState.openMain() })
-
-            is Screen.Main -> MainScreen(
-                initialTab = screen.tab,
-                apiClient = apiClient,
-                homeDate = appState.homeDate,
-                onHomeDateChange = { appState.homeDate = it },
-                onStartCapture = { appState.openCapture() },
-                onEditGoal = { appState.openGoals() },
-                onOpenReminders = { appState.openReminders() },
-            )
         }
     }
 }

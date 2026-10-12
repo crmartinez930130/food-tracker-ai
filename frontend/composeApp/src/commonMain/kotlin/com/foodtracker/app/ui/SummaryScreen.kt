@@ -43,16 +43,38 @@ import com.foodtracker.app.util.isBeforeDay
 import com.foodtracker.app.util.plusDays
 import com.foodtracker.app.util.todayDateString
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.error_load_summary
+import food_tracker_frontend.composeapp.generated.resources.error_load_weight
+import food_tracker_frontend.composeapp.generated.resources.error_save_weight
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_left
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
-import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
+import food_tracker_frontend.composeapp.generated.resources.summary_average_macros
+import food_tracker_frontend.composeapp.generated.resources.summary_daily_average
+import food_tracker_frontend.composeapp.generated.resources.summary_month
+import food_tracker_frontend.composeapp.generated.resources.summary_next_month
+import food_tracker_frontend.composeapp.generated.resources.summary_next_week
+import food_tracker_frontend.composeapp.generated.resources.summary_period_totals
+import food_tracker_frontend.composeapp.generated.resources.summary_previous_month
+import food_tracker_frontend.composeapp.generated.resources.summary_previous_week
+import food_tracker_frontend.composeapp.generated.resources.summary_range
+import food_tracker_frontend.composeapp.generated.resources.summary_week
+import food_tracker_frontend.composeapp.generated.resources.unit_kcal
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Rolling windows ending on the selected day (see the add-trend-charts design). */
-private enum class SummaryPeriod(val days: Int, val label: String) {
-    WEEK(7, "Week"),
-    MONTH(30, "Month"),
+private enum class SummaryPeriod(
+    val days: Int,
+    val label: StringResource,
+    val previousLabel: StringResource,
+    val nextLabel: StringResource,
+) {
+    WEEK(7, Res.string.summary_week, Res.string.summary_previous_week, Res.string.summary_next_week),
+    MONTH(30, Res.string.summary_month, Res.string.summary_previous_month, Res.string.summary_next_month),
 }
 
 /** Trends over a week or a month. The single-day view lives on Home. */
@@ -86,7 +108,7 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
             days = apiClient.rangeSummary(startDate, endDate)
             goalCalories = apiClient.getGoals().targetCalories
         } catch (e: Exception) {
-            errorMessage = "Couldn't load summary: ${e.message ?: "unknown error"}"
+            errorMessage = errorText(Res.string.error_load_summary, e)
         } finally {
             isLoading = false
         }
@@ -109,7 +131,7 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
             }
             weightLoadedOnce = true
         } catch (e: Exception) {
-            weightError = "Couldn't load weight: ${e.message ?: "unknown error"}"
+            weightError = errorText(Res.string.error_load_weight, e)
         } finally {
             isWeightLoading = false
         }
@@ -121,7 +143,7 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
                 action()
                 weightReloadKey++
             } catch (e: Exception) {
-                weightError = "Couldn't save weight: ${e.message ?: "unknown error"}"
+                weightError = errorText(Res.string.error_save_weight, e)
             }
         }
     }
@@ -133,16 +155,16 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
                     selected = period == option,
                     onClick = { period = option },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = SummaryPeriod.entries.size),
-                ) { Text(option.label) }
+                ) { Text(stringResource(option.label)) }
             }
         }
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { endDate = endDate.plusDays(-period.days) }) {
-                Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = "Previous ${period.label.lowercase()}")
+                Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = stringResource(period.previousLabel))
             }
             Text(
-                "$startDate – $endDate",
+                stringResource(Res.string.summary_range, startDate, endDate),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
@@ -152,7 +174,7 @@ fun SummaryScreen(apiClient: FoodTrackerApiClient, modifier: Modifier = Modifier
                 onClick = { endDate = endDate.plusDays(period.days).let { if (today.isBeforeDay(it)) today else it } },
                 enabled = endDate.isBeforeDay(today),
             ) {
-                Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = "Next ${period.label.lowercase()}")
+                Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = stringResource(period.nextLabel))
             }
         }
 
@@ -198,18 +220,21 @@ private fun PeriodAverages(days: List<DailyTotals>, goalCalories: Double, modifi
     val totalCalories = days.sumOf { it.totalCalories }
     val overGoal = days.count { isOverGoal(it.totalCalories, goalCalories) }
     Column(modifier = modifier.fillMaxWidth()) {
-        Text("Daily average", style = MaterialTheme.typography.titleMedium)
-        Text("${(totalCalories / count).roundToInt()} kcal", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Res.string.summary_daily_average), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.unit_kcal, (totalCalories / count).roundToInt()), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Protein ${(days.sumOf { it.totalProteinGrams } / count).roundToInt()} g · " +
-                "Fat ${(days.sumOf { it.totalFatGrams } / count).roundToInt()} g · " +
-                "Carbs ${(days.sumOf { it.totalCarbsGrams } / count).roundToInt()} g",
+            stringResource(
+                Res.string.summary_average_macros,
+                (days.sumOf { it.totalProteinGrams } / count).roundToInt(),
+                (days.sumOf { it.totalFatGrams } / count).roundToInt(),
+                (days.sumOf { it.totalCarbsGrams } / count).roundToInt(),
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "${totalCalories.roundToInt()} kcal over ${days.size} days · $overGoal over goal",
+            pluralStringResource(Res.plurals.summary_period_totals, days.size, totalCalories.roundToInt(), days.size, overGoal),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

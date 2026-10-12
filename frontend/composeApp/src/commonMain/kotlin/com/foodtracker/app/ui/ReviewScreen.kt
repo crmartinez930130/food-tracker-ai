@@ -1,11 +1,10 @@
 package com.foodtracker.app.ui
 
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,9 +27,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,8 +43,29 @@ import com.foodtracker.app.data.MealItem
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.SaveMealRequest
 import com.foodtracker.app.util.currentLocalHour
-import kotlinx.coroutines.launch
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_cancel
+import food_tracker_frontend.composeapp.generated.resources.error_save_meal
+import food_tracker_frontend.composeapp.generated.resources.review_carbs_g
+import food_tracker_frontend.composeapp.generated.resources.review_confidence
+import food_tracker_frontend.composeapp.generated.resources.review_confirm_save
+import food_tracker_frontend.composeapp.generated.resources.review_discard
+import food_tracker_frontend.composeapp.generated.resources.review_discard_text
+import food_tracker_frontend.composeapp.generated.resources.review_discard_title
+import food_tracker_frontend.composeapp.generated.resources.review_fat_g
+import food_tracker_frontend.composeapp.generated.resources.review_food
+import food_tracker_frontend.composeapp.generated.resources.review_grams
+import food_tracker_frontend.composeapp.generated.resources.review_kcal
+import food_tracker_frontend.composeapp.generated.resources.review_keep_editing
+import food_tracker_frontend.composeapp.generated.resources.review_no_food
+import food_tracker_frontend.composeapp.generated.resources.review_notes
+import food_tracker_frontend.composeapp.generated.resources.review_protein_g
+import food_tracker_frontend.composeapp.generated.resources.review_remove
+import food_tracker_frontend.composeapp.generated.resources.review_title
+import food_tracker_frontend.composeapp.generated.resources.review_total
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 /** UI-only default (see design.md of the add-meal-type change) - the backend never derives a type from a timestamp. */
 private fun suggestedMealType(hourOfDay: Int): MealType = when {
@@ -121,7 +142,7 @@ fun ReviewScreen(
                 )
                 onSaved()
             } catch (e: Exception) {
-                errorMessage = "Couldn't save the meal: ${e.message ?: "unknown error"}"
+                errorMessage = errorText(Res.string.error_save_meal, e)
             } finally {
                 isSaving = false
             }
@@ -141,28 +162,28 @@ fun ReviewScreen(
     if (showDiscardPrompt) {
         AlertDialog(
             onDismissRequest = { showDiscardPrompt = false },
-            title = { Text("Discard this meal?") },
-            text = { Text("The analysis and your edits will be lost.") },
+            title = { Text(stringResource(Res.string.review_discard_title)) },
+            text = { Text(stringResource(Res.string.review_discard_text)) },
             confirmButton = {
                 TextButton(onClick = onCancel) {
-                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.review_discard), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardPrompt = false }) { Text("Keep editing") }
+                TextButton(onClick = { showDiscardPrompt = false }) { Text(stringResource(Res.string.review_keep_editing)) }
             },
         )
     }
 
     Column(modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp)) {
-        Text("Review analysis", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Res.string.review_title), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
 
         MealTypeSelector(selected = mealType, onSelect = { mealType = it })
         Spacer(Modifier.height(8.dp))
 
         if (items.isEmpty()) {
-            Text("No food was detected in this photo. You can add items manually if needed.")
+            Text(stringResource(Res.string.review_no_food))
             Spacer(Modifier.height(8.dp))
         }
 
@@ -176,14 +197,19 @@ fun ReviewScreen(
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = it },
-            label = { Text("Notes (optional)") },
+            label = { Text(stringResource(Res.string.review_notes)) },
             modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(8.dp))
         Text(
-            "Total: ${totalCalories.roundToInt()} kcal · P ${totalProtein.roundToInt()}g · " +
-                "F ${totalFat.roundToInt()}g · C ${totalCarbs.roundToInt()}g",
+            stringResource(
+                Res.string.review_total,
+                totalCalories.roundToInt(),
+                totalProtein.roundToInt(),
+                totalFat.roundToInt(),
+                totalCarbs.roundToInt(),
+            ),
             style = MaterialTheme.typography.titleSmall,
         )
 
@@ -194,13 +220,13 @@ fun ReviewScreen(
 
         Spacer(Modifier.height(8.dp))
         Row {
-            OutlinedButton(onClick = { showDiscardPrompt = true }, enabled = !isSaving) { Text("Cancel") }
+            OutlinedButton(onClick = { showDiscardPrompt = true }, enabled = !isSaving) { Text(stringResource(Res.string.action_cancel)) }
             Spacer(Modifier.width(12.dp))
             Button(onClick = { save() }, enabled = !isSaving) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                 } else {
-                    Text("Confirm & Save")
+                    Text(stringResource(Res.string.review_confirm_save))
                 }
             }
         }
@@ -233,23 +259,23 @@ private fun EditableItemRow(
             OutlinedTextField(
                 value = item.name,
                 onValueChange = { item.name = it },
-                label = { Text("Food") },
+                label = { Text(stringResource(Res.string.review_food)) },
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onRemove) { Text("Remove") }
+            TextButton(onClick = onRemove) { Text(stringResource(Res.string.review_remove)) }
         }
         Row {
             OutlinedTextField(
                 value = item.estimatedGrams,
                 onValueChange = { item.estimatedGrams = it },
-                label = { Text("Grams") },
+                label = { Text(stringResource(Res.string.review_grams)) },
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = item.calories,
                 onValueChange = { item.calories = it },
-                label = { Text("kcal") },
+                label = { Text(stringResource(Res.string.review_kcal)) },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -257,24 +283,24 @@ private fun EditableItemRow(
             OutlinedTextField(
                 value = item.proteinGrams,
                 onValueChange = { item.proteinGrams = it },
-                label = { Text("Protein g") },
+                label = { Text(stringResource(Res.string.review_protein_g)) },
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = item.fatGrams,
                 onValueChange = { item.fatGrams = it },
-                label = { Text("Fat g") },
+                label = { Text(stringResource(Res.string.review_fat_g)) },
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = item.carbsGrams,
                 onValueChange = { item.carbsGrams = it },
-                label = { Text("Carbs g") },
+                label = { Text(stringResource(Res.string.review_carbs_g)) },
                 modifier = Modifier.weight(1f),
             )
         }
-        Text("Confidence: ${item.confidence.name.lowercase()}", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(Res.string.review_confidence, stringResource(item.confidence.labelRes)), style = MaterialTheme.typography.bodySmall)
     }
 }

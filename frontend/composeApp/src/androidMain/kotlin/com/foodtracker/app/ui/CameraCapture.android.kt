@@ -60,16 +60,26 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_cancel
+import food_tracker_frontend.composeapp.generated.resources.camera_allow
+import food_tracker_frontend.composeapp.generated.resources.camera_permission_denied
+import food_tracker_frontend.composeapp.generated.resources.camera_permission_rationale
+import food_tracker_frontend.composeapp.generated.resources.camera_unavailable
+import food_tracker_frontend.composeapp.generated.resources.capture_choose_gallery
+import food_tracker_frontend.composeapp.generated.resources.capture_take_photo
+import food_tracker_frontend.composeapp.generated.resources.error_take_photo
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
+import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import org.jetbrains.compose.resources.stringResource
 
 private enum class CameraPermission { GRANTED, REQUESTING, DENIED, PERMANENTLY_DENIED }
 
@@ -116,12 +126,13 @@ actual fun CameraCapture(
             CameraPermission.GRANTED -> CameraViewfinder(onCaptured = onCaptured, onCancel = onCancel, onUseGallery = onUseGallery)
             CameraPermission.REQUESTING -> Unit
             CameraPermission.DENIED, CameraPermission.PERMANENTLY_DENIED -> CameraUnavailable(
-                message = if (permission == CameraPermission.DENIED) {
-                    "The camera is needed to take a photo of your meal."
-                } else {
-                    "The camera is needed to take a photo of your meal. Camera access is turned off for this " +
-                        "app - you can enable it in the system settings."
-                },
+                message = stringResource(
+                    if (permission == CameraPermission.DENIED) {
+                        Res.string.camera_permission_rationale
+                    } else {
+                        Res.string.camera_permission_denied
+                    },
+                ),
                 onRetry = if (permission == CameraPermission.DENIED) {
                     { requestPermission.launch(Manifest.permission.CAMERA) }
                 } else {
@@ -170,7 +181,7 @@ private fun CameraViewfinder(
             awaitCancellation()
         } catch (e: IllegalArgumentException) {
             // No back camera on this device.
-            errorMessage = "No camera is available on this device."
+            errorMessage = getString(Res.string.camera_unavailable)
         } finally {
             provider.unbindAll()
         }
@@ -189,7 +200,7 @@ private fun CameraViewfinder(
 
         Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp)) {
             IconButton(onClick = onCancel, modifier = Modifier.align(Alignment.TopStart)) {
-                Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = "Cancel", tint = Color.White)
+                Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = stringResource(Res.string.action_cancel), tint = Color.White)
             }
 
             Box(
@@ -200,13 +211,13 @@ private fun CameraViewfinder(
                     .size(76.dp)
                     .clip(CircleShape)
                     .border(4.dp, Color.White, CircleShape)
-                    .clickable(enabled = !isCapturing && surfaceRequest != null, role = Role.Button, onClickLabel = "Take photo") {
+                    .clickable(enabled = !isCapturing && surfaceRequest != null, role = Role.Button, onClickLabel = stringResource(Res.string.capture_take_photo)) {
                         isCapturing = true
                         scope.launch {
                             try {
                                 onCaptured(imageCapture.captureJpeg(context))
                             } catch (e: ImageCaptureException) {
-                                errorMessage = "Couldn't take the photo: ${e.message ?: "unknown error"}"
+                                errorMessage = errorText(Res.string.error_take_photo, e)
                             } finally {
                                 isCapturing = false
                             }
@@ -267,11 +278,11 @@ private fun CameraUnavailable(
         Text(message, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(24.dp))
         if (onRetry != null) {
-            Button(onClick = onRetry) { Text("Allow camera") }
+            Button(onClick = onRetry) { Text(stringResource(Res.string.camera_allow)) }
             Spacer(Modifier.height(8.dp))
         }
-        OutlinedButton(onClick = onUseGallery) { Text("Choose from gallery") }
+        OutlinedButton(onClick = onUseGallery) { Text(stringResource(Res.string.capture_choose_gallery)) }
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onCancel) { Text("Cancel") }
+        TextButton(onClick = onCancel) { Text(stringResource(Res.string.action_cancel)) }
     }
 }

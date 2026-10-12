@@ -40,28 +40,54 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
-import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.LogWaterRequest
+import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.displayLabelOrOther
+import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.loadingPresentation
 import com.foodtracker.app.util.isBeforeDay
 import com.foodtracker.app.util.plusDays
 import com.foodtracker.app.util.todayDateString
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_delete
+import food_tracker_frontend.composeapp.generated.resources.add_to_favorites
+import food_tracker_frontend.composeapp.generated.resources.calorie_ring_left
+import food_tracker_frontend.composeapp.generated.resources.calorie_ring_of_target
+import food_tracker_frontend.composeapp.generated.resources.calorie_ring_over
+import food_tracker_frontend.composeapp.generated.resources.day_today
+import food_tracker_frontend.composeapp.generated.resources.day_yesterday
+import food_tracker_frontend.composeapp.generated.resources.default_goal_hint
+import food_tracker_frontend.composeapp.generated.resources.edit_daily_goal
+import food_tracker_frontend.composeapp.generated.resources.error_delete_meal
+import food_tracker_frontend.composeapp.generated.resources.error_load_day
+import food_tracker_frontend.composeapp.generated.resources.error_update_favorite
+import food_tracker_frontend.composeapp.generated.resources.error_update_water
+import food_tracker_frontend.composeapp.generated.resources.home_empty_day
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_left
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
 import food_tracker_frontend.composeapp.generated.resources.ic_edit
-import food_tracker_frontend.composeapp.generated.resources.ic_notifications
+import food_tracker_frontend.composeapp.generated.resources.ic_settings
 import food_tracker_frontend.composeapp.generated.resources.ic_star
 import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
+import food_tracker_frontend.composeapp.generated.resources.macro_carbs
+import food_tracker_frontend.composeapp.generated.resources.macro_fat
+import food_tracker_frontend.composeapp.generated.resources.macro_progress_grams
+import food_tracker_frontend.composeapp.generated.resources.macro_protein
+import food_tracker_frontend.composeapp.generated.resources.macros_short
+import food_tracker_frontend.composeapp.generated.resources.next_day
+import food_tracker_frontend.composeapp.generated.resources.no_items
+import food_tracker_frontend.composeapp.generated.resources.open_options
+import food_tracker_frontend.composeapp.generated.resources.previous_day
+import food_tracker_frontend.composeapp.generated.resources.remove_from_favorites
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.compose.resources.painterResource
-import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
 
 /** Breakfast/lunch/dinner/snack first, in that order; untagged entries ("Other") last. */
 private val MEAL_TYPE_SECTION_ORDER: List<MealType?> =
@@ -83,7 +109,7 @@ fun HomeScreen(
     date: String,
     onDateChange: (String) -> Unit,
     onEditGoal: () -> Unit,
-    onOpenReminders: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var meals by remember { mutableStateOf<List<MealEntry>>(emptyList()) }
@@ -108,7 +134,7 @@ fun HomeScreen(
             water = apiClient.getWater(date)
             waterError = null
         } catch (e: Exception) {
-            errorMessage = "Couldn't load this day: ${e.message ?: "unknown error"}"
+            errorMessage = errorText(Res.string.error_load_day, e)
         } finally {
             isLoading = false
         }
@@ -120,7 +146,7 @@ fun HomeScreen(
                 apiClient.setFavorite(meal.id, !meal.isFavorite)
                 reloadKey++
             } catch (e: Exception) {
-                errorMessage = "Couldn't update favorite: ${e.message ?: "unknown error"}"
+                errorMessage = errorText(Res.string.error_update_favorite, e)
             }
         }
     }
@@ -131,7 +157,7 @@ fun HomeScreen(
                 apiClient.deleteMeal(id)
                 reloadKey++
             } catch (e: Exception) {
-                errorMessage = "Couldn't delete meal: ${e.message ?: "unknown error"}"
+                errorMessage = errorText(Res.string.error_delete_meal, e)
             }
         }
     }
@@ -148,7 +174,7 @@ fun HomeScreen(
                     if (currentDate == day) water = refreshed
                     waterError = null
                 } catch (e: Exception) {
-                    waterError = "Couldn't update water: ${e.message ?: "unknown error"}"
+                    waterError = errorText(Res.string.error_update_water, e)
                 }
             }
         }
@@ -156,12 +182,16 @@ fun HomeScreen(
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         DayHeader(
-            label = dayLabel(date, today),
+            label = when (val label = dayLabel(date, today)) {
+                DayLabel.Today -> stringResource(Res.string.day_today)
+                DayLabel.Yesterday -> stringResource(Res.string.day_yesterday)
+                is DayLabel.Date -> label.iso
+            },
             canGoForward = date.isBeforeDay(today),
             onPrevious = { onDateChange(date.plusDays(-1)) },
             onNext = { onDateChange(date.plusDays(1)) },
             onEditGoal = onEditGoal,
-            onOpenReminders = onOpenReminders,
+            onOpenSettings = onOpenSettings,
         )
 
         val currentGoal = goal
@@ -183,14 +213,14 @@ fun HomeScreen(
                                 if (currentGoal.isDefault) {
                                     AssistChip(
                                         onClick = onEditGoal,
-                                        label = { Text("Using default goal — set yours") },
+                                        label = { Text(stringResource(Res.string.default_goal_hint)) },
                                         leadingIcon = { Icon(painterResource(Res.drawable.ic_edit), contentDescription = null) },
                                     )
                                 }
                                 Spacer(Modifier.height(8.dp))
-                                MacroBar("Protein", totals.protein, currentGoal.targetProteinGrams)
-                                MacroBar("Fat", totals.fat, currentGoal.targetFatGrams)
-                                MacroBar("Carbs", totals.carbs, currentGoal.targetCarbsGrams)
+                                MacroBar(stringResource(Res.string.macro_protein), totals.protein, currentGoal.targetProteinGrams)
+                                MacroBar(stringResource(Res.string.macro_fat), totals.fat, currentGoal.targetFatGrams)
+                                MacroBar(stringResource(Res.string.macro_carbs), totals.carbs, currentGoal.targetCarbsGrams)
                                 Spacer(Modifier.height(8.dp))
                                 WaterCard(
                                     water = water,
@@ -216,7 +246,7 @@ fun HomeScreen(
                         if (meals.isEmpty()) {
                             item(key = "empty") {
                                 Text(
-                                    "Nothing logged this day yet.",
+                                    stringResource(Res.string.home_empty_day),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(vertical = 16.dp),
@@ -252,12 +282,12 @@ private fun DayHeader(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onEditGoal: () -> Unit,
-    onOpenReminders: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onPrevious) {
-            Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = "Previous day")
+            Icon(painterResource(Res.drawable.ic_chevron_left), contentDescription = stringResource(Res.string.previous_day))
         }
         Text(
             label,
@@ -266,13 +296,13 @@ private fun DayHeader(
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onNext, enabled = canGoForward) {
-            Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = "Next day")
+            Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = stringResource(Res.string.next_day))
         }
-        IconButton(onClick = onOpenReminders) {
-            Icon(painterResource(Res.drawable.ic_notifications), contentDescription = "Meal reminders")
+        IconButton(onClick = onOpenSettings) {
+            Icon(painterResource(Res.drawable.ic_settings), contentDescription = stringResource(Res.string.open_options))
         }
         IconButton(onClick = onEditGoal) {
-            Icon(painterResource(Res.drawable.ic_edit), contentDescription = "Edit daily goal")
+            Icon(painterResource(Res.drawable.ic_edit), contentDescription = stringResource(Res.string.edit_daily_goal))
         }
     }
 }
@@ -292,7 +322,7 @@ private fun CalorieRing(
             .padding(vertical = 8.dp)
             .size(184.dp)
             .clip(CircleShape)
-            .clickable(onClickLabel = "Edit daily goal", onClick = onClick),
+            .clickable(onClickLabel = stringResource(Res.string.edit_daily_goal), onClick = onClick),
     ) {
         CircularProgressIndicator(
             progress = { progress.fraction },
@@ -305,12 +335,16 @@ private fun CalorieRing(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${consumed.roundToInt()}", style = MaterialTheme.typography.headlineLarge)
             Text(
-                "of ${target.roundToInt()} kcal",
+                stringResource(Res.string.calorie_ring_of_target, target.roundToInt()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                if (progress.isOver) "${progress.excess.roundToInt()} over" else "${progress.remaining.roundToInt()} left",
+                if (progress.isOver) {
+                    stringResource(Res.string.calorie_ring_over, progress.excess.roundToInt())
+                } else {
+                    stringResource(Res.string.calorie_ring_left, progress.remaining.roundToInt())
+                },
                 style = MaterialTheme.typography.labelLarge,
                 color = color,
             )
@@ -326,7 +360,7 @@ private fun MacroBar(name: String, consumed: Double, target: Double, modifier: M
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(name, style = MaterialTheme.typography.labelLarge)
             Text(
-                "${consumed.roundToInt()} / ${target.roundToInt()} g",
+                stringResource(Res.string.macro_progress_grams, consumed.roundToInt(), target.roundToInt()),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (progress.isOver) color else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -351,10 +385,15 @@ private fun MealRow(
 ) {
     Row(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(meal.items.joinToString(", ") { it.name }.ifBlank { "(no items)" })
+            Text(meal.items.joinToString(", ") { it.name }.ifBlank { stringResource(Res.string.no_items) })
             Text(
-                "${meal.totalCalories.roundToInt()} kcal · P ${meal.totalProteinGrams.roundToInt()}g · " +
-                    "F ${meal.totalFatGrams.roundToInt()}g · C ${meal.totalCarbsGrams.roundToInt()}g",
+                stringResource(
+                    Res.string.macros_short,
+                    meal.totalCalories.roundToInt(),
+                    meal.totalProteinGrams.roundToInt(),
+                    meal.totalFatGrams.roundToInt(),
+                    meal.totalCarbsGrams.roundToInt(),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -362,10 +401,10 @@ private fun MealRow(
         IconButton(onClick = onToggleFavorite) {
             Icon(
                 painterResource(if (meal.isFavorite) Res.drawable.ic_star_filled else Res.drawable.ic_star),
-                contentDescription = if (meal.isFavorite) "Remove from favorites" else "Add to favorites",
+                contentDescription = stringResource(if (meal.isFavorite) Res.string.remove_from_favorites else Res.string.add_to_favorites),
                 tint = if (meal.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onDelete) { Text("Delete") }
+        TextButton(onClick = onDelete) { Text(stringResource(Res.string.action_delete)) }
     }
 }

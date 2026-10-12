@@ -24,6 +24,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.WeightEntry
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_cancel
+import food_tracker_frontend.composeapp.generated.resources.action_delete
+import food_tracker_frontend.composeapp.generated.resources.action_save
+import food_tracker_frontend.composeapp.generated.resources.weight_dialog_title
+import food_tracker_frontend.composeapp.generated.resources.weight_empty
+import food_tracker_frontend.composeapp.generated.resources.weight_error_range
+import food_tracker_frontend.composeapp.generated.resources.weight_field
+import food_tracker_frontend.composeapp.generated.resources.weight_latest
+import food_tracker_frontend.composeapp.generated.resources.weight_log
+import food_tracker_frontend.composeapp.generated.resources.weight_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Weight for the Summary period: latest value and change, the trend chart (aligned with the
@@ -45,23 +57,23 @@ fun WeightSection(
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Weight", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.weight_title), style = MaterialTheme.typography.titleMedium)
                 if (perDay.isNotEmpty()) {
                     val change = perDay.last().weightKg - perDay.first().weightKg
                     Text(
-                        "${formatKg(perDay.last().weightKg)} · ${formatKgChange(change)} this period",
+                        stringResource(Res.string.weight_latest, formatKg(perDay.last().weightKg), formatKgChange(change)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            FilledTonalButton(onClick = { showLogDialog = true }) { Text("Log weight") }
+            FilledTonalButton(onClick = { showLogDialog = true }) { Text(stringResource(Res.string.weight_log)) }
         }
 
         Spacer(Modifier.height(8.dp))
         if (perDay.isEmpty()) {
             Text(
-                "No weight logged in this period. Log today's weight to start your trend.",
+                stringResource(Res.string.weight_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -73,7 +85,7 @@ fun WeightSection(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(entry.day, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     Text(formatKg(entry.weightKg), style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = { onDelete(entry) }) { Text("Delete") }
+                    TextButton(onClick = { onDelete(entry) }) { Text(stringResource(Res.string.action_delete)) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
@@ -99,31 +111,35 @@ internal fun parseWeightInput(text: String): Double? =
 @Composable
 private fun LogWeightDialog(initialValue: Double?, onSave: (Double) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initialValue?.let { formatKg(it).removeSuffix(" kg") } ?: "") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var invalid by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log today's weight") },
+        title = { Text(stringResource(Res.string.weight_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = {
                     text = it
-                    error = null
+                    invalid = false
                 },
-                label = { Text("Weight (kg)") },
+                label = { Text(stringResource(Res.string.weight_field)) },
                 singleLine = true,
-                isError = error != null,
-                supportingText = error?.let { message -> { Text(message) } },
+                isError = invalid,
+                supportingText = if (invalid) {
+                    { Text(stringResource(Res.string.weight_error_range)) }
+                } else {
+                    null
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
         },
         confirmButton = {
             TextButton(onClick = {
                 val kg = parseWeightInput(text)
-                if (kg == null) error = "Enter a weight between 0 and 500 kg." else onSave(kg)
-            }) { Text("Save") }
+                if (kg == null) invalid = true else onSave(kg)
+            }) { Text(stringResource(Res.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }

@@ -37,9 +37,16 @@ fun progressOf(consumed: Double, target: Double): Progress {
     )
 }
 
-/** "Today", "Yesterday", or the ISO date for anything else. Both arguments are `YYYY-MM-DD`. */
-fun dayLabel(date: String, today: String): String = when (LocalDate.parse(date)) {
-    LocalDate.parse(today) -> "Today"
-    LocalDate.parse(today).minus(DatePeriod(days = 1)) -> "Yesterday"
-    else -> date
+/** How Home names a day: relative when it's today or yesterday, otherwise its ISO date. */
+sealed interface DayLabel {
+    data object Today : DayLabel
+    data object Yesterday : DayLabel
+    data class Date(val iso: String) : DayLabel
+}
+
+/** Both arguments are `YYYY-MM-DD`. */
+fun dayLabel(date: String, today: String): DayLabel = when (LocalDate.parse(date)) {
+    LocalDate.parse(today) -> DayLabel.Today
+    LocalDate.parse(today).minus(DatePeriod(days = 1)) -> DayLabel.Yesterday
+    else -> DayLabel.Date(date)
 }
