@@ -17,10 +17,14 @@ import androidx.compose.ui.Modifier
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.ui.home.HomeScreen
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_log_meal
 import food_tracker_frontend.composeapp.generated.resources.ic_add
 import food_tracker_frontend.composeapp.generated.resources.ic_bar_chart
 import food_tracker_frontend.composeapp.generated.resources.ic_home
+import food_tracker_frontend.composeapp.generated.resources.nav_home
+import food_tracker_frontend.composeapp.generated.resources.nav_summary
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MainScreen(
@@ -30,7 +34,7 @@ fun MainScreen(
     onHomeDateChange: (String) -> Unit,
     onStartCapture: () -> Unit,
     onEditGoal: () -> Unit,
-    onOpenReminders: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tab by remember(initialTab) { mutableStateOf(initialTab) }
@@ -39,7 +43,7 @@ fun MainScreen(
         modifier = modifier,
         floatingActionButton = {
             FloatingActionButton(onClick = onStartCapture) {
-                Icon(painterResource(Res.drawable.ic_add), contentDescription = "Log a meal")
+                Icon(painterResource(Res.drawable.ic_add), contentDescription = stringResource(Res.string.action_log_meal))
             }
         },
         bottomBar = {
@@ -48,13 +52,13 @@ fun MainScreen(
                     selected = tab == MainTab.HOME,
                     onClick = { tab = MainTab.HOME },
                     icon = { Icon(painterResource(Res.drawable.ic_home), contentDescription = null) },
-                    label = { Text("Home") },
+                    label = { Text(stringResource(Res.string.nav_home)) },
                 )
                 NavigationBarItem(
                     selected = tab == MainTab.SUMMARY,
                     onClick = { tab = MainTab.SUMMARY },
                     icon = { Icon(painterResource(Res.drawable.ic_bar_chart), contentDescription = null) },
-                    label = { Text("Summary") },
+                    label = { Text(stringResource(Res.string.nav_summary)) },
                 )
             }
         },
@@ -66,7 +70,7 @@ fun MainScreen(
                     date = homeDate,
                     onDateChange = onHomeDateChange,
                     onEditGoal = onEditGoal,
-                    onOpenReminders = onOpenReminders,
+                    onOpenSettings = onOpenSettings,
                 )
                 MainTab.SUMMARY -> SummaryScreen(apiClient)
             }

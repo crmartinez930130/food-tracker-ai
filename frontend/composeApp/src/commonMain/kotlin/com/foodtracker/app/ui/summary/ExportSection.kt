@@ -25,8 +25,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.rememberFileSharer
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_cancel
+import food_tracker_frontend.composeapp.generated.resources.error_export
+import food_tracker_frontend.composeapp.generated.resources.export_button
+import food_tracker_frontend.composeapp.generated.resources.export_confirm
+import food_tracker_frontend.composeapp.generated.resources.export_dialog_title
+import food_tracker_frontend.composeapp.generated.resources.export_error_incomplete
+import food_tracker_frontend.composeapp.generated.resources.export_error_reversed
+import food_tracker_frontend.composeapp.generated.resources.export_error_too_long
+import food_tracker_frontend.composeapp.generated.resources.export_in_progress
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Export CSV": picks a date range (pre-selected with the period Summary is showing) and hands the
@@ -63,9 +77,9 @@ fun ExportSection(
             if (isExporting) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
-                Text("Exporting…")
+                Text(stringResource(Res.string.export_in_progress))
             } else {
-                Text("Export CSV")
+                Text(stringResource(Res.string.export_button))
             }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
@@ -86,7 +100,7 @@ fun ExportSection(
                         val csv = apiClient.exportMealsCsv(start, end)
                         sharer.share(exportFileName(start, end), "text/csv", csv)
                     } catch (e: Exception) {
-                        error = "Couldn't export: ${e.message ?: "unknown error"}"
+                        error = errorText(Res.string.error_export, e)
                     } finally {
                         isExporting = false
                     }
@@ -127,16 +141,22 @@ private fun ExportRangeDialog(
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = { onConfirm(start!!, end!!) }, enabled = rangeError == null) { Text("Export") }
+            TextButton(onClick = { onConfirm(start!!, end!!) }, enabled = rangeError == null) { Text(stringResource(Res.string.export_confirm)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     ) {
         DateRangePicker(
             state = state,
             // The title slot (above the selected-range headline) explains why Export is disabled.
             title = {
                 Text(
-                    rangeError ?: "Export meals in this range",
+                    when (rangeError) {
+                        null -> stringResource(Res.string.export_dialog_title)
+                        ExportRangeProblem.Incomplete -> stringResource(Res.string.export_error_incomplete)
+                        ExportRangeProblem.Reversed -> stringResource(Res.string.export_error_reversed)
+                        is ExportRangeProblem.TooLong ->
+                            pluralStringResource(Res.plurals.export_error_too_long, rangeError.days, MAX_EXPORT_DAYS, rangeError.days)
+                    },
                     style = MaterialTheme.typography.labelLarge,
                     color = if (rangeError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),

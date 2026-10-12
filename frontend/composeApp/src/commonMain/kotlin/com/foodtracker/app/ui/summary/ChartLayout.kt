@@ -36,23 +36,19 @@ fun isOverGoal(value: Double, goal: Double): Boolean = progressOf(value, goal).i
  * repeat T/T and S/S), the day of the
  * month every 5th bar for longer periods (so labels don't collide), or null for no label.
  */
-fun xAxisLabel(date: String, index: Int, count: Int): String? {
+fun xAxisLabel(date: String, index: Int, count: Int): AxisLabel? {
     val day = LocalDate.parse(date)
     return when {
-        count <= 7 -> day.dayOfWeek.shortName()
-        index % 5 == 0 -> day.day.toString()
+        count <= 7 -> AxisLabel.Weekday(day.dayOfWeek)
+        index % 5 == 0 -> AxisLabel.DayOfMonth(day.day)
         else -> null
     }
 }
 
-private fun DayOfWeek.shortName(): String = when (this) {
-    DayOfWeek.MONDAY -> "Mo"
-    DayOfWeek.TUESDAY -> "Tu"
-    DayOfWeek.WEDNESDAY -> "We"
-    DayOfWeek.THURSDAY -> "Th"
-    DayOfWeek.FRIDAY -> "Fr"
-    DayOfWeek.SATURDAY -> "Sa"
-    DayOfWeek.SUNDAY -> "Su"
+/** A bar's label: a weekday (shown as a localized two-letter name) or a day-of-month number. */
+sealed interface AxisLabel {
+    data class Weekday(val day: DayOfWeek) : AxisLabel
+    data class DayOfMonth(val day: Int) : AxisLabel
 }
 
 /**

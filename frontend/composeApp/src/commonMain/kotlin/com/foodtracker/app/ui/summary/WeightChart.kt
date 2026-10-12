@@ -15,7 +15,11 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.WeightEntry
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.weight_chart_description
+import food_tracker_frontend.composeapp.generated.resources.weight_chart_empty
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Weight over the period as a line through each day's last entry. Uses the same day slots as
@@ -61,13 +65,20 @@ fun WeightChart(periodDays: List<String>, points: List<WeightEntry>, modifier: M
     }
 }
 
+@Composable
 private fun weightChartDescription(points: List<WeightEntry>): String {
-    if (points.isEmpty()) return "Weight: no entries in this period"
+    if (points.isEmpty()) return stringResource(Res.string.weight_chart_empty)
     val first = points.first()
     val last = points.last()
     val change = last.weightKg - first.weightKg
-    return "Weight from ${first.day} to ${last.day}: ${formatKg(first.weightKg)} to ${formatKg(last.weightKg)} " +
-        "(${formatKgChange(change)})."
+    return stringResource(
+        Res.string.weight_chart_description,
+        first.day,
+        last.day,
+        formatKg(first.weightKg),
+        formatKg(last.weightKg),
+        formatKgChange(change),
+    )
 }
 
 /** One decimal, e.g. 72.4 kg. */

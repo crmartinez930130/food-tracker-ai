@@ -8,6 +8,7 @@ import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.reminders.shouldShowReminder
+import com.foodtracker.app.ui.settings.applyAppLocale
 import com.foodtracker.app.util.todayDateString
 import io.ktor.client.engine.android.Android
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +39,8 @@ class ReminderReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // A fresh receiver process has the phone's locale; texts must use the app's language.
+                applyAppLocale(context)
                 if (shouldShowReminder(meal, mealsTodayOrNull())) {
                     ReminderNotifications.show(context, meal)
                 }

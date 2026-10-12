@@ -9,10 +9,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
 import com.foodtracker.app.reminders.ReminderNotifications
 import com.foodtracker.app.reminders.ReminderScheduler
 import com.foodtracker.app.reminders.ReminderStore
+import com.foodtracker.app.ui.settings.PreferencesStore
+import com.foodtracker.app.ui.settings.applyAppLocale
+import com.foodtracker.app.ui.settings.resolveDarkTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     /** Bumped each time a reminder notification is tapped; App opens Capture on every new value. */
@@ -21,14 +30,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Restores reminder alarms dropped by a force-stop (the settings are the source of truth).
-        ReminderNotifications.ensureChannel(this)
         ReminderScheduler.applyAll(this, ReminderStore.load(this))
         // On recreation the request was already handled before.
         if (savedInstanceState == null) handleReminderTap(intent)
+        syncNotificationChannel()
         setContent {
-            val darkTheme = isSystemInDarkTheme()
+            // Options choices: owned here so the system bars can follow the chosen theme too.
+            var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
+            val darkTheme = resolveDarkTheme(preferences.theme, isSystemInDarkTheme())
             // The manifest handles uiMode changes without recreating the activity, so the system
-            // bar icon colors must be re-applied here whenever light/dark flips.
+            // bar icon colors must be re-applied here whenever the effective light/dark flips.
             DisposableEffect(darkTheme) {
                 enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { darkTheme },
@@ -36,7 +47,23 @@ class MainActivity : ComponentActivity() {
                 )
                 onDispose {}
             }
-            App(openCaptureRequests = openCaptureRequests.intValue)
+            App(
+                preferences = preferences,
+                onPreferencesChange = { updated ->
+                    PreferencesStore.save(this, updated)
+                    preferences = updated
+                    // Keeps the channel name (shown in system settings) in the chosen language.
+                    syncNotificationChannel()
+                },
+                openCaptureRequests = openCaptureRequests.intValue,
+            )
+        }
+    }
+
+    private fun syncNotificationChannel() {
+        lifecycleScope.launch {
+            applyAppLocale(this@MainActivity)
+            ReminderNotifications.ensureChannel(this@MainActivity)
         }
     }
 

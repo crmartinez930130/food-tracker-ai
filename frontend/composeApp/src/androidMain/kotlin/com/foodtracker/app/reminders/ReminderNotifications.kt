@@ -9,8 +9,12 @@ import androidx.core.app.NotificationManagerCompat
 import com.foodtracker.app.MainActivity
 import com.foodtracker.app.R
 import com.foodtracker.app.data.MealType
-import com.foodtracker.app.ui.reminders.REMINDER_TEXT
 import com.foodtracker.app.ui.reminders.reminderTitle
+import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.reminder_channel_description
+import food_tracker_frontend.composeapp.generated.resources.reminder_channel_name
+import food_tracker_frontend.composeapp.generated.resources.reminder_text
+import org.jetbrains.compose.resources.getString
 
 object ReminderNotifications {
     private const val CHANNEL_ID = "meal_reminders"
@@ -18,17 +22,18 @@ object ReminderNotifications {
     /** One id per meal: a new reminder replaces yesterday's still-unread one instead of stacking. */
     private fun notificationId(meal: MealType) = 1000 + meal.ordinal
 
-    fun ensureChannel(context: Context) {
+    /** Creates the channel, or renames it in the app's current language (see applyAppLocale). */
+    suspend fun ensureChannel(context: Context) {
         NotificationManagerCompat.from(context).createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName("Meal reminders")
-                .setDescription("Optional daily reminders to log breakfast, lunch or dinner")
+                .setName(getString(Res.string.reminder_channel_name))
+                .setDescription(getString(Res.string.reminder_channel_description))
                 .build(),
         )
     }
 
     /** Posts the reminder unless notifications are off for the app (then it silently does nothing). */
-    fun show(context: Context, meal: MealType) {
+    suspend fun show(context: Context, meal: MealType) {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
         ensureChannel(context)
@@ -42,8 +47,8 @@ object ReminderNotifications {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(reminderTitle(meal))
-            .setContentText(REMINDER_TEXT)
+            .setContentTitle(getString(reminderTitle(meal)))
+            .setContentText(getString(Res.string.reminder_text))
             .setContentIntent(openCapture)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

@@ -64,13 +64,13 @@ class ProgressTest {
 
     @Test
     fun `day labels today, yesterday and older dates`() {
-        assertEquals("Today", dayLabel("2026-10-09", today = "2026-10-09"))
-        assertEquals("Yesterday", dayLabel("2026-10-08", today = "2026-10-09"))
-        assertEquals("2026-10-07", dayLabel("2026-10-07", today = "2026-10-09"))
+        assertEquals(DayLabel.Today, dayLabel("2026-10-09", today = "2026-10-09"))
+        assertEquals(DayLabel.Yesterday, dayLabel("2026-10-08", today = "2026-10-09"))
+        assertEquals(DayLabel.Date("2026-10-07"), dayLabel("2026-10-07", today = "2026-10-09"))
     }
 
     @Test
     fun `yesterday works across a month boundary`() {
-        assertEquals("Yesterday", dayLabel("2026-09-30", today = "2026-10-01"))
+        assertEquals(DayLabel.Yesterday, dayLabel("2026-09-30", today = "2026-10-01"))
     }
 }

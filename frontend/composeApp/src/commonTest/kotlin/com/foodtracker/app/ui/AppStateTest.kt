@@ -16,7 +16,7 @@ class AppStateTest {
 
     @Test
     fun `a reminder tap opens capture from Main, Goals and Reminders`() {
-        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openReminders() })) {
+        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openSettings() }, { openReminders() })) {
             val state = AppState().apply(open)
 
             state.openCaptureFromReminder()
@@ -42,5 +42,17 @@ class AppStateTest {
 
         assertEquals(Screen.Review, state.screen)
         assertEquals(analysis, state.pendingAnalysis)
+    }
+
+    @Test
+    fun `options leads to reminders and back to options`() {
+        val state = AppState()
+
+        state.openSettings()
+        assertEquals(Screen.Settings, state.screen)
+        state.openReminders()
+        assertEquals(Screen.Reminders, state.screen)
+        state.openSettings()
+        assertEquals(Screen.Settings, state.screen)
     }
 }

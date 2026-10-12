@@ -37,8 +37,19 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.ui.displayLabel
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_back
+import food_tracker_frontend.composeapp.generated.resources.action_cancel
+import food_tracker_frontend.composeapp.generated.resources.action_ok
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
+import food_tracker_frontend.composeapp.generated.resources.reminders_blocked
+import food_tracker_frontend.composeapp.generated.resources.reminders_intro
+import food_tracker_frontend.composeapp.generated.resources.reminders_open_settings
+import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_breakfast
+import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_dinner
+import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_lunch
+import food_tracker_frontend.composeapp.generated.resources.reminders_title
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Opt-in daily reminders per meal. Every change is saved and (re)scheduled immediately. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -83,10 +94,10 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Reminders") },
+                title = { Text(stringResource(Res.string.reminders_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = "Back")
+                        Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = stringResource(Res.string.action_back))
                     }
                 },
             )
@@ -96,7 +107,7 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize().padding(contentPadding).verticalScroll(rememberScrollState()).padding(16.dp),
         ) {
             Text(
-                "Optional daily nudges to log a meal. They're off until you turn them on.",
+                stringResource(Res.string.reminders_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -114,12 +125,12 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             if (notificationsBlocked) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Notifications are blocked for Food Tracker. Allow them in system settings to get reminders.",
+                    stringResource(Res.string.reminders_blocked),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { platform.openNotificationSettings() }) { Text("Open settings") }
+                OutlinedButton(onClick = { platform.openNotificationSettings() }) { Text(stringResource(Res.string.reminders_open_settings)) }
             }
         }
     }
@@ -127,7 +138,13 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     editingTimeOf?.let { meal ->
         val reminder = settings.reminderFor(meal)
         ReminderTimeDialog(
-            title = "${meal.displayLabel()} reminder",
+            title = stringResource(
+                when (meal) {
+                    MealType.BREAKFAST -> Res.string.reminders_time_dialog_breakfast
+                    MealType.DINNER -> Res.string.reminders_time_dialog_dinner
+                    else -> Res.string.reminders_time_dialog_lunch
+                },
+            ),
             initialHour = reminder.hour,
             initialMinute = reminder.minute,
             onDismiss = { editingTimeOf = null },
@@ -168,7 +185,7 @@ private fun ReminderTimeDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { TimePicker(state = state) },
-        confirmButton = { TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text(stringResource(Res.string.action_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }

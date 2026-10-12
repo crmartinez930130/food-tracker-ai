@@ -2,7 +2,6 @@ package com.foodtracker.app.ui.summary
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ExportRangeTest {
@@ -20,14 +19,14 @@ class ExportRangeTest {
 
     @Test
     fun `367 days are rejected with the limit and the picked length`() {
-        assertEquals("Pick at most 366 days (this range has 367)", exportRangeError("2025-01-01", "2026-01-02"))
+        assertEquals(ExportRangeProblem.TooLong(367), exportRangeError("2025-01-01", "2026-01-02"))
     }
 
     @Test
     fun `an incomplete or reversed range is rejected`() {
-        assertNotNull(exportRangeError("2026-10-01", null))
-        assertNotNull(exportRangeError(null, null))
-        assertNotNull(exportRangeError("2026-10-07", "2026-10-01"))
+        assertEquals(ExportRangeProblem.Incomplete, exportRangeError("2026-10-01", null))
+        assertEquals(ExportRangeProblem.Incomplete, exportRangeError(null, null))
+        assertEquals(ExportRangeProblem.Reversed, exportRangeError("2026-10-07", "2026-10-01"))
     }
 
     @Test

@@ -36,9 +36,31 @@ import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.UpdateGoalsRequest
 import food_tracker_frontend.composeapp.generated.resources.Res
+import food_tracker_frontend.composeapp.generated.resources.action_back
+import food_tracker_frontend.composeapp.generated.resources.error_load_goal
+import food_tracker_frontend.composeapp.generated.resources.error_save_goal
+import food_tracker_frontend.composeapp.generated.resources.goals_calories
+import food_tracker_frontend.composeapp.generated.resources.goals_carbs
+import food_tracker_frontend.composeapp.generated.resources.goals_default_hint
+import food_tracker_frontend.composeapp.generated.resources.goals_error_calories
+import food_tracker_frontend.composeapp.generated.resources.goals_error_glass
+import food_tracker_frontend.composeapp.generated.resources.goals_error_macros
+import food_tracker_frontend.composeapp.generated.resources.goals_error_numbers
+import food_tracker_frontend.composeapp.generated.resources.goals_error_water
+import food_tracker_frontend.composeapp.generated.resources.goals_fat
+import food_tracker_frontend.composeapp.generated.resources.goals_glass_hint
+import food_tracker_frontend.composeapp.generated.resources.goals_glass_size
+import food_tracker_frontend.composeapp.generated.resources.goals_protein
+import food_tracker_frontend.composeapp.generated.resources.goals_save
+import food_tracker_frontend.composeapp.generated.resources.goals_saved
+import food_tracker_frontend.composeapp.generated.resources.goals_title
+import food_tracker_frontend.composeapp.generated.resources.goals_water_section
+import food_tracker_frontend.composeapp.generated.resources.goals_water_target
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Shows whole numbers without a trailing ".0" so the fields read like what the user typed. */
 private fun Double.toFieldText(): String = if (this % 1.0 == 0.0) toLong().toString() else toString()
@@ -73,7 +95,7 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
         try {
             showGoal(apiClient.getGoals())
         } catch (e: Exception) {
-            errorMessage = "Couldn't load your goal: ${e.message ?: "unknown error"}"
+            errorMessage = errorText(Res.string.error_load_goal, e)
         } finally {
             isLoading = false
         }
@@ -92,16 +114,16 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
         // Same rules the backend enforces, checked here first for a friendlier message.
         val clientError = when {
             listOf(request.targetCalories, request.targetProteinGrams, request.targetFatGrams, request.targetCarbsGrams)
-                .any { it.isNaN() } -> "Enter a number in every field."
-            request.targetCalories <= 0 -> "Calories must be greater than 0."
+                .any { it.isNaN() } -> Res.string.goals_error_numbers
+            request.targetCalories <= 0 -> Res.string.goals_error_calories
             listOf(request.targetProteinGrams, request.targetFatGrams, request.targetCarbsGrams).any { it < 0 } ->
-                "Protein, fat and carbs can't be negative."
-            request.targetWaterMl !in 1..20000 -> "Daily water must be a whole number from 1 to 20000 ml."
-            request.waterGlassMl !in 1..5000 -> "Glass size must be a whole number from 1 to 5000 ml."
+                Res.string.goals_error_macros
+            request.targetWaterMl !in 1..20000 -> Res.string.goals_error_water
+            request.waterGlassMl !in 1..5000 -> Res.string.goals_error_glass
             else -> null
         }
         if (clientError != null) {
-            errorMessage = clientError
+            scope.launch { errorMessage = getString(clientError) }
             return
         }
         isSaving = true
@@ -109,10 +131,10 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
         scope.launch {
             try {
                 showGoal(apiClient.updateGoals(request))
-                savedMessage = "Goal saved."
+                savedMessage = getString(Res.string.goals_saved)
             } catch (e: Exception) {
                 // Keep the user's edits on screen so they can correct them.
-                errorMessage = "Couldn't save your goal: ${e.message ?: "unknown error"}"
+                errorMessage = errorText(Res.string.error_save_goal, e)
             } finally {
                 isSaving = false
             }
@@ -125,10 +147,10 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Daily goal") },
+                title = { Text(stringResource(Res.string.goals_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = "Back")
+                        Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = stringResource(Res.string.action_back))
                     }
                 },
             )
@@ -144,23 +166,23 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
 
             if (isDefault) {
                 Text(
-                    "You're using the default goal. Adjust it to your needs and save.",
+                    stringResource(Res.string.goals_default_hint),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(8.dp))
             }
 
-            GoalField("Calories (kcal)", calories, onValueChange = { calories = it })
-            GoalField("Protein (g)", protein, onValueChange = { protein = it })
-            GoalField("Fat (g)", fat, onValueChange = { fat = it })
-            GoalField("Carbs (g)", carbs, onValueChange = { carbs = it })
+            GoalField(stringResource(Res.string.goals_calories), calories, onValueChange = { calories = it })
+            GoalField(stringResource(Res.string.goals_protein), protein, onValueChange = { protein = it })
+            GoalField(stringResource(Res.string.goals_fat), fat, onValueChange = { fat = it })
+            GoalField(stringResource(Res.string.goals_carbs), carbs, onValueChange = { carbs = it })
 
             Spacer(Modifier.height(16.dp))
-            Text("Water", style = MaterialTheme.typography.titleMedium)
-            GoalField("Daily water (ml)", water, onValueChange = { water = it }, keyboardType = KeyboardType.Number)
-            GoalField("Glass size (ml)", glass, onValueChange = { glass = it }, keyboardType = KeyboardType.Number)
+            Text(stringResource(Res.string.goals_water_section), style = MaterialTheme.typography.titleMedium)
+            GoalField(stringResource(Res.string.goals_water_target), water, onValueChange = { water = it }, keyboardType = KeyboardType.Number)
+            GoalField(stringResource(Res.string.goals_glass_size), glass, onValueChange = { glass = it }, keyboardType = KeyboardType.Number)
             Text(
-                "Each tap of the water button on Home adds one glass.",
+                stringResource(Res.string.goals_glass_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -179,7 +201,7 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                 } else {
-                    Text("Save goal")
+                    Text(stringResource(Res.string.goals_save))
                 }
             }
         }
