@@ -5,6 +5,7 @@ import {
   dailyTotalsBetween,
   deleteMeal,
   exportRowsBetween,
+  firstMealDate,
   getMealById,
   listMealsBetween,
   listFavoriteMeals,
@@ -270,5 +271,27 @@ describe("exportRowsBetween", () => {
 
     const rows = exportRowsBetween(db, "2026-03-05", "2026-03-07");
     expect(rows.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-03-05 08:00", "2026-03-06 20:00"]);
+  });
+});
+
+describe("firstMealDate", () => {
+  const local = (y: number, m: number, d: number, h: number) => new Date(y, m - 1, d, h).toISOString();
+
+  it("is null when there are no meals", () => {
+    expect(firstMealDate(db)).toBeNull();
+  });
+
+  it("returns the local day of the earliest meal, whatever the insertion order", () => {
+    createMeal(db, { items: [sampleItem], occurredAt: local(2026, 3, 9, 12) });
+    createMeal(db, { items: [sampleItem], occurredAt: local(2025, 11, 2, 12) });
+    createMeal(db, { items: [sampleItem], occurredAt: local(2026, 1, 15, 12) });
+
+    expect(firstMealDate(db)).toBe("2025-11-02");
+  });
+
+  it("uses the local day for a late-evening earliest meal", () => {
+    createMeal(db, { items: [sampleItem], occurredAt: local(2026, 3, 5, 23) });
+
+    expect(firstMealDate(db)).toBe("2026-03-05");
   });
 });

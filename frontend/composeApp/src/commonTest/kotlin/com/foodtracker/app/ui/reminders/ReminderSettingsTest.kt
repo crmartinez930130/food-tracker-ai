@@ -1,5 +1,6 @@
 package com.foodtracker.app.ui.reminders
 
+import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -8,6 +9,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -94,5 +96,35 @@ class ReminderSettingsTest {
         assertEquals("Did you log your lunch?", reminderTitle(MealType.LUNCH))
         assertEquals("Did you log your breakfast?", reminderTitle(MealType.BREAKFAST))
         assertEquals("07:05", timeLabel(7, 5))
+    }
+
+    private fun meal(type: MealType?) = MealEntry(
+        id = 1,
+        occurredAt = "2026-10-12T15:00:00.000Z",
+        createdAt = "2026-10-12T15:00:00.000Z",
+        notes = null,
+        mealType = type,
+        items = emptyList(),
+        totalCalories = 0.0,
+        totalProteinGrams = 0.0,
+        totalFatGrams = 0.0,
+        totalCarbsGrams = 0.0,
+    )
+
+    @Test
+    fun `a reminder shows when today's meals are unknown or don't include that meal`() {
+        assertTrue(shouldShowReminder(MealType.LUNCH, null))
+        assertTrue(shouldShowReminder(MealType.LUNCH, emptyList()))
+        assertTrue(shouldShowReminder(MealType.LUNCH, listOf(meal(MealType.BREAKFAST), meal(MealType.SNACK))))
+    }
+
+    @Test
+    fun `a reminder is skipped when that meal is already logged`() {
+        assertFalse(shouldShowReminder(MealType.LUNCH, listOf(meal(MealType.BREAKFAST), meal(MealType.LUNCH))))
+    }
+
+    @Test
+    fun `an untagged meal doesn't count as any meal`() {
+        assertTrue(shouldShowReminder(MealType.LUNCH, listOf(meal(null))))
     }
 }

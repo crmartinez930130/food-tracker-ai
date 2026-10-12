@@ -3,7 +3,7 @@ import type { AppDatabase } from "../db/client.js";
 import { dailySummary, rangeSummary, weeklySummary } from "../services/summary.js";
 import { ValidationError } from "../errors.js";
 import { asyncHandler } from "./async-handler.js";
-import { isCalendarDate, parseDateRange } from "./dates.js";
+import { invalidDateMessage, isCalendarDate, parseDateRange } from "./dates.js";
 
 
 export interface SummaryRouterDeps {
@@ -18,7 +18,7 @@ export function createSummaryRouter({ db }: SummaryRouterDeps): Router {
     asyncHandler(async (req, res) => {
       const date = req.query.date;
       if (!isCalendarDate(date)) {
-        throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
+        throw new ValidationError(invalidDateMessage("date"));
       }
       res.json(dailySummary(db, date));
     }),
@@ -29,7 +29,7 @@ export function createSummaryRouter({ db }: SummaryRouterDeps): Router {
     asyncHandler(async (req, res) => {
       const startDate = req.query.startDate;
       if (!isCalendarDate(startDate)) {
-        throw new ValidationError("Query parameter 'startDate' must be in YYYY-MM-DD format");
+        throw new ValidationError(invalidDateMessage("startDate"));
       }
       res.json(weeklySummary(db, startDate));
     }),

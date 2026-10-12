@@ -372,3 +372,25 @@ describe("GET /api/meals/export", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("GET /api/meals/first-date", () => {
+  it("returns null when no meal was ever logged", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).get("/api/meals/first-date");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ date: null });
+  });
+
+  it("returns the local day of the earliest meal (and isn't routed to /:id)", async () => {
+    const { app } = buildTestApp();
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: new Date(2026, 2, 9, 12).toISOString() });
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt: new Date(2025, 10, 2, 12).toISOString() });
+
+    const res = await request(app).get("/api/meals/first-date");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ date: "2025-11-02" });
+  });
+});

@@ -323,6 +323,17 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `firstMealDate reads the date or null`() = runBlocking {
+        var path: String? = null
+        val withMeals = capturingClient("""{"date":"2026-09-30"}""") { path = it.url.encodedPath }
+        val empty = capturingClient("""{"date":null}""") {}
+
+        assertEquals("2026-09-30", withMeals.firstMealDate())
+        assertEquals("/api/meals/first-date", path)
+        assertEquals(null, empty.firstMealDate())
+    }
+
+    @Test
     fun `exportMealsCsv requests the range and returns the CSV text unchanged`() = runBlocking {
         val csv = "\uFEFFdate,time,meal_type,item\r\n2026-03-01,13:15,lunch,\"Ñoquis, con jamón\"\r\n"
         var path: String? = null

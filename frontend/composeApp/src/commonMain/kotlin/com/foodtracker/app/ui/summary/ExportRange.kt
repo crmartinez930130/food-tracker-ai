@@ -24,6 +24,20 @@ fun exportRangeError(startDate: String?, endDate: String?): String? {
     }
 }
 
+/** Years offered when the earliest meal is unknown (no meals yet, or the lookup failed). */
+const val FALLBACK_EXPORT_YEARS = 10
+
+/**
+ * The picker's years: from the earliest meal's year - or the pre-selected period's, if earlier, since
+ * the picker's initial month must lie inside the range - up to the current year.
+ */
+fun exportYearRange(firstMealDate: String?, periodStart: String, today: String): IntRange {
+    val todayYear = LocalDate.parse(today).year
+    val periodYear = LocalDate.parse(periodStart).year
+    val firstYear = firstMealDate?.let { LocalDate.parse(it).year } ?: (todayYear - FALLBACK_EXPORT_YEARS)
+    return minOf(firstYear, periodYear)..todayYear
+}
+
 /** The Material date pickers work in UTC-midnight millis; the app and backend in YYYY-MM-DD. */
 fun dateToPickerMillis(date: String): Long = LocalDate.parse(date).toEpochDays() * MILLIS_PER_DAY
 

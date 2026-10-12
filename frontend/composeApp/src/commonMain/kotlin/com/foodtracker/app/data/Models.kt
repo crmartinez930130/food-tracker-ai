@@ -183,3 +183,7 @@ data class LogWaterRequest(
     /** Omitted (not sent as null) when absent, so the backend logs it now. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val loggedAt: String? = null,
 )
+
+/** The local day (YYYY-MM-DD) of the earliest logged meal, or null when there are none. */
+@Serializable
+data class FirstMealDate(val date: String?)

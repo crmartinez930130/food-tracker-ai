@@ -190,6 +190,15 @@ export function exportRowsBetween(db: AppDatabase, startDateInclusive: string, e
   }));
 }
 
+/** The local calendar day (YYYY-MM-DD) of the earliest meal, or null when there are none. */
+export function firstMealDate(db: AppDatabase): string | null {
+  const row = db
+    .select({ date: sql<string | null>`date(min(${meals.occurredAt}), 'localtime')` })
+    .from(meals)
+    .get();
+  return row?.date ?? null;
+}
+
 /** Every meal marked as favorite, whatever day it belongs to, ordered by when it occurred (newest first). */
 export function listFavoriteMeals(db: AppDatabase): MealEntry[] {
   const mealRows = db.select().from(meals).where(eq(meals.isFavorite, true)).orderBy(desc(meals.occurredAt)).all();
