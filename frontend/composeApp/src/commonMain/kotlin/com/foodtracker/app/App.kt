@@ -1,6 +1,7 @@
 package com.foodtracker.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
@@ -10,12 +11,21 @@ import com.foodtracker.app.ui.GoalsScreen
 import com.foodtracker.app.ui.MainScreen
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
+import com.foodtracker.app.ui.reminders.RemindersScreen
 import com.foodtracker.app.ui.theme.FoodTrackerTheme
 
+/**
+ * [openCaptureRequests] is bumped by the platform each time a meal reminder is tapped; every new
+ * value asks to open Capture (see AppState.openCaptureFromReminder).
+ */
 @Composable
-fun App() {
+fun App(openCaptureRequests: Int = 0) {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
     val appState = remember { AppState() }
+
+    LaunchedEffect(openCaptureRequests) {
+        if (openCaptureRequests > 0) appState.openCaptureFromReminder()
+    }
 
     FoodTrackerTheme {
         when (val screen = appState.screen) {
@@ -42,6 +52,8 @@ fun App() {
                 onBack = { appState.openMain() },
             )
 
+            is Screen.Reminders -> RemindersScreen(onBack = { appState.openMain() })
+
             is Screen.Main -> MainScreen(
                 initialTab = screen.tab,
                 apiClient = apiClient,
@@ -49,6 +61,7 @@ fun App() {
                 onHomeDateChange = { appState.homeDate = it },
                 onStartCapture = { appState.openCapture() },
                 onEditGoal = { appState.openGoals() },
+                onOpenReminders = { appState.openReminders() },
             )
         }
     }

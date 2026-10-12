@@ -12,6 +12,7 @@ sealed interface Screen {
     data object Capture : Screen
     data object Review : Screen
     data object Goals : Screen
+    data object Reminders : Screen
     data class Main(val tab: MainTab = MainTab.HOME) : Screen
 }
 
@@ -40,6 +41,21 @@ class AppState {
 
     fun openGoals() {
         screen = Screen.Goals
+    }
+
+    fun openReminders() {
+        screen = Screen.Reminders
+    }
+
+    /**
+     * A tapped reminder notification: go to Capture, unless the user is already capturing or
+     * reviewing a meal - that work (and its pending analysis) must never be thrown away.
+     */
+    fun openCaptureFromReminder() {
+        when (screen) {
+            is Screen.Main, Screen.Goals, Screen.Reminders -> openCapture()
+            Screen.Capture, Screen.Review -> Unit
+        }
     }
 
     fun openMain(tab: MainTab = MainTab.HOME) {

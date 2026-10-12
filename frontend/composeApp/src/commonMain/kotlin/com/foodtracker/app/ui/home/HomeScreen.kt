@@ -54,6 +54,7 @@ import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_left
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
 import food_tracker_frontend.composeapp.generated.resources.ic_edit
+import food_tracker_frontend.composeapp.generated.resources.ic_notifications
 import food_tracker_frontend.composeapp.generated.resources.ic_star
 import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
 import kotlinx.coroutines.launch
@@ -82,6 +83,7 @@ fun HomeScreen(
     date: String,
     onDateChange: (String) -> Unit,
     onEditGoal: () -> Unit,
+    onOpenReminders: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var meals by remember { mutableStateOf<List<MealEntry>>(emptyList()) }
@@ -159,6 +161,7 @@ fun HomeScreen(
             onPrevious = { onDateChange(date.plusDays(-1)) },
             onNext = { onDateChange(date.plusDays(1)) },
             onEditGoal = onEditGoal,
+            onOpenReminders = onOpenReminders,
         )
 
         val currentGoal = goal
@@ -249,6 +252,7 @@ private fun DayHeader(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onEditGoal: () -> Unit,
+    onOpenReminders: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -263,6 +267,9 @@ private fun DayHeader(
         )
         IconButton(onClick = onNext, enabled = canGoForward) {
             Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = "Next day")
+        }
+        IconButton(onClick = onOpenReminders) {
+            Icon(painterResource(Res.drawable.ic_notifications), contentDescription = "Meal reminders")
         }
         IconButton(onClick = onEditGoal) {
             Icon(painterResource(Res.drawable.ic_edit), contentDescription = "Edit daily goal")

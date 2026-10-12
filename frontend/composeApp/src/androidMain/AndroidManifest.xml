@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Opt-in meal reminders: notifications (Android 13+ runtime) and re-arming alarms after reboot. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- The app falls back to the gallery without a camera, so don't filter camera-less devices. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -19,6 +22,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Meal reminder alarms, plus the system broadcasts after which alarms must be re-registered.
+             Not exported: the system still delivers its own broadcasts, and alarms use an explicit intent. -->
+        <receiver
+            android:name=".reminders.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Shares CSV exports from the cache with other apps (see res/xml/file_paths.xml). -->
         <provider
