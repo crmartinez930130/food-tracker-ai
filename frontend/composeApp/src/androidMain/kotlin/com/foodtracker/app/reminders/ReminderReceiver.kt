@@ -8,7 +8,9 @@ import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.reminders.shouldShowReminder
+import com.foodtracker.app.ui.settings.PreferencesStore
 import com.foodtracker.app.ui.settings.applyAppLocale
+import com.foodtracker.app.ui.settings.effectiveServerUrl
 import com.foodtracker.app.util.todayDateString
 import io.ktor.client.engine.android.Android
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +43,7 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 // A fresh receiver process has the phone's locale; texts must use the app's language.
                 applyAppLocale(context)
-                if (shouldShowReminder(meal, mealsTodayOrNull())) {
+                if (shouldShowReminder(meal, mealsTodayOrNull(effectiveServerUrl(PreferencesStore.load(context))))) {
                     ReminderNotifications.show(context, meal)
                 }
             } finally {
@@ -53,7 +55,8 @@ class ReminderReceiver : BroadcastReceiver() {
     }
 
     /** Today's meals, or null if the backend can't answer quickly - then the reminder is shown anyway. */
-    private suspend fun mealsTodayOrNull(): List<MealEntry>? {
+    /** A fresh receiver process never set BackendConfig, so the saved address is passed in explicitly. */
+    private suspend fun mealsTodayOrNull(serverUrl: String): List<MealEntry>? {
         // Engine timeouts too: a blocking connect to a sleeping laptop may not react to cancellation.
         val httpClient = createHttpClient(
             Android.create {
@@ -62,7 +65,7 @@ class ReminderReceiver : BroadcastReceiver() {
             },
         )
         return try {
-            withTimeoutOrNull(MEALS_TIMEOUT_MS) { FoodTrackerApiClient(httpClient).listMeals(todayDateString()) }
+            withTimeoutOrNull(MEALS_TIMEOUT_MS) { FoodTrackerApiClient(httpClient) { serverUrl }.listMeals(todayDateString()) }
         } catch (e: Exception) {
             null
         } finally {

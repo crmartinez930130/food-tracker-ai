@@ -15,11 +15,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
+import com.foodtracker.app.data.BackendConfig
 import com.foodtracker.app.reminders.ReminderNotifications
 import com.foodtracker.app.reminders.ReminderScheduler
 import com.foodtracker.app.reminders.ReminderStore
 import com.foodtracker.app.ui.settings.PreferencesStore
 import com.foodtracker.app.ui.settings.applyAppLocale
+import com.foodtracker.app.ui.settings.effectiveServerUrl
 import com.foodtracker.app.ui.settings.resolveDarkTheme
 import kotlinx.coroutines.launch
 
@@ -34,6 +36,8 @@ class MainActivity : ComponentActivity() {
         // On recreation the request was already handled before.
         if (savedInstanceState == null) handleReminderTap(intent)
         syncNotificationChannel()
+        // Every API client reads BackendConfig lazily, so this covers all requests from here on.
+        BackendConfig.baseUrl = effectiveServerUrl(PreferencesStore.load(this))
         setContent {
             // Options choices: owned here so the system bars can follow the chosen theme too.
             var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
@@ -52,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 onPreferencesChange = { updated ->
                     PreferencesStore.save(this, updated)
                     preferences = updated
+                    BackendConfig.baseUrl = effectiveServerUrl(updated)
                     // Keeps the channel name (shown in system settings) in the chosen language.
                     syncNotificationChannel()
                 },
