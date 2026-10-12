@@ -54,8 +54,10 @@ class ReminderReceiver : BroadcastReceiver() {
         }
     }
 
-    /** Today's meals, or null if the backend can't answer quickly - then the reminder is shown anyway. */
-    /** A fresh receiver process never set BackendConfig, so the saved address is passed in explicitly. */
+    /**
+     * Today's meals, or null if the backend can't answer quickly - then the reminder is shown anyway.
+     * A fresh receiver process never set BackendConfig, so the saved address is passed in explicitly.
+     */
     private suspend fun mealsTodayOrNull(serverUrl: String): List<MealEntry>? {
         // Engine timeouts too: a blocking connect to a sleeping laptop may not react to cancellation.
         val httpClient = createHttpClient(

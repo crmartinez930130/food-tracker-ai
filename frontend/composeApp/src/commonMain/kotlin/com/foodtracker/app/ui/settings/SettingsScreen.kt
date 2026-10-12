@@ -73,6 +73,10 @@ import food_tracker_frontend.composeapp.generated.resources.settings_theme_light
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_system
 import food_tracker_frontend.composeapp.generated.resources.settings_title
 import food_tracker_frontend.composeapp.generated.resources.unknown_error
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.HttpTimeout
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
@@ -247,12 +251,26 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
 
 /** Tries the typed (not necessarily saved) address with a throwaway client. */
 private suspend fun testConnection(url: String): ServerStatus {
-    val httpClient = createHttpClient()
+    // Timeouts at the engine level too: a blocking connect to a host that drops packets (firewall,
+    // sleeping PC) may not react to coroutine cancellation, which is all withTimeoutOrNull does.
+    val httpClient = createHttpClient().config {
+        install(HttpTimeout) {
+            connectTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+            socketTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+            requestTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+        }
+    }
     return try {
         withTimeoutOrNull(CONNECTION_TEST_TIMEOUT_MS) {
             FoodTrackerApiClient(httpClient) { url }.getGoals()
             ServerStatus.Connected
         } ?: ServerStatus.Timeout
+    } catch (e: HttpRequestTimeoutException) {
+        ServerStatus.Timeout
+    } catch (e: ConnectTimeoutException) {
+        ServerStatus.Timeout
+    } catch (e: SocketTimeoutException) {
+        ServerStatus.Timeout
     } catch (e: Exception) {
         ServerStatus.Failed(e.message)
     } finally {
