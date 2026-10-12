@@ -55,6 +55,8 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.compose.ui.backhandler)
+            // LifecycleResumeEffect (Reminders re-checks notification permission on resume); already transitive.
+            implementation(libs.jetbrains.lifecycle.runtime.compose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

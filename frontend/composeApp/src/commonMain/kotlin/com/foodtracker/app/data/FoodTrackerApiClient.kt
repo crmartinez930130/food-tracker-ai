@@ -153,6 +153,11 @@ class FoodTrackerApiClient(
             .parseOrThrow()
     }
 
+    /** The local day (YYYY-MM-DD) of the earliest logged meal, or null when none was ever logged. */
+    suspend fun firstMealDate(): String? {
+        return httpClient.get("$baseUrl/api/meals/first-date").parseOrThrow<FirstMealDate>().date
+    }
+
     /**
      * The CSV export of meals from [startDate] to [endDate] (inclusive), as the backend's raw text -
      * including its UTF-8 byte-order mark, which spreadsheets need to read accents correctly.

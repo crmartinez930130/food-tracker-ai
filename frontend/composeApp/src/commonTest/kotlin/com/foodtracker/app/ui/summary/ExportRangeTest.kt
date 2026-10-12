@@ -44,4 +44,19 @@ class ExportRangeTest {
         assertEquals("2026-10-11", pickerMillisToDate(midnight + 23 * 60 * 60 * 1000L))
         assertEquals("2026-10-10", pickerMillisToDate(midnight - 1))
     }
+
+    @Test
+    fun `picker years start at the earliest meal`() {
+        assertEquals(2024..2026, exportYearRange("2024-05-03", periodStart = "2026-10-05", today = "2026-10-11"))
+    }
+
+    @Test
+    fun `picker years include a period that starts before the first meal`() {
+        assertEquals(2025..2026, exportYearRange("2026-01-10", periodStart = "2025-12-29", today = "2026-01-04"))
+    }
+
+    @Test
+    fun `without a first meal date the picker falls back to recent years`() {
+        assertEquals(2016..2026, exportYearRange(null, periodStart = "2026-10-05", today = "2026-10-11"))
+    }
 }

@@ -3,7 +3,7 @@ import type { AppDatabase } from "../db/client.js";
 import { createWaterLog, deleteWaterLog, waterForDay } from "../db/water-repository.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { asyncHandler } from "./async-handler.js";
-import { isCalendarDate } from "./dates.js";
+import { invalidDateMessage, isCalendarDate } from "./dates.js";
 import { LogWaterRequestSchema } from "./schemas.js";
 import { validationErrorFrom } from "./validation.js";
 
@@ -48,7 +48,7 @@ export function createWaterRouter({ db }: WaterRouterDeps): Router {
     asyncHandler(async (req, res) => {
       const date = req.query.date;
       if (!isCalendarDate(date)) {
-        throw new ValidationError("Query parameter 'date' must be a real date in YYYY-MM-DD format");
+        throw new ValidationError(invalidDateMessage("date"));
       }
       res.json(waterForDay(db, date));
     }),

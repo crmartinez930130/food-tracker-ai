@@ -1,5 +1,6 @@
 package com.foodtracker.app.ui.reminders
 
+import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.ui.displayLabel
 import kotlinx.datetime.DateTimeUnit
@@ -76,6 +77,14 @@ fun nextTriggerAt(now: Instant, hour: Int, minute: Int, timeZone: TimeZone): Ins
     val todayAt = LocalDateTime(today, time).toInstant(timeZone)
     return if (todayAt > now) todayAt else LocalDateTime(today.plus(1, DateTimeUnit.DAY), time).toInstant(timeZone)
 }
+
+/**
+ * Whether a firing reminder for [meal] should notify. [mealsToday] is null when today's meals
+ * couldn't be fetched in time: then remind anyway - a spurious nudge beats a missed one. Untagged
+ * meals can't be attributed to breakfast/lunch/dinner, so they never suppress a reminder.
+ */
+fun shouldShowReminder(meal: MealType, mealsToday: List<MealEntry>?): Boolean =
+    mealsToday == null || mealsToday.none { it.mealType == meal }
 
 fun reminderTitle(meal: MealType): String = "Did you log your ${meal.displayLabel().lowercase()}?"
 

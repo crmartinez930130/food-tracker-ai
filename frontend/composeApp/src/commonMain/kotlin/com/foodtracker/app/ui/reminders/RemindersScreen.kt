@@ -33,6 +33,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.ui.displayLabel
 import food_tracker_frontend.composeapp.generated.resources.Res
@@ -45,9 +46,17 @@ import org.jetbrains.compose.resources.painterResource
 fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val platform = rememberReminderPlatform()
     var settings by remember { mutableStateOf(platform.load()) }
-    // Shown after a denied request, or when reminders are on but the user has since blocked notifications.
-    var notificationsBlocked by remember {
-        mutableStateOf(settings.reminders.any { it.enabled } && !platform.canNotify())
+    // Shown after a denied request, or when reminders are on but notifications aren't allowed.
+    var notificationsBlocked by remember { mutableStateOf(false) }
+    // Re-checked on every resume (incl. coming back from system settings), not just on entry.
+    LifecycleResumeEffect(Unit) {
+        notificationsBlocked = if (platform.canNotify()) {
+            false
+        } else {
+            // Keep a denial's message even while every reminder is off.
+            notificationsBlocked || settings.reminders.any { it.enabled }
+        }
+        onPauseOrDispose {}
     }
     var editingTimeOf by remember { mutableStateOf<MealType?>(null) }
 

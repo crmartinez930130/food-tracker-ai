@@ -5,6 +5,7 @@ import type { AppDatabase } from "../db/client.js";
 import {
   createMeal,
   deleteMeal,
+  firstMealDate,
   getMealById,
   listFavoriteMeals,
   listMealsByDate,
@@ -16,7 +17,7 @@ import { analyzeMealPhoto } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
-import { isCalendarDate, parseDateRange } from "./dates.js";
+import { invalidDateMessage, isCalendarDate, parseDateRange } from "./dates.js";
 import { validationErrorFrom } from "./validation.js";
 
 
@@ -79,13 +80,21 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
     asyncHandler(async (req, res) => {
       const date = req.query.date;
       if (!isCalendarDate(date)) {
-        throw new ValidationError("Query parameter 'date' must be in YYYY-MM-DD format");
+        throw new ValidationError(invalidDateMessage("date"));
       }
       res.json(listMealsByDate(db, date));
     }),
   );
 
-  // Like "/favorites", must stay above "/:id".
+  // Like "/favorites", these must stay above "/:id".
+  // Lets clients bound date pickers to where the data actually starts (see the export picker).
+  router.get(
+    "/first-date",
+    asyncHandler(async (_req, res) => {
+      res.json({ date: firstMealDate(db) });
+    }),
+  );
+
   router.get(
     "/export",
     asyncHandler(async (req, res) => {

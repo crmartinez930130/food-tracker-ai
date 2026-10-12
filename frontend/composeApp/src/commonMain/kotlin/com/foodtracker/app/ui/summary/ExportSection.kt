@@ -42,13 +42,21 @@ fun ExportSection(
 ) {
     val sharer = rememberFileSharer()
     val scope = rememberCoroutineScope()
-    var showPicker by remember { mutableStateOf(false) }
+    // Non-null while the picker is open: the years it offers (see exportYearRange).
+    var pickerYears by remember { mutableStateOf<IntRange?>(null) }
     var isExporting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedButton(
-            onClick = { error = null; showPicker = true },
+            onClick = {
+                error = null
+                scope.launch {
+                    // One tiny request; on failure the picker just offers the fallback years.
+                    val firstMealDate = runCatching { apiClient.firstMealDate() }.getOrNull()
+                    pickerYears = exportYearRange(firstMealDate, periodStart, today)
+                }
+            },
             enabled = !isExporting,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -63,14 +71,15 @@ fun ExportSection(
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 
-    if (showPicker) {
+    pickerYears?.let { years ->
         ExportRangeDialog(
             initialStart = periodStart,
             initialEnd = periodEnd,
             today = today,
-            onDismiss = { showPicker = false },
+            years = years,
+            onDismiss = { pickerYears = null },
             onConfirm = { start, end ->
-                showPicker = false
+                pickerYears = null
                 scope.launch {
                     isExporting = true
                     try {
@@ -93,15 +102,16 @@ private fun ExportRangeDialog(
     initialStart: String,
     initialEnd: String,
     today: String,
+    years: IntRange,
     onDismiss: () -> Unit,
     onConfirm: (start: String, end: String) -> Unit,
 ) {
     val todayMillis = dateToPickerMillis(today)
-    val todayYear = today.take(4).toInt()
+    val todayYear = years.last
     val state = rememberDateRangePickerState(
         initialSelectedStartDateMillis = dateToPickerMillis(initialStart),
         initialSelectedEndDateMillis = dateToPickerMillis(initialEnd),
-        yearRange = 2020..todayYear,
+        yearRange = years,
         selectableDates = remember(todayMillis) {
             object : SelectableDates {
                 // No meals can exist after today.

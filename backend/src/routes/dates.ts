@@ -11,6 +11,13 @@ export function isCalendarDate(value: unknown): value is string {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+/** The one wording for a bad date query parameter, whether malformed or impossible (2026-02-30). */
+export function invalidDateMessage(name: string): string {
+  return `Query parameter '${name}' must be a real date in YYYY-MM-DD format`;
+}
+
+export const INVALID_RANGE_MESSAGE = "Query parameters 'startDate' and 'endDate' must be real dates in YYYY-MM-DD format";
+
 /**
  * Validates an inclusive `startDate`/`endDate` query pair: real dates, end not before start, at
  * most MAX_RANGE_DAYS days. Throws ValidationError otherwise.
@@ -21,7 +28,7 @@ export function parseDateRange(query: { startDate?: unknown; endDate?: unknown }
 } {
   const { startDate, endDate } = query;
   if (!isCalendarDate(startDate) || !isCalendarDate(endDate)) {
-    throw new ValidationError("Query parameters 'startDate' and 'endDate' must be dates in YYYY-MM-DD format");
+    throw new ValidationError(INVALID_RANGE_MESSAGE);
   }
   const days = (Date.parse(endDate) - Date.parse(startDate)) / MS_PER_DAY + 1;
   if (days < 1) {
