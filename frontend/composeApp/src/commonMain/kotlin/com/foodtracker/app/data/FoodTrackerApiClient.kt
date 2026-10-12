@@ -53,11 +53,16 @@ class FoodTrackerApiClient(
         return body()
     }
 
-    suspend fun analyzeMealPhoto(imageBytes: ByteArray, filename: String = "meal.jpg"): MealAnalysis {
+    /**
+     * Analyzes a meal photo. [language] ("es"/"en") is the language the backend asks Claude to write
+     * the food names and notes in; the backend treats anything else as English.
+     */
+    suspend fun analyzeMealPhoto(imageBytes: ByteArray, language: String, filename: String = "meal.jpg"): MealAnalysis {
         return httpClient
             .submitFormWithBinaryData(
                 url = "$baseUrl/api/meals/analyze",
                 formData = formData {
+                    append("language", language)
                     append(
                         "photo",
                         imageBytes,

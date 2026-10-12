@@ -394,3 +394,40 @@ describe("GET /api/meals/first-date", () => {
     expect(res.body).toEqual({ date: "2025-11-02" });
   });
 });
+
+describe("POST /api/meals/analyze language", () => {
+  const emptyAnalysis = {
+    parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
+    usage: { input_tokens: 1, output_tokens: 1 },
+  };
+
+  async function analyzeWith(fields: Record<string, string>): Promise<{ status: number; prompt: string }> {
+    let prompt = "";
+    const { app } = buildTestApp(async (request: unknown) => {
+      const content = (request as { messages: { content: { type: string; text?: string }[] }[] }).messages[0].content;
+      prompt = content.find((part) => part.type === "text")!.text!;
+      return emptyAnalysis;
+    });
+    let req = request(app).post("/api/meals/analyze");
+    for (const [name, value] of Object.entries(fields)) req = req.field(name, value);
+    const res = await req.attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" });
+    return { status: res.status, prompt };
+  }
+
+  it("asks for Spanish when the app sends language=es", async () => {
+    const { status, prompt } = await analyzeWith({ language: "es" });
+
+    expect(status).toBe(200);
+    expect(prompt).toContain("in Spanish (es)");
+  });
+
+  it.each([
+    ["no language", {}],
+    ["an unknown language", { language: "fr" }],
+  ])("still analyzes in English with %s", async (_label, fields) => {
+    const { status, prompt } = await analyzeWith(fields);
+
+    expect(status).toBe(200);
+    expect(prompt).toContain("in English");
+  });
+});

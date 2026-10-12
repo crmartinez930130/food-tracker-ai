@@ -11,6 +11,27 @@ protein (g), fat (g), and carbohydrates (g). If a quantity is hard to judge from
 provide your best estimate and set its confidence to "low" rather than omitting the item. If no food \
 is visible in the photo, return an empty items list with all totals at zero.`;
 
+/** The languages the analysis texts (item names, notes) can be written in. */
+export type AnalysisLanguage = "es" | "en";
+
+/**
+ * The requested analysis language, or English for anything missing or unknown - an older client
+ * (or curl) without the field must keep working, so this never rejects.
+ */
+export function parseAnalysisLanguage(value: unknown): AnalysisLanguage {
+  return typeof value === "string" && value.trim().toLowerCase() === "es" ? "es" : "en";
+}
+
+const LANGUAGE_INSTRUCTIONS: Record<AnalysisLanguage, string> = {
+  es: "Write each item's name and the notes in Spanish (es), using common food names a person in a Spanish-speaking country would recognize.",
+  en: "Write each item's name and the notes in English.",
+};
+
+/** The full instruction sent with the photo. Numbers and enum values stay language-neutral. */
+export function analysisPrompt(language: AnalysisLanguage): string {
+  return `${ANALYSIS_PROMPT} ${LANGUAGE_INSTRUCTIONS[language]}`;
+}
+
 export interface AnalyzeMealPhotoResult {
   analysis: MealAnalysis;
   usage: {
@@ -23,6 +44,7 @@ export async function analyzeMealPhoto(
   client: Anthropic,
   image: PreprocessedImage,
   model: string,
+  language: AnalysisLanguage = "en",
 ): Promise<AnalyzeMealPhotoResult> {
   let response;
   try {
@@ -41,7 +63,7 @@ export async function analyzeMealPhoto(
                 data: image.buffer.toString("base64"),
               },
             },
-            { type: "text", text: ANALYSIS_PROMPT },
+            { type: "text", text: analysisPrompt(language) },
           ],
         },
       ],

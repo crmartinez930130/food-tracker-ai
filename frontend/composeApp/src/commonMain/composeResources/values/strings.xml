@@ -73,9 +73,9 @@
     <string name="review_remove">Quitar</string>
     <string name="review_grams">Gramos</string>
     <string name="review_kcal">kcal</string>
-    <string name="review_protein_g">Proteína g</string>
-    <string name="review_fat_g">Grasa g</string>
-    <string name="review_carbs_g">Carbohidratos g</string>
+    <string name="review_protein_g">Proteína (g)</string>
+    <string name="review_fat_g">Grasa (g)</string>
+    <string name="review_carbs_g">Carbs (g)</string>
     <string name="review_confidence">Confianza: %1$s</string>
     <string name="confidence_low">baja</string>
     <string name="confidence_medium">media</string>

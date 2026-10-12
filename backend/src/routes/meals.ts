@@ -13,7 +13,7 @@ import {
 } from "../db/meal-repository.js";
 import { exportFileName, exportMealsCsv } from "../services/csv-export.js";
 import { preprocessImage } from "../services/image-preprocessing.js";
-import { analyzeMealPhoto } from "../services/vision-analysis.js";
+import { analyzeMealPhoto, parseAnalysisLanguage } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
@@ -58,7 +58,9 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
         throw new ValidationError("Missing 'photo' file in request");
       }
       const preprocessed = await preprocessImage(req.file.buffer);
-      const result = await analyzeMealPhoto(anthropicClient, preprocessed, model);
+      // Multer puts the form's text fields in req.body; the app sends the language it's showing.
+      const language = parseAnalysisLanguage(req.body?.language);
+      const result = await analyzeMealPhoto(anthropicClient, preprocessed, model, language);
       res.status(200).json(result.analysis);
     }),
   );

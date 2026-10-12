@@ -98,6 +98,20 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `analyzeMealPhoto sends the language next to the photo`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"items":[],"totalCalories":0,"totalProteinGrams":0,"totalFatGrams":0,"totalCarbsGrams":0}""",
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        api.analyzeMealPhoto(byteArrayOf(1, 2, 3), "es")
+
+        val languagePart = Regex("""name="?language"?\r\n(?:[^\r\n]+\r\n)*\r\n([^\r\n]*)""").find(sentBody)
+        assertEquals("es", languagePart?.groupValues?.get(1))
+        assertTrue(sentBody.contains("name=\"photo\"") || sentBody.contains("name=photo"))
+    }
+
+    @Test
     fun `deserializes an empty list response`() = runBlocking {
         val api = mockedApiClient("[]")
 
@@ -118,7 +132,7 @@ class FoodTrackerApiClientTest {
         val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
 
         val exception = assertFailsWith<ApiException> {
-            api.analyzeMealPhoto(byteArrayOf(1, 2, 3))
+            api.analyzeMealPhoto(byteArrayOf(1, 2, 3), "en")
         }
         assertEquals("Vision analysis request failed", exception.message)
     }
