@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import food_tracker_frontend.composeapp.generated.resources.Res
@@ -20,7 +21,11 @@ import org.jetbrains.compose.resources.Font
 @Composable
 fun googleSansFlex(): FontFamily {
     val weights = listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold, FontWeight.ExtraBold)
-    val fonts = weights.map { Font(Res.font.google_sans_flex, weight = it) }
+    // Pin the `wght` axis explicitly (Compose resources' default derives it from weight too, but the
+    // design calls for it and it keeps each instance unambiguous).
+    val fonts = weights.map {
+        Font(Res.font.google_sans_flex, weight = it, variationSettings = FontVariation.Settings(FontVariation.weight(it.weight)))
+    }
     return remember(fonts) { FontFamily(fonts) }
 }
 
