@@ -55,23 +55,33 @@ The system SHALL return, for an inclusive date range, one entry per calendar day
 - **THEN** the first day's entry has a meal count of 2 and 750 ml, and the second has a meal count of 0, zero calories and 500 ml
 
 ### Requirement: Calorie trend chart in the app
-The Summary screen SHALL show a chart of calories per day for the selected period (the last 7 or 30 days by default), with a reference line at the daily calorie goal, days above the goal visually distinguished, and the period's daily averages alongside. The user SHALL be able to switch between week and month and move to earlier or later periods, and the chart SHALL update accordingly.
+The Summary screen SHALL show a chart of calories per day for the selected period (the last 7 or 30 days by default), with a labeled reference line at the daily calorie goal and the days above the goal visually distinguished. It SHALL label the period with readable short dates, and SHALL show stat cards with:
+- the daily calorie average;
+- the number of days over the goal out of the period's days;
+- the daily average of each macro;
+- the period's total calories.
+
+The user SHALL be able to switch between week and month with a connected button group, and move to earlier or later periods, and the chart and stats SHALL update accordingly.
 
 #### Scenario: Current week
-- **WHEN** the user opens Summary
-- **THEN** it shows a bar per day for the last 7 days ending today, a goal reference line, and the daily averages for those days
+- **WHEN** the user opens Summary on 13 October
+- **THEN** it shows "7 – 13 oct" (or "7 – 13 Oct" in English), a bar per day for those 7 days, a labeled goal line, and stat cards with the daily average, the days over the goal out of 7, and each macro's average
 
 #### Scenario: Day above the goal
 - **WHEN** a day in the period exceeds the daily calorie goal
-- **THEN** that day's bar is visually distinguished from days at or under the goal
+- **THEN** that day's bar is visually distinguished from days at or under the goal, and it is counted in the days-over-the-goal card
 
 #### Scenario: Switch to month and navigate
 - **WHEN** the user switches to month, or moves to the previous or next period
-- **THEN** the chart and averages update to show the days of the newly selected period
+- **THEN** the chart, the period label and the stat cards update to the newly selected period
 
 #### Scenario: Period with no meals
 - **WHEN** the selected period has no logged meals
-- **THEN** the chart shows empty bars with the goal line and zero averages, rather than an error
+- **THEN** the chart shows empty bars with the goal line, and the stat cards show zeros, rather than an error
+
+#### Scenario: Period in another year
+- **WHEN** the selected period crosses into a new year or lies in a past year
+- **THEN** the period label includes the year of each date
 
 ### Requirement: Reject impossible dates in summaries
 The daily and weekly summaries SHALL reject a date that is malformed or is not a real calendar date, the same way the per-day range summary does.
@@ -90,3 +100,14 @@ When the user moves to another period or switches between week and month, the Su
 #### Scenario: Change period
 - **WHEN** the user moves to the previous period and its data is still loading
 - **THEN** the previously shown chart, averages and weight section are dimmed and a progress indicator is shown, and both return to normal once the new data is displayed
+
+### Requirement: Open a day from the Summary chart
+Tapping a bar of the Summary calorie chart SHALL open that day's detail. Going back from the detail SHALL return to Summary showing the same period and the same week or month view.
+
+#### Scenario: Tap a bar
+- **WHEN** the user taps Thursday's bar in the week chart
+- **THEN** the detail of that Thursday opens
+
+#### Scenario: Return keeps the period
+- **WHEN** the user switches to month, moves to the previous month, opens a day from the chart and goes back
+- **THEN** Summary still shows month view on that previous period
