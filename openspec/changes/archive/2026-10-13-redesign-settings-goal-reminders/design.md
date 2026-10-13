@@ -75,7 +75,7 @@
 - **Validation:** client-side validation and the backend request are unchanged.
 
 ### D5. Shared meal type icons
-- **The move:** `MealType?.iconStyle()` (icon, square color, icon color), private in `DayContent`, moves to `ui/MealTypeLabel.kt` as `mealTypeIconStyle()`, next to the meal type labels.
+- **The move:** `MealType?.iconStyle()` (icon, square color, icon color), private in `DayContent`, moves to `ui/MealTypeLabel.kt`, keeping its name (`MealType?.iconStyle()`, now returning a `MealTypeIconStyle`), next to the meal type labels.
 - **Square:** a small `MealTypeIcon(type, size)` composable draws the square. Home's groups and Reminders both use it.
 
 ### D6. Resources

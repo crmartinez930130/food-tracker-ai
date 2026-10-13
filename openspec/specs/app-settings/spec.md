@@ -8,12 +8,12 @@ Lets the user choose the app's language (Spanish or English, following the phone
 
 ### Requirement: Options screen
 The app SHALL provide an Options screen, reachable from a settings action in Home's header. It SHALL contain:
-- a language choice: "Phone language", Spanish or English;
-- a theme choice: System, Light or Dark;
+- a language choice between the phone's language (labeled "Phone" / "Teléfono"), Spanish and English;
+- a theme choice between System, Light and Dark;
 - an entry that opens the meal reminders screen;
 - the backend server address.
 
-A choice SHALL take effect immediately, without restarting the app, and SHALL keep the user on the Options screen. Choices SHALL persist on the device across app restarts. The screen SHALL offer a back action that returns to Home.
+Each choice SHALL be shown as a single-choice group of connected buttons with the current choice selected. A choice SHALL take effect immediately, without restarting the app, and SHALL keep the user on the Options screen. Choices SHALL persist on the device across app restarts. The screen SHALL offer a back action that returns to Home.
 
 #### Scenario: Open Options
 - **WHEN** the user taps the settings action in Home's header
@@ -25,7 +25,7 @@ A choice SHALL take effect immediately, without restarting the app, and SHALL ke
 
 ### Requirement: App language
 Every user-visible text produced by the app SHALL exist in Spanish and English and SHALL follow the language in use. This covers screen texts, dialogs, the app's own messages, chart labels, accessibility descriptions, relative day names, and the month and weekday names in date and time pickers.
-- With "Phone language", which SHALL be the default, the app SHALL use English when the phone's language is English, and Spanish for any other phone language, including Spanish.
+- With the phone's language option ("Phone" / "Teléfono"), which SHALL be the default, the app SHALL use English when the phone's language is English, and Spanish for any other phone language, including Spanish.
 - With Spanish or English chosen, the app SHALL use that language whatever the phone's language is.
 
 Changing the language from Options SHALL keep the user on the Options screen.
