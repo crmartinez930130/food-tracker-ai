@@ -67,13 +67,13 @@
 - **Tests:** each boundary (89.9%, 90%, 100%, 100.1%), no meals with water, and a zero target.
 
 ### D3. Month grid as a pure function
-- **`monthGrid(year, month)`** returns the weeks of the month as lists of 7 `LocalDate?`. Monday comes first, matching ISO days and the existing `weekday_short_*` labels, and `null` pads before the 1st and after the last day.
+- **`monthGrid(first)`** (the month's 1st) returns the weeks of the month as lists of 7 `LocalDate?`. Monday comes first, matching ISO days and the existing `weekday_short_*` labels, and `null` pads before the 1st and after the last day.
 - **Tests:**
   - a month starting on a Monday;
   - one starting on a Sunday, which needs 6 rows;
   - February in a leap year and in a common year.
 - **Month navigation:**
-  - `YearMonth` arithmetic through `LocalDate.plus(DatePeriod(months = ±1))` on the 1st;
+  - `firstOfMonth`, `shiftMonth` and `lastOfMonth` work on the 1st through `DatePeriod(months = ±1)`;
   - the next arrow is disabled when the shown month is the current one;
   - the previous arrow has no limit.
 
@@ -107,9 +107,9 @@
 ### D6. Navigation state and return targets
 - **`AppState` changes:**
   - `MainTab` gains `HISTORY`, placed between `HOME` and `SUMMARY`;
-  - `Screen.DayDetail(date: String, returnTo: Screen)`, with `openDayDetail(date)` recording the current screen. From History that is `Main(HISTORY)`; #44 will open it from `Main(SUMMARY)`;
-  - `historyMonth: String` (the first day of the shown month, as an ISO date) lives in `AppState`, so returning from the detail shows the same month. It resets to the current month only on a fresh `AppState`.
-- **The selected tab** is kept in `Screen.Main(tab)`. `MainScreen` reports tab changes back (`onTabChange`), so `openDayDetail` records the right tab.
+  - `Screen.DayDetail(date: String, returnTo: Screen)`, with `openDayDetail(date)` recording the current screen and `closeDayDetail()` returning to it. From History that is `Main(HISTORY)`; #44 will open it from `Main(SUMMARY)`;
+  - `historyMonth: LocalDate` (the 1st of the shown month) lives in `AppState`, so returning from the detail shows the same month. It resets to the current month only on a fresh `AppState`.
+- **The selected tab** is kept in `Screen.Main(tab)`. `MainScreen` reports tab changes back (`onTabChange` → `selectMainTab`), so `openDayDetail` records the right tab.
 - **Goals:** `openGoals()` stores the current screen, and Goals' back calls `closeGoals()`, which returns to it: Home, or the day detail. Settings and Reminders keep their current behavior.
 - **Reminders:** `openCaptureFromReminder` also treats `DayDetail` as a screen it can leave for Capture.
 - **Tests:** `AppStateTest` covers:
