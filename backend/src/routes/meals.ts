@@ -13,7 +13,7 @@ import {
 } from "../db/meal-repository.js";
 import { exportFileName, exportMealsCsv } from "../services/csv-export.js";
 import { preprocessImage } from "../services/image-preprocessing.js";
-import { analyzeMealPhoto, parseAnalysisLanguage } from "../services/vision-analysis.js";
+import { analyzeMeal, parseAnalysisLanguage, parseAnalysisPortion } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
@@ -39,6 +39,9 @@ const upload = multer({
   },
 });
 
+/** Longest free-text meal description the analysis accepts. */
+const MAX_DESCRIPTION_LENGTH = 500;
+
 function parseId(raw: string): number {
   const id = Number(raw);
   if (!Number.isInteger(id)) {
@@ -54,13 +57,26 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
     "/analyze",
     upload.single("photo"),
     asyncHandler(async (req, res) => {
-      if (!req.file) {
-        throw new ValidationError("Missing 'photo' file in request");
+      // Multer puts the form's text fields in req.body (the photo itself is optional).
+      const rawDescription = req.body?.description;
+      const description = typeof rawDescription === "string" ? rawDescription.trim() : "";
+      if (description.length > MAX_DESCRIPTION_LENGTH) {
+        throw new ValidationError(`description: must be at most ${MAX_DESCRIPTION_LENGTH} characters`);
       }
-      const preprocessed = await preprocessImage(req.file.buffer);
-      // Multer puts the form's text fields in req.body; the app sends the language it's showing.
-      const language = parseAnalysisLanguage(req.body?.language);
-      const result = await analyzeMealPhoto(anthropicClient, preprocessed, model, language);
+      if (!req.file && !description) {
+        throw new ValidationError("Provide a photo, a description, or both");
+      }
+      const image = req.file ? await preprocessImage(req.file.buffer) : undefined;
+      const result = await analyzeMeal(
+        anthropicClient,
+        {
+          image,
+          description: description || undefined,
+          portion: parseAnalysisPortion(req.body?.portion),
+          language: parseAnalysisLanguage(req.body?.language),
+        },
+        model,
+      );
       res.status(200).json(result.analysis);
     }),
   );

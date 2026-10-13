@@ -10,6 +10,20 @@ fun captureBackAction(hasPhotoToConfirm: Boolean, isAnalyzing: Boolean): Capture
     else -> CaptureBack.EXIT
 }
 
+/** Longest meal description the backend accepts. */
+const val MAX_DESCRIPTION_LENGTH = 500
+
+/** Whether there is something to analyze: a photo, a non-blank description, or both. */
+fun canAnalyze(hasPhoto: Boolean, description: String): Boolean = hasPhoto || description.isNotBlank()
+
+/** Appends dictated text to what the user already typed, separated by a space, within the limit. */
+fun appendDictation(current: String, dictated: String): String {
+    val addition = dictated.trim()
+    if (addition.isEmpty()) return current
+    val joined = if (current.isBlank()) addition else "${current.trimEnd()} $addition"
+    return joined.take(MAX_DESCRIPTION_LENGTH)
+}
+
 /** What system back does on the review screen, which never leaves without confirmation. */
 enum class ReviewBack { IGNORE, DISMISS_PROMPT, SHOW_PROMPT }
 

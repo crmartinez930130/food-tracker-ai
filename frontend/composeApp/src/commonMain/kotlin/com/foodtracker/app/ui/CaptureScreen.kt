@@ -21,11 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
+import com.foodtracker.app.data.Portion
 import com.foodtracker.app.data.toReviewAnalysis
 import com.foodtracker.app.ui.settings.LocalAppLocale
 import food_tracker_frontend.composeapp.generated.resources.Res
@@ -54,9 +57,16 @@ import food_tracker_frontend.composeapp.generated.resources.action_cancel
 import food_tracker_frontend.composeapp.generated.resources.capture_analyze
 import food_tracker_frontend.composeapp.generated.resources.capture_choose_again
 import food_tracker_frontend.composeapp.generated.resources.capture_choose_gallery
+import food_tracker_frontend.composeapp.generated.resources.capture_description_counter
+import food_tracker_frontend.composeapp.generated.resources.capture_description_label
+import food_tracker_frontend.composeapp.generated.resources.capture_description_placeholder
+import food_tracker_frontend.composeapp.generated.resources.capture_dictate
+import food_tracker_frontend.composeapp.generated.resources.capture_dictation_prompt
 import food_tracker_frontend.composeapp.generated.resources.capture_favorites
 import food_tracker_frontend.composeapp.generated.resources.capture_favorites_empty
+import food_tracker_frontend.composeapp.generated.resources.capture_or_describe
 import food_tracker_frontend.composeapp.generated.resources.capture_photo_size
+import food_tracker_frontend.composeapp.generated.resources.capture_portion
 import food_tracker_frontend.composeapp.generated.resources.capture_relog
 import food_tracker_frontend.composeapp.generated.resources.capture_retake
 import food_tracker_frontend.composeapp.generated.resources.capture_selected_photo
@@ -65,8 +75,12 @@ import food_tracker_frontend.composeapp.generated.resources.capture_title
 import food_tracker_frontend.composeapp.generated.resources.error_analyze_photo
 import food_tracker_frontend.composeapp.generated.resources.error_load_favorites
 import food_tracker_frontend.composeapp.generated.resources.error_update_favorite
+import food_tracker_frontend.composeapp.generated.resources.ic_mic
 import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
 import food_tracker_frontend.composeapp.generated.resources.no_items
+import food_tracker_frontend.composeapp.generated.resources.portion_large
+import food_tracker_frontend.composeapp.generated.resources.portion_medium
+import food_tracker_frontend.composeapp.generated.resources.portion_small
 import food_tracker_frontend.composeapp.generated.resources.remove_from_favorites
 import food_tracker_frontend.composeapp.generated.resources.unit_kcal
 import kotlin.math.roundToInt
@@ -93,6 +107,9 @@ fun CaptureScreen(
     // gallery picker writes to.
     var showCamera by remember { mutableStateOf(false) }
     var isAnalyzing by remember { mutableStateOf(false) }
+    // Optional context for the analysis (and the only input when logging without a photo).
+    var description by remember { mutableStateOf("") }
+    var portion by remember { mutableStateOf<Portion?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var favorites by remember { mutableStateOf<List<MealEntry>?>(null) }
     var favoritesError by remember { mutableStateOf<String?>(null) }
@@ -139,13 +156,20 @@ fun CaptureScreen(
     // The language the app is showing, so the analysis names and notes come back in it.
     val language = LocalAppLocale.current
 
+    val speechInput = rememberSpeechInput(
+        language = language,
+        prompt = stringResource(Res.string.capture_dictation_prompt),
+        onResult = { dictated -> description = appendDictation(description, dictated) },
+    )
+
     fun analyze() {
-        val bytes = photo ?: return
+        if (!canAnalyze(hasPhoto = photo != null, description = description)) return
+        val bytes = photo
         isAnalyzing = true
         errorMessage = null
         scope.launch {
             try {
-                onAnalyzed(apiClient.analyzeMealPhoto(bytes, language))
+                onAnalyzed(apiClient.analyzeMeal(bytes, description, portion, language))
             } catch (e: Exception) {
                 errorMessage = errorText(Res.string.error_analyze_photo, e)
             } finally {
@@ -197,14 +221,6 @@ fun CaptureScreen(
             OutlinedButton(onClick = { pickerLauncher.launch() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.capture_choose_gallery))
             }
-            Spacer(Modifier.height(32.dp))
-            FavoritesSection(
-                favorites = favorites,
-                error = favoritesError,
-                // Re-logging skips analysis entirely: the saved foods go straight to review.
-                onRelog = { meal -> onAnalyzed(meal.toReviewAnalysis()) },
-                onRemove = ::removeFavorite,
-            )
         } else {
             val bitmap = preview
             if (bitmap != null) {
@@ -217,20 +233,54 @@ fun CaptureScreen(
             } else {
                 Text(stringResource(Res.string.capture_photo_size, currentPhoto.size / 1024))
             }
-            Spacer(Modifier.height(16.dp))
-            if (isAnalyzing) {
-                CircularProgressIndicator()
-            } else {
-                Row {
-                    if (photoSource == PhotoSource.CAMERA) {
-                        OutlinedButton(onClick = { photo = null; showCamera = true }) { Text(stringResource(Res.string.capture_retake)) }
-                    } else {
-                        OutlinedButton(onClick = { pickerLauncher.launch() }) { Text(stringResource(Res.string.capture_choose_again)) }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Button(onClick = { analyze() }) { Text(stringResource(Res.string.capture_analyze)) }
+            if (!isAnalyzing) {
+                Spacer(Modifier.height(8.dp))
+                if (photoSource == PhotoSource.CAMERA) {
+                    OutlinedButton(onClick = { photo = null; showCamera = true }) { Text(stringResource(Res.string.capture_retake)) }
+                } else {
+                    OutlinedButton(onClick = { pickerLauncher.launch() }) { Text(stringResource(Res.string.capture_choose_again)) }
                 }
             }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        if (currentPhoto == null) {
+            Text(
+                stringResource(Res.string.capture_or_describe),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            )
+        }
+        DescriptionField(
+            value = description,
+            onValueChange = { description = it.take(MAX_DESCRIPTION_LENGTH) },
+            speechInput = speechInput,
+            enabled = !isAnalyzing,
+        )
+        Spacer(Modifier.height(12.dp))
+        PortionChips(selected = portion, onSelect = { portion = it }, enabled = !isAnalyzing)
+        Spacer(Modifier.height(16.dp))
+        if (isAnalyzing) {
+            CircularProgressIndicator()
+        } else {
+            Button(
+                onClick = { analyze() },
+                enabled = canAnalyze(hasPhoto = currentPhoto != null, description = description),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(Res.string.capture_analyze)) }
+        }
+
+        // Favorites are the "nothing chosen yet" shortcut; once a photo or description exists they'd compete.
+        if (currentPhoto == null && description.isBlank()) {
+            Spacer(Modifier.height(32.dp))
+            FavoritesSection(
+                favorites = favorites,
+                error = favoritesError,
+                // Re-logging skips analysis entirely: the saved foods go straight to review.
+                onRelog = { meal -> onAnalyzed(meal.toReviewAnalysis()) },
+                onRemove = ::removeFavorite,
+            )
         }
 
         errorMessage?.let { message ->
@@ -292,3 +342,60 @@ private fun FavoritesSection(
     }
 }
 
+/** Shown under the field only near the limit, so the counter doesn't clutter normal use. */
+private const val DESCRIPTION_COUNTER_FROM = 400
+
+@Composable
+private fun DescriptionField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    speechInput: SpeechInput?,
+    enabled: Boolean,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(Res.string.capture_description_label)) },
+        placeholder = { Text(stringResource(Res.string.capture_description_placeholder)) },
+        minLines = 2,
+        maxLines = 5,
+        enabled = enabled,
+        trailingIcon = speechInput?.let { input ->
+            {
+                IconButton(onClick = { input.start() }, enabled = enabled) {
+                    Icon(painterResource(Res.drawable.ic_mic), contentDescription = stringResource(Res.string.capture_dictate))
+                }
+            }
+        },
+        supportingText = if (value.length > DESCRIPTION_COUNTER_FROM) {
+            { Text(stringResource(Res.string.capture_description_counter, value.length, MAX_DESCRIPTION_LENGTH)) }
+        } else {
+            null
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+private val PORTION_LABELS = listOf(
+    Portion.SMALL to Res.string.portion_small,
+    Portion.MEDIUM to Res.string.portion_medium,
+    Portion.LARGE to Res.string.portion_large,
+)
+
+/** Optional portion size: none selected by default, and tapping the selected one clears it. */
+@Composable
+private fun PortionChips(selected: Portion?, onSelect: (Portion?) -> Unit, enabled: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.capture_portion), style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((value, label) in PORTION_LABELS) {
+                FilterChip(
+                    selected = selected == value,
+                    onClick = { onSelect(if (selected == value) null else value) },
+                    label = { Text(stringResource(label)) },
+                    enabled = enabled,
+                )
+            }
+        }
+    }
+}
