@@ -32,7 +32,8 @@
 - **No subsetting.** Subsetting would create a Modified Version. The OFL allows it, but keeping the original avoids any trademark question about the name. The cost is about 3.9 MB in the APK.
 - **The family:** built with Compose resources `Font(Res.font.google_sans_flex, weight, variationSettings = FontVariation.Settings(FontVariation.weight(w)))` for 400, 500, 600, 700 and 800. Variable fonts work on API 26+, which is the app's minSdk.
 - **The typography:** the M3 baseline `Typography()` with `fontFamily` replaced everywhere. Display and headline styles move to SemiBold or Bold with slightly tighter letter spacing, titles to SemiBold, and labels stay Medium.
-- **Big figures:** an extra `emphasizedNumber` style (displayMedium, ExtraBold, tabular figures via `fontFeatureSettings = "tnum"`) is exposed through `FoodTrackerTheme.typeTokens`, so the M3 `Typography` contract isn't overloaded.
+- **Big figures:** an extra `emphasizedNumber` style (displayMedium, ExtraBold, slightly tighter tracking) plus a `numberUnit` style are exposed through `FoodTrackerTheme.typeTokens`, so the M3 `Typography` contract isn't overloaded.
+  - Tabular figures (`tnum`) were tried and dropped after the emulator check: they leave a visible gap after a narrow "1" ("1240" reads as "1 240"). If #47's count-up animation jitters, they can be applied only during the animation.
 
 ### D3. Rounder shapes through `Shapes`
 - `Shapes(extraSmall = 8.dp, small = 12.dp, medium = 20.dp, large = 28.dp, extraLarge = 36.dp)` takes M3's scale toward the expressive feel of the samples.
@@ -44,7 +45,10 @@ Upgrading Compose Multiplatform to an alpha just to get `MaterialShapes` and `Lo
   - `cookie9`, built with `RoundedPolygon.star(numVerticesPerRadius = 9, innerRadius = 0.8f, rounding = CornerRounding(0.3f))`;
   - `sunny`, an 8-point star with soft rounding;
   - `softBurst`, a 10-point star;
-  - `pill` and `circle`, through `RoundedPolygon.circle` or `pill`.
+  - `pentagon`, a rounded pentagon used in the loading sequence;
+  - `circle`, through `RoundedPolygon.circle`.
+
+  A `pill` shape isn't needed yet; it can be added when a screen uses it.
 
   The parameters are tuned visually against the samples.
 - **Polygon → Compose:** `RoundedPolygon.toComposePath(size)` converts the cubics into a Compose `Path`, normalizing the bounds into the target size. `PolygonShape(polygon)` implements `Shape.createOutline`.
