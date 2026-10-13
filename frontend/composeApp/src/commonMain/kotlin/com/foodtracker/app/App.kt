@@ -12,6 +12,7 @@ import com.foodtracker.app.ui.GoalsScreen
 import com.foodtracker.app.ui.MainScreen
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
+import com.foodtracker.app.ui.components.DesignSampleScreen
 import com.foodtracker.app.ui.reminders.RemindersScreen
 import com.foodtracker.app.ui.settings.AppEnvironment
 import com.foodtracker.app.ui.settings.AppPreferences
@@ -71,8 +72,11 @@ fun App(
                     preferences = preferences,
                     onPreferencesChange = onPreferencesChange,
                     onOpenReminders = { appState.openReminders() },
+                    onOpenDesignSample = { appState.openDesignSample() },
                     onBack = { appState.openMain() },
                 )
+
+                is Screen.DesignSample -> DesignSampleScreen(onBack = { appState.openSettings() })
 
                 is Screen.Reminders -> RemindersScreen(onBack = { appState.openSettings() })
 

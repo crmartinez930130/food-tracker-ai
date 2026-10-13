@@ -7,7 +7,7 @@ Defines how the app looks across the system's light and dark modes, so every scr
 ## Requirements
 
 ### Requirement: Brand color theme in light and dark
-The app SHALL render every screen with its own brand color scheme, never the framework's default palette. There SHALL be a light variant and a dark variant, and all text and icons SHALL remain legible against their backgrounds in both.
+The app SHALL render every screen with its own brand color scheme, never the framework's default palette. The scheme SHALL be the green Greenwave palette, generated from the seed color `#81DFA2`. There SHALL be a light variant and a dark variant, and all text and icons SHALL remain legible against their backgrounds in both, meeting a 4.5:1 contrast ratio for the text color pairs the app uses.
 
 #### Scenario: Light mode
 - **WHEN** the device is in light mode and the user opens any screen
@@ -61,3 +61,17 @@ The main navigation and the primary capture action SHALL use Material Symbols ic
 #### Scenario: Capture action
 - **WHEN** the user views the main screen
 - **THEN** the button that starts a new capture shows a Material "add" icon and exposes an accessible description of its action
+
+### Requirement: Brand typeface and shapes
+All text in the app SHALL use the Google Sans Flex typeface, bundled with the app under its open font license so no network is needed. Headlines and large figures SHALL use heavier weights than body text. Cards, sheets, dialogs, fields and buttons SHALL use the app's rounded corner scale.
+
+#### Scenario: Any screen
+- **WHEN** the user opens any screen, online or offline
+- **THEN** its text is set in Google Sans Flex, and its cards and buttons have rounded corners
+
+### Requirement: Expressive loading indicator
+While a screen or a section loads with nothing to show yet, or while a meal is being analyzed, the app SHALL show an animated loading indicator that changes shape. Small progress indicators inside buttons MAY remain circular.
+
+#### Scenario: Analyzing a meal
+- **WHEN** the user taps analyze on the capture screen
+- **THEN** a shape-changing loading indicator is shown until the analysis finishes or fails

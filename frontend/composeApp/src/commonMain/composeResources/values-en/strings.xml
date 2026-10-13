@@ -195,4 +195,20 @@
     <string name="portion_medium">Medium</string>
     <string name="portion_large">Large</string>
     <string name="capture_or_describe">Or describe the meal without a photo:</string>
+    <string name="settings_design_sample">Design sample</string>
+    <string name="settings_design_sample_hint">Redesign components and styles (development builds only)</string>
+    <string name="design_sample_title">Design sample</string>
+    <string name="design_sample_type">Typography</string>
+    <string name="design_sample_display">Display title</string>
+    <string name="design_sample_headline">Headline</string>
+    <string name="design_sample_body">Body text in Google Sans Flex, easy to read.</string>
+    <string name="design_sample_numbers">Figures</string>
+    <string name="design_sample_badges">Badges</string>
+    <string name="design_sample_bar">Segmented bar</string>
+    <string name="design_sample_stats">Stat cards</string>
+    <string name="design_sample_loading">Loading</string>
+    <string name="design_sample_colors">Colors</string>
+    <string name="design_sample_stat_average">Daily average</string>
+    <string name="design_sample_stat_streak">Days on goal</string>
+    <string name="design_sample_stat_water">Water</string>
 </resources>
