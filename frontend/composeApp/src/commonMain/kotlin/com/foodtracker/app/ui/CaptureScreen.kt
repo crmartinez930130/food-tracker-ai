@@ -95,7 +95,6 @@ import food_tracker_frontend.composeapp.generated.resources.portion_large
 import food_tracker_frontend.composeapp.generated.resources.portion_medium
 import food_tracker_frontend.composeapp.generated.resources.portion_small
 import food_tracker_frontend.composeapp.generated.resources.remove_from_favorites
-import food_tracker_frontend.composeapp.generated.resources.unit_kcal
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
