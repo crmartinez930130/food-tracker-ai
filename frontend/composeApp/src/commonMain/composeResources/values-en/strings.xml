@@ -76,10 +76,12 @@
     <string name="camera_allow">Allow camera</string>
     <string name="error_take_photo">Couldn't take the photo: %1$s</string>
     <string name="review_title">Review analysis</string>
+    <string name="review_save_total">Save · %1$d kcal</string>
+    <string name="review_total_title">Total</string>
+    <string name="capture_analyzing">Analyzing…</string>
+    <string name="capture_close">Close</string>
     <string name="review_no_food">No food was detected in this photo. You can add items manually if needed.</string>
     <string name="review_notes">Notes (optional)</string>
-    <string name="review_total">Total: %1$d kcal · P %2$dg · F %3$dg · C %4$dg</string>
-    <string name="review_confirm_save">Confirm &amp; Save</string>
     <string name="review_discard_title">Discard this meal?</string>
     <string name="review_discard_text">The analysis and your edits will be lost.</string>
     <string name="review_discard">Discard</string>

@@ -1,8 +1,12 @@
 package com.foodtracker.app.ui
 
+import com.foodtracker.app.data.Confidence
+import com.foodtracker.app.data.MealItem
+import com.foodtracker.app.data.Portion
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CaptureLogicTest {
@@ -32,5 +36,30 @@ class CaptureLogicTest {
         val typed = "a".repeat(MAX_DESCRIPTION_LENGTH - 3)
 
         assertEquals(MAX_DESCRIPTION_LENGTH, appendDictation(typed, "bbbbbb").length)
+    }
+
+    @Test
+    fun `tapping a portion selects it, another switches, the same one clears`() {
+        assertEquals(Portion.SMALL, toggledPortion(null, Portion.SMALL))
+        assertEquals(Portion.LARGE, toggledPortion(Portion.SMALL, Portion.LARGE))
+        assertNull(toggledPortion(Portion.SMALL, Portion.SMALL))
+    }
+
+    @Test
+    fun `review numbers accept a decimal comma and count anything else as zero`() {
+        assertEquals(12.5, editableNumber("12,5"))
+        assertEquals(12.5, editableNumber(" 12.5 "))
+        assertEquals(0.0, editableNumber(""))
+        assertEquals(0.0, editableNumber("abc"))
+    }
+
+    private fun item(kcal: Double, p: Double, f: Double, c: Double) = MealItem("x", 100.0, Confidence.HIGH, kcal, p, f, c)
+
+    @Test
+    fun `meal totals sum every food`() {
+        val totals = mealTotals(listOf(item(300.0, 20.0, 10.0, 30.0), item(436.0, 5.5, 12.0, 60.0)))
+
+        assertEquals(MealTotals(736.0, 25.5, 22.0, 90.0), totals)
+        assertEquals(MealTotals(0.0, 0.0, 0.0, 0.0), mealTotals(emptyList()))
     }
 }
