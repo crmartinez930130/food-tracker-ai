@@ -1,6 +1,8 @@
 package com.foodtracker.app.ui
 
 import com.foodtracker.app.data.MealAnalysis
+import com.foodtracker.app.ui.summary.SummaryPeriod
+import com.foodtracker.app.ui.summary.SummaryView
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -88,5 +90,17 @@ class AppStateTest {
         state.closeGoals()
 
         assertEquals(Screen.Main(MainTab.HOME), state.screen)
+    }
+
+    @Test
+    fun `a day opened from Summary goes back to Summary with the same view`() {
+        val view = SummaryView(SummaryPeriod.MONTH, endDate = "2026-09-13")
+        val state = AppState().apply { openMain(MainTab.SUMMARY); summaryView = view }
+
+        state.openDayDetail("2026-09-10")
+        state.closeDayDetail()
+
+        assertEquals(Screen.Main(MainTab.SUMMARY), state.screen)
+        assertEquals(view, state.summaryView)
     }
 }

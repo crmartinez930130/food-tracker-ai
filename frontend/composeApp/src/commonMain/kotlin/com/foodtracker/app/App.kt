@@ -94,6 +94,8 @@ fun App(
                     apiClient = apiClient,
                     historyMonth = appState.historyMonth,
                     onHistoryMonthChange = { appState.historyMonth = it },
+                    summaryView = appState.summaryView,
+                    onSummaryViewChange = { appState.summaryView = it },
                     onOpenDay = { appState.openDayDetail(it) },
                     onStartCapture = { appState.openCapture() },
                     onEditGoal = { appState.openGoals() },
