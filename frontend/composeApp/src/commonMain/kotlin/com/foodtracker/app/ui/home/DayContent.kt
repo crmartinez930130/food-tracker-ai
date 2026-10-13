@@ -56,6 +56,7 @@ import food_tracker_frontend.composeapp.generated.resources.add_to_favorites
 import food_tracker_frontend.composeapp.generated.resources.calorie_ring_left
 import food_tracker_frontend.composeapp.generated.resources.calorie_ring_of_target
 import food_tracker_frontend.composeapp.generated.resources.calorie_ring_over
+import food_tracker_frontend.composeapp.generated.resources.day_calories_title
 import food_tracker_frontend.composeapp.generated.resources.default_goal_hint
 import food_tracker_frontend.composeapp.generated.resources.edit_daily_goal
 import food_tracker_frontend.composeapp.generated.resources.error_delete_meal
@@ -200,7 +201,7 @@ fun DayContent(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item(key = "calories") {
-                        CaloriesCard(totals = totals, goal = currentGoal, onEditGoal = onEditGoal)
+                        CaloriesCard(totals = totals, goal = currentGoal, isToday = date == today, onEditGoal = onEditGoal)
                     }
                     item(key = "water") {
                         Column {
@@ -259,7 +260,7 @@ fun DayContent(
 
 /** The day's calories as a big figure with the goal percentage badge, plus the macro bar. */
 @Composable
-private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, onEditGoal: () -> Unit, modifier: Modifier = Modifier) {
+private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, isToday: Boolean, onEditGoal: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val progress = progressOf(totals.calories, goal.targetCalories)
     Card(
@@ -269,7 +270,7 @@ private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, onEditGoal: () -> U
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
-                stringResource(Res.string.home_calories_title),
+                stringResource(if (isToday) Res.string.home_calories_title else Res.string.day_calories_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = colors.onSurfaceVariant,
             )

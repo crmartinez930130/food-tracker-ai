@@ -212,6 +212,7 @@ describe("dailyTotalsBetween", () => {
     expect(days[0].totalCalories).toBe(2 * sampleItem.calories);
     expect(days[0].totalProteinGrams).toBeCloseTo(2 * sampleItem.proteinGrams);
     expect(days[1].totalCalories).toBe(sampleItem.calories);
+    expect(days.map((d) => d.mealCount)).toEqual([2, 1]);
   });
 });
 

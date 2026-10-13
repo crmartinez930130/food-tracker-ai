@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type AppDatabase } from "../../src/db/client.js";
-import { createWaterLog, deleteWaterLog, waterForDay } from "../../src/db/water-repository.js";
+import { createWaterLog, deleteWaterLog, waterForDay, waterTotalsBetween } from "../../src/db/water-repository.js";
 
 // Built from local wall-clock values, so the expected local day holds in any test timezone.
 const local = (d: number, h: number, min = 0) => new Date(2026, 2, d, h, min).toISOString();
@@ -45,5 +45,19 @@ describe("water repository", () => {
     expect(deleteWaterLog(db, mistake.id)).toBe(true);
     expect(waterForDay(db, "2026-03-05")).toMatchObject({ totalMl: 250, entries: [{ id: keep.id }] });
     expect(deleteWaterLog(db, mistake.id)).toBe(false);
+  });
+});
+
+describe("waterTotalsBetween", () => {
+  it("sums each local day, omits days without water, and orders by day", () => {
+    createWaterLog(db, 500, local(3, 9));
+    createWaterLog(db, 250, local(1, 8));
+    createWaterLog(db, 250, local(1, 23, 30)); // still the 1st, locally
+    createWaterLog(db, 250, local(10, 12)); // outside the range
+
+    expect(waterTotalsBetween(db, "2026-03-01", "2026-03-05")).toEqual([
+      { date: "2026-03-01", totalMl: 500 },
+      { date: "2026-03-03", totalMl: 500 },
+    ]);
   });
 });

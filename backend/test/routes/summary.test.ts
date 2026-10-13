@@ -87,8 +87,20 @@ describe("GET /api/summary/range", () => {
       totalProteinGrams: 0,
       totalFatGrams: 0,
       totalCarbsGrams: 0,
+      mealCount: 0,
+      waterMl: 0,
     });
     expect(res.body[1].totalCalories).toBe(sampleItem.calories);
+    expect(res.body[1].mealCount).toBe(1);
+  });
+
+  it("includes the water logged each day", async () => {
+    const { app } = buildTestApp();
+    await request(app).post("/api/water").send({ amountMl: 300, loggedAt: "2026-02-02T12:00:00.000Z" });
+
+    const res = await request(app).get("/api/summary/range").query({ startDate: "2026-02-01", endDate: "2026-02-03" });
+
+    expect(res.body.map((d: { waterMl: number }) => d.waterMl)).toEqual([0, 300, 0]);
   });
 
   it("returns a single entry when start and end are the same day", async () => {

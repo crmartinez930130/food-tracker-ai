@@ -1,5 +1,6 @@
 import type { AppDatabase } from "../db/client.js";
 import { dailyTotalsBetween, listMealsBetween, listMealsByDate, type DayTotals } from "../db/meal-repository.js";
+import { waterTotalsBetween } from "../db/water-repository.js";
 import type { MealTotals } from "../domain/meal.js";
 
 const ZERO_TOTALS: MealTotals = {
@@ -52,15 +53,24 @@ export function weeklySummary(db: AppDatabase, startDate: string): WeeklySummary
   return { total, averagePerDay };
 }
 
-/** One entry per day from startDate to endDate (both inclusive), zero-filled where nothing was logged. */
-export function rangeSummary(db: AppDatabase, startDate: string, endDate: string): DayTotals[] {
-  const loggedDays = new Map(
-    dailyTotalsBetween(db, startDate, addDaysToDateString(endDate, 1)).map((day) => [day.date, day]),
-  );
+/** One day of a range: its meal totals and count, plus the water logged that day. */
+export interface RangeDay extends DayTotals {
+  waterMl: number;
+}
 
-  const days: DayTotals[] = [];
+/**
+ * One entry per day from startDate to endDate (both inclusive), zero-filled where nothing was
+ * logged. Water is counted on its own, so a day with water but no meals still reports it.
+ */
+export function rangeSummary(db: AppDatabase, startDate: string, endDate: string): RangeDay[] {
+  const endExclusive = addDaysToDateString(endDate, 1);
+  const mealDays = new Map(dailyTotalsBetween(db, startDate, endExclusive).map((day) => [day.date, day]));
+  const waterDays = new Map(waterTotalsBetween(db, startDate, endExclusive).map((day) => [day.date, day.totalMl]));
+
+  const days: RangeDay[] = [];
   for (let date = startDate; date <= endDate; date = addDaysToDateString(date, 1)) {
-    days.push(loggedDays.get(date) ?? { date, ...ZERO_TOTALS });
+    const meals = mealDays.get(date) ?? { date, ...ZERO_TOTALS, mealCount: 0 };
+    days.push({ ...meals, waterMl: waterDays.get(date) ?? 0 });
   }
   return days;
 }

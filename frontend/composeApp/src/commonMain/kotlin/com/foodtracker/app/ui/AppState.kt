@@ -4,8 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.foodtracker.app.data.MealAnalysis
+import com.foodtracker.app.ui.history.firstOfMonth
+import com.foodtracker.app.util.currentLocalDateTime
+import kotlinx.datetime.LocalDate
 
-enum class MainTab { HOME, SUMMARY }
+enum class MainTab { HOME, HISTORY, SUMMARY }
 
 sealed interface Screen {
     data object Capture : Screen
@@ -15,15 +18,27 @@ sealed interface Screen {
     data object DesignSample : Screen
     data object Reminders : Screen
     data class Main(val tab: MainTab = MainTab.HOME) : Screen
+
+    /** One day's full content; back returns to [returnTo] (History, or Summary from #44). */
+    data class DayDetail(val date: String, val returnTo: Screen) : Screen
 }
 
-/** Owns which screen is showing and the in-flight analysis being reviewed. */
+/**
+ * Owns which screen is showing, the in-flight analysis being reviewed, and the navigation state
+ * that has to outlive a screen (where Goals returns to, which month History shows).
+ */
 class AppState {
     var screen: Screen by mutableStateOf(Screen.Main())
         private set
 
     var pendingAnalysis: MealAnalysis? by mutableStateOf(null)
         private set
+
+    /** Where Goals' back goes: the screen it was opened from (Home or a day's detail). */
+    private var goalsReturnTo: Screen = Screen.Main()
+
+    /** The 1st of the month History shows; kept here so it survives opening a day and coming back. */
+    var historyMonth: LocalDate by mutableStateOf(firstOfMonth(currentLocalDateTime().date))
 
     fun openCapture() {
         screen = Screen.Capture
@@ -35,7 +50,21 @@ class AppState {
     }
 
     fun openGoals() {
+        goalsReturnTo = screen
         screen = Screen.Goals
+    }
+
+    fun closeGoals() {
+        screen = goalsReturnTo
+    }
+
+    /** Opens [date]'s detail; its back returns to the current screen (e.g. Main on History). */
+    fun openDayDetail(date: String) {
+        screen = Screen.DayDetail(date, returnTo = screen)
+    }
+
+    fun closeDayDetail() {
+        (screen as? Screen.DayDetail)?.let { screen = it.returnTo }
     }
 
     fun openSettings() {
@@ -58,7 +87,7 @@ class AppState {
      */
     fun openCaptureFromReminder() {
         when (screen) {
-            is Screen.Main, Screen.Goals, Screen.Settings, Screen.Reminders, Screen.DesignSample -> openCapture()
+            is Screen.Main, is Screen.DayDetail, Screen.Goals, Screen.Settings, Screen.Reminders, Screen.DesignSample -> openCapture()
             Screen.Capture, Screen.Review -> Unit
         }
     }
@@ -66,5 +95,10 @@ class AppState {
     fun openMain(tab: MainTab = MainTab.HOME) {
         pendingAnalysis = null
         screen = Screen.Main(tab)
+    }
+
+    /** A tab picked in Main's bottom navigation; kept in [screen] so going back restores it. */
+    fun selectMainTab(tab: MainTab) {
+        if (screen is Screen.Main) screen = Screen.Main(tab)
     }
 }

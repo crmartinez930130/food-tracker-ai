@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type AppDatabase } from "../../src/db/client.js";
 import { createMeal } from "../../src/db/meal-repository.js";
+import { createWaterLog } from "../../src/db/water-repository.js";
 import { rangeSummary } from "../../src/services/summary.js";
 import type { MealItemInput } from "../../src/domain/meal.js";
 
@@ -48,6 +49,8 @@ describe("rangeSummary", () => {
       totalProteinGrams: 0,
       totalFatGrams: 0,
       totalCarbsGrams: 0,
+      mealCount: 0,
+      waterMl: 0,
     });
     expect(days[1].totalCalories).toBe(500);
     expect(days[3].totalCalories).toBe(0);
@@ -57,8 +60,21 @@ describe("rangeSummary", () => {
     createMeal(db, { items: [item], occurredAt: at("2026-03-05") });
 
     expect(rangeSummary(db, "2026-03-05", "2026-03-05")).toEqual([
-      { date: "2026-03-05", totalCalories: 500, totalProteinGrams: 20, totalFatGrams: 10, totalCarbsGrams: 80 },
+      { date: "2026-03-05", totalCalories: 500, totalProteinGrams: 20, totalFatGrams: 10, totalCarbsGrams: 80, mealCount: 1, waterMl: 0 },
     ]);
+  });
+
+  it("adds each day's meal count and water, including days with water but no meals", () => {
+    createMeal(db, { items: [item], occurredAt: at("2026-03-01") });
+    createMeal(db, { items: [item], occurredAt: at("2026-03-01") });
+    createWaterLog(db, 500, at("2026-03-01"));
+    createWaterLog(db, 250, at("2026-03-01"));
+    createWaterLog(db, 500, at("2026-03-02"));
+
+    const days = rangeSummary(db, "2026-03-01", "2026-03-03");
+
+    expect(days.map((d) => [d.mealCount, d.waterMl])).toEqual([[2, 750], [0, 500], [0, 0]]);
+    expect(days[1].totalCalories).toBe(0);
   });
 
   it("walks across a month boundary", () => {
