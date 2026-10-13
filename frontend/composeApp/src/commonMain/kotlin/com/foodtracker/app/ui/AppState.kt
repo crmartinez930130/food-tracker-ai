@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.ui.history.firstOfMonth
+import com.foodtracker.app.ui.summary.SummaryView
 import com.foodtracker.app.util.currentLocalDateTime
 import kotlinx.datetime.LocalDate
 
@@ -39,6 +40,9 @@ class AppState {
 
     /** The 1st of the month History shows; kept here so it survives opening a day and coming back. */
     var historyMonth: LocalDate by mutableStateOf(firstOfMonth(currentLocalDateTime().date))
+
+    /** Summary's week/month and period; kept here so opening a day from its chart and coming back keeps them. */
+    var summaryView: SummaryView by mutableStateOf(SummaryView())
 
     fun openCapture() {
         screen = Screen.Capture

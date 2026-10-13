@@ -44,11 +44,11 @@ The system SHALL let the client delete a weight entry by id, and SHALL respond w
 - **THEN** the system responds with a 404-style error
 
 ### Requirement: Weight in the app
-The Summary screen SHALL show a weight section for the selected period with a trend chart, which uses the last entry of each day and is aligned to the period's days. The section SHALL also show the latest weight and its change across the period. It SHALL let the user log a weight for today, with the field pre-filled from the last entry, and delete the period's entries.
+The Summary screen SHALL show a weight card for the selected period with a trend chart, drawn as a smooth curve through the last entry of each day and aligned to the period's days. The card SHALL show the latest weight as a large figure and its change across the period. It SHALL let the user log a weight for today, with the field pre-filled from the last entry, and delete the period's entries.
 
 #### Scenario: Trend with entries
 - **WHEN** the selected period has weight entries on at least two days
-- **THEN** the chart shows a line through each day's last entry, and the section shows the latest weight and the change from the first to the last day with data
+- **THEN** the chart shows a smooth line through each day's last entry, and the section shows the latest weight and the change from the first to the last day with data
 
 #### Scenario: Log from the app
 - **WHEN** the user logs a weight from the Summary screen

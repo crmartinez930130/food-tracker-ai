@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.ui.history.HistoryScreen
 import com.foodtracker.app.ui.home.HomeScreen
+import com.foodtracker.app.ui.summary.SummaryView
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_log_meal
 import food_tracker_frontend.composeapp.generated.resources.ic_add
@@ -33,6 +34,8 @@ fun MainScreen(
     apiClient: FoodTrackerApiClient,
     historyMonth: LocalDate,
     onHistoryMonthChange: (LocalDate) -> Unit,
+    summaryView: SummaryView,
+    onSummaryViewChange: (SummaryView) -> Unit,
     onOpenDay: (String) -> Unit,
     onStartCapture: () -> Unit,
     onEditGoal: () -> Unit,
@@ -82,7 +85,12 @@ fun MainScreen(
                     onMonthChange = onHistoryMonthChange,
                     onOpenDay = onOpenDay,
                 )
-                MainTab.SUMMARY -> SummaryScreen(apiClient)
+                MainTab.SUMMARY -> SummaryScreen(
+                    apiClient = apiClient,
+                    view = summaryView,
+                    onViewChange = onSummaryViewChange,
+                    onOpenDay = onOpenDay,
+                )
             }
         }
     }

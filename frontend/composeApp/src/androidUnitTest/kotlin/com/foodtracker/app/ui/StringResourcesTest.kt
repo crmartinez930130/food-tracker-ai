@@ -79,5 +79,6 @@ class StringResourcesTest {
         // Home indexes these by ISO day number and month number.
         assertEquals(7, spanish["weekday_names"])
         assertEquals(12, spanish["month_names"])
+        assertEquals(12, spanish["month_short_names"])
     }
 }

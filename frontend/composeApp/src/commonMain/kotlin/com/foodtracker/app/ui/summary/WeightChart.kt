@@ -7,7 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -22,7 +25,7 @@ import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Weight over the period as a line through each day's last entry. Uses the same day slots as
+ * Weight over the period as a smooth curve through each day's last entry. Uses the same day slots as
  * [CalorieChart] (one slot per day of [periodDays], full width), so a point sits right under that
  * day's calorie bar. Days without an entry are skipped, with the line joining across them.
  */
@@ -55,11 +58,21 @@ fun WeightChart(periodDays: List<String>, points: List<WeightEntry>, modifier: M
         }
 
         if (positions.size >= 2) {
-            val path = Path().apply {
+            val line = Path().apply {
                 moveTo(positions.first().x, positions.first().y)
-                positions.drop(1).forEach { lineTo(it.x, it.y) }
+                smoothControlPoints(positions).forEach { segment ->
+                    cubicTo(segment.control1.x, segment.control1.y, segment.control2.x, segment.control2.y, segment.end.x, segment.end.y)
+                }
             }
-            drawPath(path, color = colors.primary, style = Stroke(width = 2.5.dp.toPx()))
+            // A soft fill under the curve, fading toward the bottom.
+            val fill = Path().apply {
+                addPath(line)
+                lineTo(positions.last().x, bottom)
+                lineTo(positions.first().x, bottom)
+                close()
+            }
+            drawPath(fill, brush = Brush.verticalGradient(listOf(colors.primary.copy(alpha = 0.2f), Color.Transparent), startY = top, endY = bottom))
+            drawPath(line, color = colors.primary, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
         }
         positions.forEach { drawCircle(color = colors.primary, radius = 4.dp.toPx(), center = it) }
     }
@@ -82,7 +95,10 @@ private fun weightChartDescription(points: List<WeightEntry>): String {
 }
 
 /** One decimal, e.g. 72.4 kg. */
-fun formatKg(kg: Double): String = "${(kg * 10).roundToInt() / 10.0} kg"
+fun formatKg(kg: Double): String = "${kgNumber(kg)} kg"
+
+/** The number alone, one decimal: 72.4. */
+fun kgNumber(kg: Double): String = "${(kg * 10).roundToInt() / 10.0}"
 
 /** Signed with one decimal, e.g. +0.6 kg / −0.8 kg / ±0 kg. */
 fun formatKgChange(change: Double): String {

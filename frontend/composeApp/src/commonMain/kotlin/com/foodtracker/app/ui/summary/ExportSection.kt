@@ -11,7 +11,8 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +32,7 @@ import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
 import food_tracker_frontend.composeapp.generated.resources.error_export
 import food_tracker_frontend.composeapp.generated.resources.export_button
+import food_tracker_frontend.composeapp.generated.resources.ic_download
 import food_tracker_frontend.composeapp.generated.resources.export_confirm
 import food_tracker_frontend.composeapp.generated.resources.export_dialog_title
 import food_tracker_frontend.composeapp.generated.resources.export_error_incomplete
@@ -39,6 +41,7 @@ import food_tracker_frontend.composeapp.generated.resources.export_error_too_lon
 import food_tracker_frontend.composeapp.generated.resources.export_in_progress
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -62,7 +65,7 @@ fun ExportSection(
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 error = null
                 scope.launch {
@@ -79,6 +82,8 @@ fun ExportSection(
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.export_in_progress))
             } else {
+                Icon(painterResource(Res.drawable.ic_download), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.export_button))
             }
         }

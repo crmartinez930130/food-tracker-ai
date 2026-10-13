@@ -121,11 +121,14 @@
     <string name="summary_next_week">Semana siguiente</string>
     <string name="summary_previous_month">Mes anterior</string>
     <string name="summary_next_month">Mes siguiente</string>
-    <string name="summary_range">%1$s – %2$s</string>
     <string name="summary_daily_average">Promedio diario</string>
-    <string name="summary_average_macros">Proteína %1$d g · Grasa %2$d g · Carbohidratos %3$d g</string>
+    <string name="summary_average_macros_title">Promedio de macros</string>
+    <string name="summary_over_goal">Sobre la meta</string>
+    <string name="summary_period_total">%1$d kcal en el período</string>
+    <string name="chart_tap_hint">Tocá una barra para ver ese día.</string>
+    <string name="weight_change">%1$s en el período</string>
     <string name="error_load_summary">No se pudo cargar el resumen: %1$s</string>
-    <string name="chart_goal_label">meta %1$d</string>
+    <string name="chart_goal_label">Meta diaria: %1$d kcal</string>
     <string name="chart_calories_no_data">Calorías por día: sin datos</string>
     <string name="weekday_short_mon">Lu</string>
     <string name="weekday_short_tue">Ma</string>
@@ -135,7 +138,6 @@
     <string name="weekday_short_sat">Sá</string>
     <string name="weekday_short_sun">Do</string>
     <string name="weight_title">Peso</string>
-    <string name="weight_latest">%1$s · %2$s en este período</string>
     <string name="weight_log">Registrar peso</string>
     <string name="weight_empty">No registraste tu peso en este período. Registrá el de hoy para empezar tu tendencia.</string>
     <string name="weight_dialog_title">Registrar el peso de hoy</string>
@@ -176,10 +178,6 @@
     <string name="settings_theme_dark">Oscuro</string>
     <string name="settings_reminders">Recordatorios</string>
     <string name="settings_reminders_hint">Recordatorios diarios para registrar tus comidas</string>
-    <plurals name="summary_period_totals">
-        <item quantity="one">%1$d kcal en %2$d día · %3$d sobre la meta</item>
-        <item quantity="other">%1$d kcal en %2$d días · %3$d sobre la meta</item>
-    </plurals>
     <plurals name="chart_calories_description">
         <item quantity="one">Calorías por día del %1$s al %2$s. Promedio %3$d kcal. %4$d de %5$d día sobre la meta de %6$d kcal.</item>
         <item quantity="other">Calorías por día del %1$s al %2$s. Promedio %3$d kcal. %4$d de %5$d días sobre la meta de %6$d kcal.</item>
@@ -249,5 +247,20 @@
         <item>octubre</item>
         <item>noviembre</item>
         <item>diciembre</item>
+    </string-array>
+    <!-- Short month names for compact dates ("7 – 13 oct"), January first. -->
+    <string-array name="month_short_names">
+        <item>ene</item>
+        <item>feb</item>
+        <item>mar</item>
+        <item>abr</item>
+        <item>may</item>
+        <item>jun</item>
+        <item>jul</item>
+        <item>ago</item>
+        <item>sep</item>
+        <item>oct</item>
+        <item>nov</item>
+        <item>dic</item>
     </string-array>
 </resources>
