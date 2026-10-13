@@ -35,9 +35,12 @@ Corre al abrir un PR, al reabrirlo, al sacarlo de draft y en cada push. Los PRs 
 - Revisa el diff contra los **criterios de aceptación del issue vinculado** y, si el PR trae un change de OpenSpec, contra sus specs y tasks.
 - Clasifica los hallazgos en **[Bloqueante]** (criterio no cumplido, bug, faltan tests, seguridad) o **[Sugerencia]**. Solo los bloqueantes piden cambios.
 - Publica una review formal: `APPROVE` si no hay bloqueantes, `REQUEST_CHANGES` si los hay.
+- **Herramientas:** lee el código con Read, Grep y Glob (no con comandos de shell). Escribe el texto de la review en `.claude-review-body.md` y la publica con `gh pr review --body-file`, sin `$(...)`, heredocs ni pipes, que no coinciden con los permisos de Bash.
+- **Comandos denegados:** el paso *Show denied tool calls* muestra en el log solo las llamadas que se le denegaron, con la herramienta y la entrada recortada. No se usa el modo de salida completa de la action porque puede filtrar datos sensibles.
+- **Verificación:** el paso *Verify a review was published* exige que el bot haya publicado, para el commit actual, una review `APPROVED` o `CHANGES_REQUESTED`, o una `COMMENTED` con texto (la del caso `needs-human`). Las `COMMENTED` vacías que genera cada comentario en línea no cuentan. Si no hay ninguna, el job queda **en rojo** en lugar de pasar en silencio. En ese caso, revisar las denegaciones en el log y relanzar el job (`gh run rerun <id>`).
 - **Límite de 3 rondas:** cuando ya pidió cambios 3 veces en el mismo PR y siguen quedando bloqueantes, deja de pedir cambios. En su lugar agrega la label `needs-human` y deja un comentario para que decida el dueño.
 
-En un PR que agrega o modifica el workflow del reviewer, la action no revisa: se saltea por un error de validación del workflow y el job queda en verde igual, sin publicar ninguna review. Es esperado, porque la action solo confía en el workflow que ya está en `master`.
+En un PR que agrega o modifica el workflow del reviewer, la action no revisa: se saltea por un error de validación del workflow y el job queda en verde igual, sin publicar ninguna review. Es esperado, porque la action solo confía en el workflow que ya está en `master`. El paso de verificación detecta este caso y no lo marca como error.
 
 ## Ciclo de corrección automática
 
