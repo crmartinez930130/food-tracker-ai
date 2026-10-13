@@ -35,6 +35,17 @@ class StringResourcesTest {
         return entries
     }
 
+    /** `<string-array>` name -> its item count. */
+    private fun loadArrays(qualifier: String): Map<String, Int> {
+        val file = File("src/commonMain/composeResources/$qualifier/strings.xml")
+        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+        val arrays = document.getElementsByTagName("string-array")
+        return (0 until arrays.length).associate { i ->
+            val node = arrays.item(i) as Element
+            node.getAttribute("name") to node.getElementsByTagName("item").length
+        }
+    }
+
     private fun placeholders(text: String) = placeholder.findAll(text).map { it.value }.distinct().sorted().toList()
 
     @Test
@@ -59,5 +70,14 @@ class StringResourcesTest {
             val text = File("src/commonMain/composeResources/$qualifier/strings.xml").readText()
             assertTrue('\\' !in text, "$qualifier/strings.xml contains a backslash; Compose resources show it literally")
         }
+    }
+
+    @Test
+    fun `both languages define the same string arrays with the same sizes`() {
+        val spanish = loadArrays("values")
+        assertEquals(spanish, loadArrays("values-en"))
+        // Home indexes these by ISO day number and month number.
+        assertEquals(7, spanish["weekday_names"])
+        assertEquals(12, spanish["month_names"])
     }
 }

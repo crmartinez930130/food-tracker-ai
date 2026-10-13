@@ -30,8 +30,6 @@ import org.jetbrains.compose.resources.stringResource
 fun MainScreen(
     initialTab: MainTab,
     apiClient: FoodTrackerApiClient,
-    homeDate: String,
-    onHomeDateChange: (String) -> Unit,
     onStartCapture: () -> Unit,
     onEditGoal: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -67,8 +65,6 @@ fun MainScreen(
             when (tab) {
                 MainTab.HOME -> HomeScreen(
                     apiClient = apiClient,
-                    date = homeDate,
-                    onDateChange = onHomeDateChange,
                     onEditGoal = onEditGoal,
                     onOpenSettings = onOpenSettings,
                 )

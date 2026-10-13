@@ -21,8 +21,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/** One part of a [SegmentedBar]; [detail] is shown after the label in the legend ("45%", "120 g"). */
-data class BarSegment(val label: String, val value: Double, val color: Color, val detail: String? = null)
+/**
+ * One part of a [SegmentedBar]; [detail] is shown after the label in the legend ("45%", "120 g"),
+ * in [detailColor] when given (e.g. the error color for a macro over its target).
+ */
+data class BarSegment(
+    val label: String,
+    val value: Double,
+    val color: Color,
+    val detail: String? = null,
+    val detailColor: Color? = null,
+)
 
 /**
  * Each value's share of the total, in order. Negative values count as zero; when nothing is
@@ -79,7 +88,7 @@ fun SegmentedBar(
                             Text(
                                 it,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = segment.detailColor ?: MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(start = 4.dp),
                             )
                         }

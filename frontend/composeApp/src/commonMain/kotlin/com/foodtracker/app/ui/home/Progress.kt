@@ -1,8 +1,6 @@
 package com.foodtracker.app.ui.home
 
-import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
+import kotlin.math.roundToInt
 
 /**
  * How much of a daily target has been consumed.
@@ -37,16 +35,9 @@ fun progressOf(consumed: Double, target: Double): Progress {
     )
 }
 
-/** How Home names a day: relative when it's today or yesterday, otherwise its ISO date. */
-sealed interface DayLabel {
-    data object Today : DayLabel
-    data object Yesterday : DayLabel
-    data class Date(val iso: String) : DayLabel
-}
-
-/** Both arguments are `YYYY-MM-DD`. */
-fun dayLabel(date: String, today: String): DayLabel = when (LocalDate.parse(date)) {
-    LocalDate.parse(today) -> DayLabel.Today
-    LocalDate.parse(today).minus(DatePeriod(days = 1)) -> DayLabel.Yesterday
-    else -> DayLabel.Date(date)
-}
+/**
+ * [consumed] as a whole percentage of [target], not capped at 100 (a day can be at 112%); null
+ * when the target isn't positive, since there's nothing to divide by.
+ */
+fun goalPercent(consumed: Double, target: Double): Int? =
+    if (target <= 0.0) null else (consumed.coerceAtLeast(0.0) / target * 100).roundToInt()

@@ -60,7 +60,7 @@ The system SHALL leave the stored goal unchanged when it rejects one.
 - **THEN** the system responds with a 400-style validation error and the stored goal is unchanged
 
 ### Requirement: Edit the goal from the app
-The app SHALL provide a screen, reachable from Home at any time (through an edit-goal action in Home's header and by tapping the calorie progress indicator), that shows the current goal loaded from the backend. On that screen the user SHALL be able to edit and save the four nutrition targets, the daily water target and the glass size. The screen SHALL offer a back action, and going back SHALL return to Home on the day that was being viewed, with progress measured against the latest saved goal.
+The app SHALL provide a screen, reachable from Home at any time through an edit-goal action in Home's header and by tapping the calorie percentage badge, that shows the current goal loaded from the backend. On that screen the user SHALL be able to edit and save the four nutrition targets, the daily water target and the glass size. The screen SHALL offer a back action, and going back SHALL return to Home with progress measured against the latest saved goal.
 
 #### Scenario: Open the goal screen
 - **WHEN** the user opens the goal screen
@@ -75,5 +75,5 @@ The app SHALL provide a screen, reachable from Home at any time (through an edit
 - **THEN** the app shows an error message and keeps the user's edits on screen so they can correct them
 
 #### Scenario: Return to Home
-- **WHEN** the user goes back from the goal screen (back arrow or system back) after viewing a past day on Home and saving a new goal
-- **THEN** Home shows the same day it was showing before, with progress measured against the newly saved goal, including the new water target and glass size
+- **WHEN** the user goes back from the goal screen (back arrow or system back) after saving a new goal
+- **THEN** Home shows today with progress measured against the newly saved goal, including the new water target and glass size
