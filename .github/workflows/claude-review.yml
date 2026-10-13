@@ -29,11 +29,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
+          # One line per review, counted after paging (a per-page `length` would print one number per page).
           count=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --paginate \
-            --jq '[.[] | select(.user.type == "Bot" and (.user.login | startswith("claude")) and .state == "CHANGES_REQUESTED")] | length')
+            --jq '.[] | select(.user.type == "Bot" and (.user.login | startswith("claude")) and .state == "CHANGES_REQUESTED") | .id' | wc -l)
           echo "count=$count" >> "$GITHUB_OUTPUT"
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -50,6 +52,12 @@ jobs:
             You review by reading code, not by running it. Do NOT try to run builds, tests,
             gradle, npm or `gh pr checks`: a separate CI job already runs them on this PR, and
             those commands aren't available to you anyway, so attempts only burn turns.
+
+            Your tools - use only these, anything else is denied and wastes turns:
+            - Read, Grep and Glob to read code. Never `cat`, `grep`, `ls`, `find` or `head` in Bash.
+            - Write, only to create the review body file (step 3).
+            - Bash only for single, plain `gh pr view`, `gh pr diff`, `gh pr review`, `gh pr edit`
+              and `gh issue view` commands: no pipes, no `&&`, no `$(...)`, no heredocs.
 
             ## 1. Gather context
             - `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}`.
@@ -69,18 +77,66 @@ jobs:
             - One inline comment per finding on the exact line, using
               `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`),
               prefixed with **[Bloqueante]** or **[Sugerencia]**.
-            - Then submit exactly ONE formal review with `gh pr review`, whose body has:
-              a short summary, the acceptance-criteria checklist marked ✅/❌ one by one,
-              and the list of blockers (if any).
-              - No blockers → `gh pr review ${{ github.event.pull_request.number }} --approve --body "..."`
+            - Then submit exactly ONE formal review. Write its body with the Write tool to
+              `.claude-review-body.md` (in the working directory): a short summary, the
+              acceptance-criteria checklist marked ✅/❌ one by one, and the list of blockers
+              (if any). Then publish it with `--body-file`, never with an inline `--body`:
+              - No blockers → `gh pr review ${{ github.event.pull_request.number }} --approve --body-file .claude-review-body.md`
               - Blockers, and PREVIOUS CHANGE REQUESTS < MAX ROUNDS →
-                `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "..."`
+                `gh pr review ${{ github.event.pull_request.number }} --request-changes --body-file .claude-review-body.md`
               - Blockers, and PREVIOUS CHANGE REQUESTS >= MAX ROUNDS → do NOT request changes
                 again. Run `gh pr edit ${{ github.event.pull_request.number }} --add-label needs-human`
-                and submit `gh pr review ${{ github.event.pull_request.number }} --comment --body "..."`
+                and submit `gh pr review ${{ github.event.pull_request.number }} --comment --body-file .claude-review-body.md`
                 explaining which blockers remain after the round limit, so the repo owner decides.
+              If a publish command fails, read the error and retry with a corrected plain command.
             - Don't post anything else (no extra PR comments, no review text as chat output).
           claude_args: |
             --model claude-sonnet-5
             --max-turns 45
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr edit:*),Bash(gh issue view:*)"
+            --allowedTools "Read,Glob,Grep,Write,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr edit:*),Bash(gh issue view:*)"
+
+      # Shows only the denied tool calls (tool + truncated input), not the full transcript:
+      # the action's full-output mode can leak sensitive data into the log.
+      - name: Show denied tool calls
+        if: ${{ !cancelled() && steps.claude.outputs.execution_file != '' }}
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          if [ ! -s "$EXECUTION_FILE" ]; then
+            echo "No execution file; nothing to show."
+            exit 0
+          fi
+          denials=$(jq -r '[.[] | select(.type == "result") | .permission_denials[]?]
+            | map("- \(.tool_name): \(.tool_input | tostring | .[0:300])") | .[]' "$EXECUTION_FILE")
+          if [ -n "$denials" ]; then
+            echo "::warning::The reviewer had denied tool calls (see below)."
+            echo "$denials"
+          else
+            echo "No denied tool calls."
+          fi
+
+      # The action can end "successfully" without publishing anything (e.g. every publish attempt
+      # denied). Fail visibly instead, unless this PR changes the reviewer workflow itself, where
+      # the action is expected to skip (GitHub only trusts the workflow already on master).
+      - name: Verify a review was published
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pulls/$PR/files" --paginate --jq '.[].filename' \
+              | grep -qx '.github/workflows/claude-review.yml'; then
+            echo "This PR changes the reviewer workflow: the action skips it by design, nothing to verify."
+            exit 0
+          fi
+          # One line per matching review, so --paginate can't split the count across pages.
+          published=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --paginate \
+            --jq ".[] | select(.commit_id == \"$HEAD_SHA\" and .user.type == \"Bot\" and (.user.login | startswith(\"claude\")))
+                  | select(.state == \"APPROVED\" or .state == \"CHANGES_REQUESTED\"
+                           or (.state == \"COMMENTED\" and (.body // \"\") != \"\")) | .id" | wc -l)
+          if [ "$published" -eq 0 ]; then
+            echo "::error::The reviewer finished without publishing a formal review for $HEAD_SHA. Re-run this job."
+            exit 1
+          fi
+          echo "Found $published formal review(s) from the reviewer for $HEAD_SHA."
