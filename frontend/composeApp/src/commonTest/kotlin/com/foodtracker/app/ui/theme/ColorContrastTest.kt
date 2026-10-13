@@ -31,6 +31,15 @@ class ColorContrastTest {
         "onSecondaryContainer/secondaryContainer" to (scheme.onSecondaryContainer to scheme.secondaryContainer),
         "onSurfaceVariant/surfaceContainer" to (scheme.onSurfaceVariant to scheme.surfaceContainer),
         "error/surface" to (scheme.error to scheme.surface),
+        // Home's cards (water, calorie badge, meal groups and their type squares).
+        "onTertiaryContainer/tertiaryContainer" to (scheme.onTertiaryContainer to scheme.tertiaryContainer),
+        "onTertiary/tertiary" to (scheme.onTertiary to scheme.tertiary),
+        "onErrorContainer/errorContainer" to (scheme.onErrorContainer to scheme.errorContainer),
+        "error/surfaceContainer" to (scheme.error to scheme.surfaceContainer),
+        "primary/surfaceContainer" to (scheme.primary to scheme.surfaceContainer),
+        "onSurface/surfaceContainerLow" to (scheme.onSurface to scheme.surfaceContainerLow),
+        "onSurfaceVariant/surfaceContainerLow" to (scheme.onSurfaceVariant to scheme.surfaceContainerLow),
+        "onSurfaceVariant/surfaceContainerHighest" to (scheme.onSurfaceVariant to scheme.surfaceContainerHighest),
     )
 
     private fun assertLegible(schemeName: String, scheme: ColorScheme) {

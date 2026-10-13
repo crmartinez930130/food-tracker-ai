@@ -57,7 +57,7 @@ fun App(
                         ReviewScreen(
                             initialAnalysis = analysis,
                             apiClient = apiClient,
-                            onSaved = { appState.openHomeAfterSave() },
+                            onSaved = { appState.openMain() },
                             onCancel = { appState.openMain() },
                         )
                     }
@@ -83,8 +83,6 @@ fun App(
                 is Screen.Main -> MainScreen(
                     initialTab = screen.tab,
                     apiClient = apiClient,
-                    homeDate = appState.homeDate,
-                    onHomeDateChange = { appState.homeDate = it },
                     onStartCapture = { appState.openCapture() },
                     onEditGoal = { appState.openGoals() },
                     onOpenSettings = { appState.openSettings() },

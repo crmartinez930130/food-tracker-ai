@@ -18,10 +18,11 @@
     <string name="nav_home">Home</string>
     <string name="nav_summary">Summary</string>
     <string name="action_log_meal">Log a meal</string>
-    <string name="day_today">Today</string>
-    <string name="day_yesterday">Yesterday</string>
-    <string name="previous_day">Previous day</string>
-    <string name="next_day">Next day</string>
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="home_date">%1$s, %3$s %2$d</string>
+    <string name="home_calories_title">Today's calories</string>
     <string name="open_options">Options</string>
     <string name="edit_daily_goal">Edit daily goal</string>
     <string name="calorie_ring_of_target">of %1$d kcal</string>
@@ -211,4 +212,28 @@
     <string name="design_sample_stat_average">Daily average</string>
     <string name="design_sample_stat_streak">Days on goal</string>
     <string name="design_sample_stat_water">Water</string>
+    <!-- Monday first (ISO day numbers 1 to 7). -->
+    <string-array name="weekday_names">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+    <string-array name="month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
 </resources>

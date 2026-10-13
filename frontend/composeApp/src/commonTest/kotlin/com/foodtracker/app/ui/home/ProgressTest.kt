@@ -3,6 +3,7 @@ package com.foodtracker.app.ui.home
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProgressTest {
@@ -63,14 +64,16 @@ class ProgressTest {
     }
 
     @Test
-    fun `day labels today, yesterday and older dates`() {
-        assertEquals(DayLabel.Today, dayLabel("2026-10-09", today = "2026-10-09"))
-        assertEquals(DayLabel.Yesterday, dayLabel("2026-10-08", today = "2026-10-09"))
-        assertEquals(DayLabel.Date("2026-10-07"), dayLabel("2026-10-07", today = "2026-10-09"))
+    fun `goal percent rounds and is not capped`() {
+        assertEquals(62, goalPercent(consumed = 1240.0, target = 2000.0))
+        assertEquals(112, goalPercent(consumed = 2240.0, target = 2000.0))
+        assertEquals(34, goalPercent(consumed = 675.0, target = 2000.0)) // 33.75
+        assertEquals(0, goalPercent(consumed = 0.0, target = 2000.0))
     }
 
     @Test
-    fun `yesterday works across a month boundary`() {
-        assertEquals(DayLabel.Yesterday, dayLabel("2026-09-30", today = "2026-10-01"))
+    fun `goal percent is null without a positive target`() {
+        assertNull(goalPercent(consumed = 500.0, target = 0.0))
+        assertNull(goalPercent(consumed = 500.0, target = -10.0))
     }
 }

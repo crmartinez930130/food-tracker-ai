@@ -11,9 +11,8 @@ import kotlin.time.Instant
 class WaterCardTest {
 
     @Test
-    fun `label shows consumed over target in ml`() {
-        assertEquals("750 / 2000 ml", waterLabel(750, 2000))
-        assertEquals("2250 / 2000 ml", waterLabel(2250, 2000))
+    fun `target label follows the big figure`() {
+        assertEquals("/ 2000 ml", waterTargetLabel(2000))
     }
 
     @Test

@@ -22,6 +22,7 @@ fun BigNumber(
     style: TextStyle = FoodTrackerTheme.typeTokens.emphasizedNumber,
     unitStyle: TextStyle = FoodTrackerTheme.typeTokens.numberUnit,
     color: Color = LocalContentColor.current,
+    unitColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.Bottom) {
         Text(value, style = style, color = color, maxLines = 1, modifier = Modifier.alignByBaseline())
@@ -29,7 +30,7 @@ fun BigNumber(
             Text(
                 unit,
                 style = unitStyle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = unitColor,
                 maxLines = 1,
                 softWrap = false,
                 modifier = Modifier.alignByBaseline().padding(start = 4.dp),
