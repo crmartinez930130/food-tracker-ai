@@ -7,14 +7,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -36,6 +41,7 @@ import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.UpdateGoalsRequest
 import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
+import com.foodtracker.app.ui.components.SettingsGroup
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_back
 import food_tracker_frontend.composeapp.generated.resources.error_load_goal
@@ -51,6 +57,7 @@ import food_tracker_frontend.composeapp.generated.resources.goals_error_water
 import food_tracker_frontend.composeapp.generated.resources.goals_fat
 import food_tracker_frontend.composeapp.generated.resources.goals_glass_hint
 import food_tracker_frontend.composeapp.generated.resources.goals_glass_size
+import food_tracker_frontend.composeapp.generated.resources.goals_macros_section
 import food_tracker_frontend.composeapp.generated.resources.goals_protein
 import food_tracker_frontend.composeapp.generated.resources.goals_save
 import food_tracker_frontend.composeapp.generated.resources.goals_saved
@@ -166,44 +173,66 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
             }
 
             if (isDefault) {
-                Text(
-                    stringResource(Res.string.goals_default_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                ) {
+                    Text(
+                        stringResource(Res.string.goals_default_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
 
-            GoalField(stringResource(Res.string.goals_calories), calories, onValueChange = { calories = it })
-            GoalField(stringResource(Res.string.goals_protein), protein, onValueChange = { protein = it })
-            GoalField(stringResource(Res.string.goals_fat), fat, onValueChange = { fat = it })
-            GoalField(stringResource(Res.string.goals_carbs), carbs, onValueChange = { carbs = it })
+            SettingsGroup(stringResource(Res.string.goals_macros_section)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    GoalField(stringResource(Res.string.goals_calories), calories, onValueChange = { calories = it })
+                    GoalField(stringResource(Res.string.goals_protein), protein, onValueChange = { protein = it })
+                    GoalField(stringResource(Res.string.goals_fat), fat, onValueChange = { fat = it })
+                    GoalField(stringResource(Res.string.goals_carbs), carbs, onValueChange = { carbs = it })
+                }
+            }
 
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(Res.string.goals_water_section), style = MaterialTheme.typography.titleMedium)
-            GoalField(stringResource(Res.string.goals_water_target), water, onValueChange = { water = it }, keyboardType = KeyboardType.Number)
-            GoalField(stringResource(Res.string.goals_glass_size), glass, onValueChange = { glass = it }, keyboardType = KeyboardType.Number)
-            Text(
-                stringResource(Res.string.goals_glass_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Spacer(Modifier.height(24.dp))
+            SettingsGroup(stringResource(Res.string.goals_water_section)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    GoalField(stringResource(Res.string.goals_water_target), water, onValueChange = { water = it }, keyboardType = KeyboardType.Number)
+                    GoalField(stringResource(Res.string.goals_glass_size), glass, onValueChange = { glass = it }, keyboardType = KeyboardType.Number)
+                    Text(
+                        stringResource(Res.string.goals_glass_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
 
             errorMessage?.let { message ->
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(message, color = MaterialTheme.colorScheme.error)
             }
             savedMessage?.let { message ->
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(message, color = MaterialTheme.colorScheme.primary)
             }
 
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { save() }, enabled = !isSaving) {
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = { save() },
+                enabled = !isSaving,
+                shape = CircleShape,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                } else {
-                    Text(stringResource(Res.string.goals_save))
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+                    Spacer(Modifier.width(12.dp))
                 }
+                Text(stringResource(Res.string.goals_save), style = MaterialTheme.typography.titleMedium)
             }
         }
     }

@@ -1,19 +1,13 @@
 package com.foodtracker.app.ui.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -24,7 +18,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,27 +28,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.data.defaultBackendBaseUrl
+import com.foodtracker.app.ui.components.ConnectedButtonGroup
+import com.foodtracker.app.ui.components.SettingsGroup
+import com.foodtracker.app.ui.components.SettingsRow
+import com.foodtracker.app.ui.components.choiceIndex
 import com.foodtracker.app.ui.isDebugBuild
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_back
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
-import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
+import food_tracker_frontend.composeapp.generated.resources.ic_notifications
+import food_tracker_frontend.composeapp.generated.resources.ic_palette
 import food_tracker_frontend.composeapp.generated.resources.settings_design_sample
 import food_tracker_frontend.composeapp.generated.resources.settings_design_sample_hint
+import food_tracker_frontend.composeapp.generated.resources.settings_general
 import food_tracker_frontend.composeapp.generated.resources.settings_language
 import food_tracker_frontend.composeapp.generated.resources.settings_language_english
+import food_tracker_frontend.composeapp.generated.resources.settings_language_phone
 import food_tracker_frontend.composeapp.generated.resources.settings_language_spanish
-import food_tracker_frontend.composeapp.generated.resources.settings_language_system
 import food_tracker_frontend.composeapp.generated.resources.settings_reminders
 import food_tracker_frontend.composeapp.generated.resources.settings_reminders_hint
 import food_tracker_frontend.composeapp.generated.resources.settings_server
@@ -87,7 +84,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 private val LANGUAGE_LABELS = listOf(
-    LanguagePreference.SYSTEM to Res.string.settings_language_system,
+    LanguagePreference.SYSTEM to Res.string.settings_language_phone,
     LanguagePreference.SPANISH to Res.string.settings_language_spanish,
     LanguagePreference.ENGLISH to Res.string.settings_language_english,
 )
@@ -126,6 +123,7 @@ fun SettingsScreen(
     ) { contentPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(contentPadding).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             ChoiceGroup(
                 title = Res.string.settings_language,
@@ -133,52 +131,42 @@ fun SettingsScreen(
                 selected = preferences.language,
                 onSelect = { onPreferencesChange(preferences.copy(language = it)) },
             )
-            Spacer(Modifier.height(16.dp))
             ChoiceGroup(
                 title = Res.string.settings_theme,
                 options = THEME_LABELS,
                 selected = preferences.theme,
                 onSelect = { onPreferencesChange(preferences.copy(theme = it)) },
             )
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenReminders).padding(vertical = 16.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(Res.string.settings_reminders), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(Res.string.settings_reminders_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            val colors = MaterialTheme.colorScheme
+            SettingsGroup(stringResource(Res.string.settings_general)) {
+                SettingsRow(
+                    icon = Res.drawable.ic_notifications,
+                    iconContainer = colors.tertiaryContainer,
+                    iconColor = colors.onTertiaryContainer,
+                    title = stringResource(Res.string.settings_reminders),
+                    subtitle = stringResource(Res.string.settings_reminders_hint),
+                    onClick = onOpenReminders,
+                )
+                if (isDebugBuild()) {
+                    HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(start = 72.dp))
+                    SettingsRow(
+                        icon = Res.drawable.ic_palette,
+                        iconContainer = colors.secondaryContainer,
+                        iconColor = colors.onSecondaryContainer,
+                        title = stringResource(Res.string.settings_design_sample),
+                        subtitle = stringResource(Res.string.settings_design_sample_hint),
+                        onClick = onOpenDesignSample,
                     )
                 }
-                Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = null)
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            if (isDebugBuild()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenDesignSample).padding(vertical = 16.dp),
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(Res.string.settings_design_sample), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            stringResource(Res.string.settings_design_sample_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = null)
+            SettingsGroup(stringResource(Res.string.settings_server)) {
+                Column(Modifier.padding(16.dp)) {
+                    ServerSection(
+                        preferences = preferences,
+                        onSave = { url -> onPreferencesChange(preferences.copy(serverUrl = url)) },
+                    )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
-            Spacer(Modifier.height(16.dp))
-            ServerSection(
-                preferences = preferences,
-                onSave = { url -> onPreferencesChange(preferences.copy(serverUrl = url)) },
-            )
         }
     }
 }
@@ -203,12 +191,11 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
     var status by remember { mutableStateOf<ServerStatus?>(null) }
     val scope = rememberCoroutineScope()
 
-    Text(stringResource(Res.string.settings_server), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     Text(
         stringResource(Res.string.settings_server_hint),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(vertical = 4.dp),
+        modifier = Modifier.padding(bottom = 8.dp),
     )
     OutlinedTextField(
         value = text,
@@ -299,6 +286,7 @@ private suspend fun testConnection(url: String): ServerStatus {
     }
 }
 
+/** A single choice as connected buttons inside a settings group, e.g. Teléfono · Español · English. */
 @Composable
 private fun <T> ChoiceGroup(
     title: StringResource,
@@ -306,20 +294,12 @@ private fun <T> ChoiceGroup(
     selected: T,
     onSelect: (T) -> Unit,
 ) {
-    Text(stringResource(title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-    Column(Modifier.selectableGroup()) {
-        for ((value, label) in options) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(selected = value == selected, onClick = { onSelect(value) }, role = Role.RadioButton)
-                    .padding(vertical = 8.dp),
-            ) {
-                // The row handles the click, so the button itself stays non-interactive for accessibility.
-                RadioButton(selected = value == selected, onClick = null)
-                Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
-            }
-        }
+    SettingsGroup(stringResource(title)) {
+        ConnectedButtonGroup(
+            options = options.map { (_, label) -> stringResource(label) },
+            selectedIndex = choiceIndex(options, selected),
+            onSelect = { onSelect(options[it].first) },
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }
