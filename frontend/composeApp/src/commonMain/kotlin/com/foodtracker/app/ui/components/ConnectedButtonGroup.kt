@@ -32,8 +32,9 @@ private fun CornerKind.size() = if (this == CornerKind.FULL) FullCorner else Inn
 
 /**
  * Single-choice buttons joined into one group (M3 Expressive "connected" style): round outer
- * edges, small inner ones, and the selected button a filled pill with a check. Our own because
- * material3's ButtonGroup is internal in Compose Multiplatform 1.9.
+ * edges, small inner ones, and the selected button a filled pill, with a check when [showCheck].
+ * [selectedIndex] -1 means nothing is selected. Our own because material3's ButtonGroup is
+ * internal in Compose Multiplatform 1.9.
  */
 @Composable
 fun ConnectedButtonGroup(
@@ -41,6 +42,8 @@ fun ConnectedButtonGroup(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    showCheck: Boolean = true,
+    enabled: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     Row(
@@ -61,6 +64,7 @@ fun ConnectedButtonGroup(
                 contentColor = if (selected) colors.onPrimary else colors.onSecondaryContainer,
                 selected = selected,
                 onClick = { onSelect(index) },
+                enabled = enabled,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
@@ -69,12 +73,18 @@ fun ConnectedButtonGroup(
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp),
                 ) {
-                    if (selected) {
+                    if (selected && showCheck) {
                         Icon(painterResource(Res.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 2.dp))
                     }
-                    Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = if (selected) 6.dp else 0.dp))
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.padding(start = if (selected && showCheck) 6.dp else 0.dp),
+                    )
                 }
             }
         }

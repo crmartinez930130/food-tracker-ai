@@ -76,10 +76,12 @@
     <string name="camera_allow">Permitir cámara</string>
     <string name="error_take_photo">No se pudo sacar la foto: %1$s</string>
     <string name="review_title">Revisar análisis</string>
+    <string name="review_save_total">Guardar · %1$d kcal</string>
+    <string name="review_total_title">Total</string>
+    <string name="capture_analyzing">Analizando…</string>
+    <string name="capture_close">Cerrar</string>
     <string name="review_no_food">No se detectó comida en esta foto. Podés agregar alimentos a mano si hace falta.</string>
     <string name="review_notes">Notas (opcional)</string>
-    <string name="review_total">Total: %1$d kcal · P %2$dg · G %3$dg · C %4$dg</string>
-    <string name="review_confirm_save">Confirmar y guardar</string>
     <string name="review_discard_title">¿Descartar esta comida?</string>
     <string name="review_discard_text">Se van a perder el análisis y tus cambios.</string>
     <string name="review_discard">Descartar</string>

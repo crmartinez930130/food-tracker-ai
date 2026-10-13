@@ -1,30 +1,41 @@
 package com.foodtracker.app.ui
 
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -36,19 +47,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealItem
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.SaveMealRequest
+import com.foodtracker.app.ui.components.BarSegment
+import com.foodtracker.app.ui.components.BigNumber
+import com.foodtracker.app.ui.components.ConnectedButtonGroup
+import com.foodtracker.app.ui.components.SegmentedBar
 import com.foodtracker.app.util.currentLocalHour
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
 import food_tracker_frontend.composeapp.generated.resources.error_save_meal
+import food_tracker_frontend.composeapp.generated.resources.ic_close
+import food_tracker_frontend.composeapp.generated.resources.ic_delete
+import food_tracker_frontend.composeapp.generated.resources.macro_carbs
+import food_tracker_frontend.composeapp.generated.resources.macro_fat
+import food_tracker_frontend.composeapp.generated.resources.macro_protein
 import food_tracker_frontend.composeapp.generated.resources.review_carbs_g
 import food_tracker_frontend.composeapp.generated.resources.review_confidence
-import food_tracker_frontend.composeapp.generated.resources.review_confirm_save
 import food_tracker_frontend.composeapp.generated.resources.review_discard
 import food_tracker_frontend.composeapp.generated.resources.review_discard_text
 import food_tracker_frontend.composeapp.generated.resources.review_discard_title
@@ -61,10 +82,12 @@ import food_tracker_frontend.composeapp.generated.resources.review_no_food
 import food_tracker_frontend.composeapp.generated.resources.review_notes
 import food_tracker_frontend.composeapp.generated.resources.review_protein_g
 import food_tracker_frontend.composeapp.generated.resources.review_remove
+import food_tracker_frontend.composeapp.generated.resources.review_save_total
 import food_tracker_frontend.composeapp.generated.resources.review_title
-import food_tracker_frontend.composeapp.generated.resources.review_total
+import food_tracker_frontend.composeapp.generated.resources.review_total_title
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /** UI-only default (see design.md of the add-meal-type change) - the backend never derives a type from a timestamp. */
@@ -90,12 +113,12 @@ private class EditableItemState(item: MealItem) {
 
     fun toMealItem(): MealItem = MealItem(
         name = name,
-        estimatedGrams = estimatedGrams.toDoubleOrNull() ?: 0.0,
+        estimatedGrams = editableNumber(estimatedGrams),
         confidence = confidence,
-        calories = calories.toDoubleOrNull() ?: 0.0,
-        proteinGrams = proteinGrams.toDoubleOrNull() ?: 0.0,
-        fatGrams = fatGrams.toDoubleOrNull() ?: 0.0,
-        carbsGrams = carbsGrams.toDoubleOrNull() ?: 0.0,
+        calories = editableNumber(calories),
+        proteinGrams = editableNumber(proteinGrams),
+        fatGrams = editableNumber(fatGrams),
+        carbsGrams = editableNumber(carbsGrams),
     )
 
     private companion object {
@@ -104,7 +127,7 @@ private class EditableItemState(item: MealItem) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewScreen(
     initialAnalysis: MealAnalysis,
@@ -123,10 +146,7 @@ fun ReviewScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val totalCalories = items.sumOf { it.calories.toDoubleOrNull() ?: 0.0 }
-    val totalProtein = items.sumOf { it.proteinGrams.toDoubleOrNull() ?: 0.0 }
-    val totalFat = items.sumOf { it.fatGrams.toDoubleOrNull() ?: 0.0 }
-    val totalCarbs = items.sumOf { it.carbsGrams.toDoubleOrNull() ?: 0.0 }
+    val totals = mealTotals(items.map { it.toMealItem() })
 
     fun save() {
         isSaving = true
@@ -175,132 +195,159 @@ fun ReviewScreen(
         )
     }
 
-    Column(modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(16.dp)) {
-        Text(stringResource(Res.string.review_title), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-
-        MealTypeSelector(selected = mealType, onSelect = { mealType = it })
-        Spacer(Modifier.height(8.dp))
-
-        if (items.isEmpty()) {
-            Text(stringResource(Res.string.review_no_food))
-            Spacer(Modifier.height(8.dp))
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(items, key = { it.id }) { item ->
-                EditableItemRow(item, onRemove = { items.remove(item) })
-                HorizontalDivider()
-            }
-        }
-
-        OutlinedTextField(
-            value = notes,
-            onValueChange = { notes = it },
-            label = { Text(stringResource(Res.string.review_notes)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(
-                Res.string.review_total,
-                totalCalories.roundToInt(),
-                totalProtein.roundToInt(),
-                totalFat.roundToInt(),
-                totalCarbs.roundToInt(),
-            ),
-            style = MaterialTheme.typography.titleSmall,
-        )
-
-        errorMessage?.let { message ->
-            Spacer(Modifier.height(8.dp))
-            Text(message, color = MaterialTheme.colorScheme.error)
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Row {
-            OutlinedButton(onClick = { showDiscardPrompt = true }, enabled = !isSaving) { Text(stringResource(Res.string.action_cancel)) }
-            Spacer(Modifier.width(12.dp))
-            Button(onClick = { save() }, enabled = !isSaving) {
-                if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                } else {
-                    Text(stringResource(Res.string.review_confirm_save))
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(Res.string.review_title)) },
+                navigationIcon = {
+                    // The cancel action: asks before discarding, like back (see reviewBackAction).
+                    IconButton(onClick = { showDiscardPrompt = true }, enabled = !isSaving) {
+                        Icon(painterResource(Res.drawable.ic_close), contentDescription = stringResource(Res.string.action_cancel))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                // Room under the last card for the fixed save pill.
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 104.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item(key = "type") {
+                    ConnectedButtonGroup(
+                        options = MealType.entries.map { it.displayLabel() },
+                        selectedIndex = mealType.ordinal,
+                        onSelect = { mealType = MealType.entries[it] },
+                        showCheck = false,
+                    )
+                }
+                if (items.isEmpty()) {
+                    item(key = "empty") { Text(stringResource(Res.string.review_no_food)) }
+                }
+                items(items, key = { it.id }) { item ->
+                    EditableItemCard(item, onRemove = { items.remove(item) })
+                }
+                item(key = "notes") {
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text(stringResource(Res.string.review_notes)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item(key = "total") { TotalCard(totals) }
+                errorMessage?.let { message ->
+                    item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error) }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun MealTypeSelector(
-    selected: MealType,
-    onSelect: (MealType) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-        MealType.entries.forEach { type ->
-            TextButton(onClick = { onSelect(type) }) {
-                Text(if (type == selected) "[${type.displayLabel()}]" else type.displayLabel())
+            // Fixed over the list, so saving (and the total) is always one tap away.
+            Button(
+                onClick = { save() },
+                enabled = !isSaving,
+                shape = CircleShape,
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .height(56.dp),
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+                    Spacer(Modifier.width(12.dp))
+                }
+                Text(stringResource(Res.string.review_save_total, totals.calories.roundToInt()), style = MaterialTheme.typography.titleMedium)
             }
         }
     }
 }
 
+/** The meal's total as a big figure with its macro composition. */
 @Composable
-private fun EditableItemRow(
+private fun TotalCard(totals: MealTotals, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(stringResource(Res.string.review_total_title), style = MaterialTheme.typography.titleMedium)
+            BigNumber(
+                value = "${totals.calories.roundToInt()}",
+                unit = "kcal",
+                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
+                unitColor = colors.onPrimaryContainer,
+            )
+            SegmentedBar(
+                segments = listOf(
+                    BarSegment(stringResource(Res.string.macro_protein), totals.proteinGrams, colors.primary, "${totals.proteinGrams.roundToInt()} g"),
+                    BarSegment(stringResource(Res.string.macro_fat), totals.fatGrams, colors.tertiary, "${totals.fatGrams.roundToInt()} g"),
+                    BarSegment(stringResource(Res.string.macro_carbs), totals.carbsGrams, colors.secondary, "${totals.carbsGrams.roundToInt()} g"),
+                ),
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditableItemCard(
     item: EditableItemState,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = item.name,
-                onValueChange = { item.name = it },
-                label = { Text(stringResource(Res.string.review_food)) },
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = onRemove) { Text(stringResource(Res.string.review_remove)) }
+    val colors = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow, contentColor = colors.onSurface),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = item.name,
+                    onValueChange = { item.name = it },
+                    label = { Text(stringResource(Res.string.review_food)) },
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onRemove) {
+                    Icon(painterResource(Res.drawable.ic_delete), contentDescription = stringResource(Res.string.review_remove), tint = colors.onSurfaceVariant)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(end = 8.dp)) {
+                NumberField(item.estimatedGrams, { item.estimatedGrams = it }, stringResource(Res.string.review_grams), Modifier.weight(1f))
+                NumberField(item.calories, { item.calories = it }, stringResource(Res.string.review_kcal), Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(end = 8.dp)) {
+                NumberField(item.proteinGrams, { item.proteinGrams = it }, stringResource(Res.string.review_protein_g), Modifier.weight(1f))
+                NumberField(item.fatGrams, { item.fatGrams = it }, stringResource(Res.string.review_fat_g), Modifier.weight(1f))
+                NumberField(item.carbsGrams, { item.carbsGrams = it }, stringResource(Res.string.review_carbs_g), Modifier.weight(1f))
+            }
+            Surface(shape = CircleShape, color = colors.secondaryContainer) {
+                Text(
+                    stringResource(Res.string.review_confidence, stringResource(item.confidence.labelRes)),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
         }
-        Row {
-            OutlinedTextField(
-                value = item.estimatedGrams,
-                onValueChange = { item.estimatedGrams = it },
-                label = { Text(stringResource(Res.string.review_grams)) },
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = item.calories,
-                onValueChange = { item.calories = it },
-                label = { Text(stringResource(Res.string.review_kcal)) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row {
-            OutlinedTextField(
-                value = item.proteinGrams,
-                onValueChange = { item.proteinGrams = it },
-                label = { Text(stringResource(Res.string.review_protein_g)) },
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = item.fatGrams,
-                onValueChange = { item.fatGrams = it },
-                label = { Text(stringResource(Res.string.review_fat_g)) },
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = item.carbsGrams,
-                onValueChange = { item.carbsGrams = it },
-                label = { Text(stringResource(Res.string.review_carbs_g)) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Text(stringResource(Res.string.review_confidence, stringResource(item.confidence.labelRes)), style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun NumberField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, maxLines = 1) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier,
+    )
 }
