@@ -86,7 +86,10 @@ data class NutritionTotals(
     val totalCarbsGrams: Double,
 )
 
-/** One day of `GET /api/summary/range`: that local day's summed totals (zeros if nothing was logged). */
+/**
+ * One day of `GET /api/summary/range`: that local day's summed totals, how many meals it has and
+ * its water (zeros if nothing was logged).
+ */
 @Serializable
 data class DailyTotals(
     val date: String,
@@ -94,6 +97,8 @@ data class DailyTotals(
     val totalProteinGrams: Double,
     val totalFatGrams: Double,
     val totalCarbsGrams: Double,
+    val mealCount: Int = 0,
+    val waterMl: Int = 0,
 )
 
 @Serializable

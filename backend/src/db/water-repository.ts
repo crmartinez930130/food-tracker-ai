@@ -28,6 +28,26 @@ export function waterForDay(db: AppDatabase, date: string): WaterDay {
   return { date, totalMl: entries.reduce((sum, entry) => sum + entry.amountMl, 0), entries };
 }
 
+export interface WaterDayTotal {
+  date: string;
+  totalMl: number;
+}
+
+/**
+ * The water total per local calendar day in [startDateInclusive, endDateExclusive), only for days
+ * with entries, in date order - the same day rule as [waterForDay].
+ */
+export function waterTotalsBetween(db: AppDatabase, startDateInclusive: string, endDateExclusive: string): WaterDayTotal[] {
+  const day = sql<string>`date(${waterLogs.loggedAt}, 'localtime')`;
+  return db
+    .select({ date: day, totalMl: sql<number>`sum(${waterLogs.amountMl})` })
+    .from(waterLogs)
+    .where(sql`${day} >= ${startDateInclusive} AND ${day} < ${endDateExclusive}`)
+    .groupBy(day)
+    .orderBy(day)
+    .all();
+}
+
 export function deleteWaterLog(db: AppDatabase, id: number): boolean {
   return db.delete(waterLogs).where(eq(waterLogs.id, id)).run().changes > 0;
 }

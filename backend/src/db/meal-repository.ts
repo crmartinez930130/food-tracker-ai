@@ -120,11 +120,12 @@ export function listMealsBetween(db: AppDatabase, startDateInclusive: string, en
 
 export interface DayTotals extends MealTotals {
   date: string;
+  mealCount: number;
 }
 
 /**
- * Summed totals per local calendar day in [startDateInclusive, endDateExclusive), only for days
- * that have meals, in date order. Aggregates in SQL so items don't need to be loaded.
+ * Summed totals and meal count per local calendar day in [startDateInclusive, endDateExclusive),
+ * only for days that have meals, in date order. Aggregates in SQL so items don't need to be loaded.
  */
 export function dailyTotalsBetween(db: AppDatabase, startDateInclusive: string, endDateExclusive: string): DayTotals[] {
   const day = sql<string>`date(${meals.occurredAt}, 'localtime')`;
@@ -135,6 +136,7 @@ export function dailyTotalsBetween(db: AppDatabase, startDateInclusive: string, 
       totalProteinGrams: sql<number>`sum(${meals.totalProteinGrams})`,
       totalFatGrams: sql<number>`sum(${meals.totalFatGrams})`,
       totalCarbsGrams: sql<number>`sum(${meals.totalCarbsGrams})`,
+      mealCount: sql<number>`count(*)`,
     })
     .from(meals)
     .where(sql`${day} >= ${startDateInclusive} AND ${day} < ${endDateExclusive}`)

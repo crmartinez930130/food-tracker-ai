@@ -16,7 +16,7 @@ class AppStateTest {
 
     @Test
     fun `a reminder tap opens capture from Main, Goals and Reminders`() {
-        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openSettings() }, { openReminders() }, { openDesignSample() })) {
+        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openSettings() }, { openReminders() }, { openDesignSample() }, { openDayDetail("2026-10-12") })) {
             val state = AppState().apply(open)
 
             state.openCaptureFromReminder()
@@ -54,5 +54,39 @@ class AppStateTest {
         assertEquals(Screen.Reminders, state.screen)
         state.openSettings()
         assertEquals(Screen.Settings, state.screen)
+    }
+
+    @Test
+    fun `a day opened from History goes back to History`() {
+        val state = AppState().apply { openMain(MainTab.HOME); selectMainTab(MainTab.HISTORY) }
+
+        state.openDayDetail("2026-10-12")
+        assertEquals(Screen.DayDetail("2026-10-12", returnTo = Screen.Main(MainTab.HISTORY)), state.screen)
+        state.closeDayDetail()
+
+        assertEquals(Screen.Main(MainTab.HISTORY), state.screen)
+    }
+
+    @Test
+    fun `goals opened from a day's detail goes back to that detail`() {
+        val state = AppState().apply { openMain(MainTab.HISTORY); openDayDetail("2026-10-12") }
+        val detail = state.screen
+
+        state.openGoals()
+        state.closeGoals()
+
+        assertEquals(detail, state.screen)
+        state.closeDayDetail()
+        assertEquals(Screen.Main(MainTab.HISTORY), state.screen)
+    }
+
+    @Test
+    fun `goals opened from Home goes back to Home`() {
+        val state = AppState()
+
+        state.openGoals()
+        state.closeGoals()
+
+        assertEquals(Screen.Main(MainTab.HOME), state.screen)
     }
 }

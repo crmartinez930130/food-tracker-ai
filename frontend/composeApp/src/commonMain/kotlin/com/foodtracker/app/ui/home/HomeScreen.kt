@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.ui.longDate
 import com.foodtracker.app.util.currentLocalDateTime
 import com.foodtracker.app.util.millisUntilNextMinute
 import food_tracker_frontend.composeapp.generated.resources.Res
@@ -27,19 +28,12 @@ import food_tracker_frontend.composeapp.generated.resources.edit_daily_goal
 import food_tracker_frontend.composeapp.generated.resources.greeting_afternoon
 import food_tracker_frontend.composeapp.generated.resources.greeting_evening
 import food_tracker_frontend.composeapp.generated.resources.greeting_morning
-import food_tracker_frontend.composeapp.generated.resources.home_date
 import food_tracker_frontend.composeapp.generated.resources.ic_edit
 import food_tracker_frontend.composeapp.generated.resources.ic_settings
-import food_tracker_frontend.composeapp.generated.resources.month_names
 import food_tracker_frontend.composeapp.generated.resources.open_options
-import food_tracker_frontend.composeapp.generated.resources.weekday_names
 import kotlinx.coroutines.delay
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.number
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 
 /** Home: always today, under a greeting header. */
@@ -115,12 +109,4 @@ private fun HomeHeader(
             Icon(painterResource(Res.drawable.ic_edit), contentDescription = stringResource(Res.string.edit_daily_goal))
         }
     }
-}
-
-/** "Lunes, 13 de octubre" / "Monday, October 13", in the app language. */
-@Composable
-private fun longDate(date: LocalDate): String {
-    val weekday = stringArrayResource(Res.array.weekday_names)[date.dayOfWeek.isoDayNumber - 1]
-    val month = stringArrayResource(Res.array.month_names)[date.month.number - 1]
-    return stringResource(Res.string.home_date, weekday, date.day, month).replaceFirstChar { it.titlecase() }
 }

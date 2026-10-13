@@ -13,6 +13,7 @@ import com.foodtracker.app.ui.MainScreen
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
 import com.foodtracker.app.ui.components.DesignSampleScreen
+import com.foodtracker.app.ui.history.DayDetailScreen
 import com.foodtracker.app.ui.reminders.RemindersScreen
 import com.foodtracker.app.ui.settings.AppEnvironment
 import com.foodtracker.app.ui.settings.AppPreferences
@@ -65,7 +66,14 @@ fun App(
 
                 is Screen.Goals -> GoalsScreen(
                     apiClient = apiClient,
-                    onBack = { appState.openMain() },
+                    onBack = { appState.closeGoals() },
+                )
+
+                is Screen.DayDetail -> DayDetailScreen(
+                    apiClient = apiClient,
+                    date = screen.date,
+                    onBack = { appState.closeDayDetail() },
+                    onEditGoal = { appState.openGoals() },
                 )
 
                 is Screen.Settings -> SettingsScreen(
@@ -81,8 +89,12 @@ fun App(
                 is Screen.Reminders -> RemindersScreen(onBack = { appState.openSettings() })
 
                 is Screen.Main -> MainScreen(
-                    initialTab = screen.tab,
+                    tab = screen.tab,
+                    onTabChange = { appState.selectMainTab(it) },
                     apiClient = apiClient,
+                    historyMonth = appState.historyMonth,
+                    onHistoryMonthChange = { appState.historyMonth = it },
+                    onOpenDay = { appState.openDayDetail(it) },
                     onStartCapture = { appState.openCapture() },
                     onEditGoal = { appState.openGoals() },
                     onOpenSettings = { appState.openSettings() },
