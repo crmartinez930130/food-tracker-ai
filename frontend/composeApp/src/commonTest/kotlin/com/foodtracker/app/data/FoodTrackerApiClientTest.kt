@@ -97,18 +97,42 @@ class FoodTrackerApiClientTest {
         assertEquals(MealType.BREAKFAST, meals[0].mealType)
     }
 
-    @Test
-    fun `analyzeMealPhoto sends the language next to the photo`() = runBlocking {
+    private fun formField(body: String, name: String): String? =
+        Regex("""name="?$name"?\r\n(?:[^\r\n]+\r\n)*\r\n([^\r\n]*)""").find(body)?.groupValues?.get(1)
+
+    private fun analyzeBody(call: suspend (FoodTrackerApiClient) -> Unit): String = runBlocking {
         var sentBody = ""
         val api = capturingClient(
             """{"items":[],"totalCalories":0,"totalProteinGrams":0,"totalFatGrams":0,"totalCarbsGrams":0}""",
         ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+        call(api)
+        sentBody
+    }
 
-        api.analyzeMealPhoto(byteArrayOf(1, 2, 3), "es")
+    @Test
+    fun `analyzeMeal sends the photo with language, description and portion`() {
+        val body = analyzeBody { it.analyzeMeal(byteArrayOf(1, 2, 3), "  sin aceite ", Portion.SMALL, "es") }
 
-        val languagePart = Regex("""name="?language"?\r\n(?:[^\r\n]+\r\n)*\r\n([^\r\n]*)""").find(sentBody)
-        assertEquals("es", languagePart?.groupValues?.get(1))
-        assertTrue(sentBody.contains("name=\"photo\"") || sentBody.contains("name=photo"))
+        assertEquals("es", formField(body, "language"))
+        assertEquals("sin aceite", formField(body, "description"))
+        assertEquals("small", formField(body, "portion"))
+        assertTrue(body.contains("name=\"photo\"") || body.contains("name=photo"))
+    }
+
+    @Test
+    fun `analyzeMeal without a photo sends only the text fields`() {
+        val body = analyzeBody { it.analyzeMeal(null, "una manzana", null, "es") }
+
+        assertEquals("una manzana", formField(body, "description"))
+        assertFalse(body.contains("photo"))
+        assertFalse(body.contains("portion"))
+    }
+
+    @Test
+    fun `analyzeMeal omits a blank description`() {
+        val body = analyzeBody { it.analyzeMeal(byteArrayOf(1), "   ", null, "en") }
+
+        assertFalse(body.contains("description"))
     }
 
     @Test
@@ -132,7 +156,7 @@ class FoodTrackerApiClientTest {
         val api = FoodTrackerApiClient(createHttpClient(engine), baseUrlProvider = { "http://test.local" })
 
         val exception = assertFailsWith<ApiException> {
-            api.analyzeMealPhoto(byteArrayOf(1, 2, 3), "en")
+            api.analyzeMeal(byteArrayOf(1, 2, 3), null, null, "en")
         }
         assertEquals("Vision analysis request failed", exception.message)
     }

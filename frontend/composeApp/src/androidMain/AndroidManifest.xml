@@ -8,6 +8,13 @@
     <!-- The app falls back to the gallery without a camera, so don't filter camera-less devices. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- API 30+ package visibility: lets the app find the system speech recognizer for dictation. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:label="Food Tracker"
         android:usesCleartextTraffic="true"

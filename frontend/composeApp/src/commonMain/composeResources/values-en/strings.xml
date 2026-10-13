@@ -54,7 +54,7 @@
     <string name="capture_favorites_empty">Star a meal on Home to log it again here in one tap.</string>
     <string name="capture_relog">Log this meal again</string>
     <string name="error_load_favorites">Couldn't load favorites: %1$s</string>
-    <string name="error_analyze_photo">Couldn't analyze the photo: %1$s</string>
+    <string name="error_analyze_photo">Couldn't analyze the meal: %1$s</string>
     <string name="camera_permission_rationale">The camera is needed to take a photo of your meal.</string>
     <string name="camera_permission_denied">The camera is needed to take a photo of your meal. Camera access is turned off for this app - you can enable it in the system settings.</string>
     <string name="camera_unavailable">No camera is available on this device.</string>
@@ -185,4 +185,14 @@
     <string name="settings_server_connected">Connected.</string>
     <string name="settings_server_timeout">The server didn't answer in time.</string>
     <string name="settings_server_failed">Couldn't connect: %1$s</string>
+    <string name="capture_description_label">Description (optional)</string>
+    <string name="capture_description_placeholder">E.g. baked chicken with mashed potatoes, no oil</string>
+    <string name="capture_description_counter">%1$d/%2$d</string>
+    <string name="capture_dictate">Dictate the description</string>
+    <string name="capture_dictation_prompt">Say what you ate</string>
+    <string name="capture_portion">Portion (optional)</string>
+    <string name="portion_small">Small</string>
+    <string name="portion_medium">Medium</string>
+    <string name="portion_large">Large</string>
+    <string name="capture_or_describe">Or describe the meal without a photo:</string>
 </resources>

@@ -187,3 +187,6 @@ data class LogWaterRequest(
 /** The local day (YYYY-MM-DD) of the earliest logged meal, or null when there are none. */
 @Serializable
 data class FirstMealDate(val date: String?)
+
+/** A portion size the user can state when analyzing a meal; [apiValue] is what the backend expects. */
+enum class Portion(val apiValue: String) { SMALL("small"), MEDIUM("medium"), LARGE("large") }

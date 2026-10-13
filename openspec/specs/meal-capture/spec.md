@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Covers how the app obtains the photo of a meal before it is analyzed: shooting it with the device camera inside the app or choosing an existing one from the gallery, and letting the user confirm it first.
+Covers how the app gathers what will be analyzed: a photo shot with the in-app camera or chosen from the gallery and confirmed first, an optional typed or dictated description, an optional portion size, or a description alone when there is no photo.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ The app SHALL keep letting the user pick an existing photo from the device galle
 - **THEN** the app shows it on the capture screen for confirmation, the same way as a camera photo
 
 ### Requirement: Confirm the photo before analysis
-The app SHALL show the selected or captured photo before analyzing it, and SHALL let the user replace it (retake or choose again) or send it for analysis. Camera and gallery photos SHALL follow the same analysis path afterwards.
+The app SHALL show the selected or captured photo before analyzing it, and SHALL let the user replace it (retake or choose again) or send it for analysis, together with the optional description and portion. Camera and gallery photos SHALL follow the same analysis path afterwards.
 
 #### Scenario: Analyze a confirmed camera photo
 - **WHEN** the user confirms a captured photo for analysis
@@ -99,3 +99,27 @@ While logging a meal, the system back action SHALL navigate within the app inste
 #### Scenario: Back while saving
 - **WHEN** the user presses system back while the meal is being saved
 - **THEN** the app ignores it, neither leaving the screen nor showing the prompt, and the save completes normally
+
+### Requirement: Describe the meal and its portion
+Before analyzing, the capture screen SHALL offer an optional description of the meal and an optional portion size: small, medium or large, with none selected by default.
+- **Description:** the user SHALL be able to type it, or to dictate it with the device's speech recognition in the app's language. Dictated text SHALL be added to the description so it can be reviewed and edited before analyzing. When the device offers no speech recognition, the dictation action SHALL NOT be shown. The description SHALL be limited to 500 characters.
+- **Sending:** the description and portion SHALL be sent with the analysis request.
+
+#### Scenario: Dictate a description
+- **WHEN** the user taps the microphone and says "milanesa al horno con puré"
+- **THEN** the description field contains that text, which the user can edit before analyzing
+
+#### Scenario: Choose and clear a portion
+- **WHEN** the user selects "Small" and then taps it again
+- **THEN** no portion is selected and none is sent
+
+### Requirement: Log a meal by description only
+The capture screen SHALL allow analyzing a meal without a photo when a description has been entered. Its analysis action SHALL be available whenever there is a photo, a non-blank description, or both. A meal analyzed from its description SHALL go through the same review and save steps as one analyzed from a photo.
+
+#### Scenario: Snack without a photo
+- **WHEN** the user types or dictates "una manzana" without taking a photo and taps analyze
+- **THEN** the app shows the review screen with the estimated analysis, and saving logs the meal like any other
+
+#### Scenario: Nothing to analyze
+- **WHEN** there is no photo and the description is empty or blank
+- **THEN** the analysis action is not available

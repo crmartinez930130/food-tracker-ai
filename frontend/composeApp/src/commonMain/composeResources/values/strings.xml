@@ -54,7 +54,7 @@
     <string name="capture_favorites_empty">Marcá una comida con la estrella en Inicio para registrarla de nuevo acá con un toque.</string>
     <string name="capture_relog">Registrar esta comida de nuevo</string>
     <string name="error_load_favorites">No se pudieron cargar los favoritos: %1$s</string>
-    <string name="error_analyze_photo">No se pudo analizar la foto: %1$s</string>
+    <string name="error_analyze_photo">No se pudo analizar la comida: %1$s</string>
     <string name="camera_permission_rationale">Se necesita la cámara para sacar una foto de tu comida.</string>
     <string name="camera_permission_denied">Se necesita la cámara para sacar una foto de tu comida. El acceso a la cámara está desactivado para esta app: podés activarlo en los ajustes del sistema.</string>
     <string name="camera_unavailable">No hay ninguna cámara disponible en este dispositivo.</string>
@@ -185,4 +185,14 @@
     <string name="settings_server_connected">Conectado.</string>
     <string name="settings_server_timeout">El servidor no respondió a tiempo.</string>
     <string name="settings_server_failed">No se pudo conectar: %1$s</string>
+    <string name="capture_description_label">Descripción (opcional)</string>
+    <string name="capture_description_placeholder">Ej.: pollo al horno con puré, sin aceite</string>
+    <string name="capture_description_counter">%1$d/%2$d</string>
+    <string name="capture_dictate">Dictar la descripción</string>
+    <string name="capture_dictation_prompt">Contá qué comiste</string>
+    <string name="capture_portion">Porción (opcional)</string>
+    <string name="portion_small">Pequeña</string>
+    <string name="portion_medium">Mediana</string>
+    <string name="portion_large">Grande</string>
+    <string name="capture_or_describe">O describí la comida sin foto:</string>
 </resources>

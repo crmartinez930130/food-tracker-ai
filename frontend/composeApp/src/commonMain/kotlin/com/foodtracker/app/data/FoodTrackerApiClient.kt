@@ -54,23 +54,34 @@ class FoodTrackerApiClient(
     }
 
     /**
-     * Analyzes a meal photo. [language] ("es"/"en") is the language the backend asks Claude to write
-     * the food names and notes in; the backend treats anything else as English.
+     * Analyzes a meal from a [photo], a [description], or both (at least one is required by the
+     * backend). [portion] steers the quantities; [language] ("es"/"en") is the language the food
+     * names and notes come back in. Only the parts that are present are sent.
      */
-    suspend fun analyzeMealPhoto(imageBytes: ByteArray, language: String, filename: String = "meal.jpg"): MealAnalysis {
+    suspend fun analyzeMeal(
+        photo: ByteArray?,
+        description: String?,
+        portion: Portion?,
+        language: String,
+        filename: String = "meal.jpg",
+    ): MealAnalysis {
         return httpClient
             .submitFormWithBinaryData(
                 url = "$baseUrl/api/meals/analyze",
                 formData = formData {
                     append("language", language)
-                    append(
-                        "photo",
-                        imageBytes,
-                        Headers.build {
-                            append(HttpHeaders.ContentType, "image/jpeg")
-                            append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
-                        },
-                    )
+                    description?.takeIf { it.isNotBlank() }?.let { append("description", it.trim()) }
+                    portion?.let { append("portion", it.apiValue) }
+                    if (photo != null) {
+                        append(
+                            "photo",
+                            photo,
+                            Headers.build {
+                                append(HttpHeaders.ContentType, "image/jpeg")
+                                append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                            },
+                        )
+                    }
                 },
             )
             .parseOrThrow()

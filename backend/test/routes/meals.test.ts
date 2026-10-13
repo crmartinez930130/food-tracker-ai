@@ -431,3 +431,79 @@ describe("POST /api/meals/analyze language", () => {
     expect(prompt).toContain("in English");
   });
 });
+
+describe("POST /api/meals/analyze description and portion", () => {
+  const emptyAnalysis = {
+    parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
+    usage: { input_tokens: 1, output_tokens: 1 },
+  };
+  type Content = { type: string; text?: string }[];
+
+  async function analyze(fields: Record<string, string>, withPhoto: boolean) {
+    const calls: Content[] = [];
+    const { app } = buildTestApp(async (request: unknown) => {
+      calls.push((request as { messages: { content: Content }[] }).messages[0].content);
+      return emptyAnalysis;
+    });
+    let req = request(app).post("/api/meals/analyze");
+    for (const [name, value] of Object.entries(fields)) req = req.field(name, value);
+    if (withPhoto) req = req.attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" });
+    const res = await req;
+    const prompt = calls[0]?.find((part) => part.type === "text")?.text ?? "";
+    return { res, calls, prompt, types: calls[0]?.map((part) => part.type) ?? [] };
+  }
+
+  it("still analyzes a photo alone, with no context added", async () => {
+    const { res, types, prompt } = await analyze({}, true);
+
+    expect(res.status).toBe(200);
+    expect(types).toEqual(["image", "text"]);
+    expect(prompt).not.toContain("<description>");
+  });
+
+  it("passes the description and portion with a photo", async () => {
+    const { res, prompt } = await analyze({ description: "  sin aceite  ", portion: "small", language: "es" }, true);
+
+    expect(res.status).toBe(200);
+    expect(prompt).toContain("<description>sin aceite</description>");
+    expect(prompt).toContain("portion is small");
+    expect(prompt).toContain("in Spanish (es)");
+  });
+
+  it("analyzes a description without a photo", async () => {
+    const { res, types, prompt } = await analyze({ description: "una manzana y un yogur bebible chico" }, false);
+
+    expect(res.status).toBe(200);
+    expect(types).toEqual(["text"]);
+    expect(prompt).toContain("From the user's description of a meal");
+  });
+
+  it.each([
+    ["nothing", {}],
+    ["a blank description", { description: "   " }],
+    ["only a portion", { portion: "small" }],
+  ])("rejects %s without a photo, without calling the analysis", async (_label, fields) => {
+    const { res, calls } = await analyze(fields, false);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Provide a photo, a description, or both");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects a description over 500 characters and accepts exactly 500", async () => {
+    const tooLong = await analyze({ description: "a".repeat(501) }, false);
+    const atLimit = await analyze({ description: "a".repeat(500) }, false);
+
+    expect(tooLong.res.status).toBe(400);
+    expect(tooLong.res.body.error).toBe("description: must be at most 500 characters");
+    expect(tooLong.calls).toHaveLength(0);
+    expect(atLimit.res.status).toBe(200);
+  });
+
+  it("ignores an unknown portion", async () => {
+    const { res, prompt } = await analyze({ description: "an apple", portion: "huge" }, false);
+
+    expect(res.status).toBe(200);
+    expect(prompt).not.toContain("portion is");
+  });
+});
