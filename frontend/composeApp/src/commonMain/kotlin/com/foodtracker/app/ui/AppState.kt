@@ -13,6 +13,7 @@ sealed interface Screen {
     data object Review : Screen
     data object Goals : Screen
     data object Settings : Screen
+    data object DesignSample : Screen
     data object Reminders : Screen
     data class Main(val tab: MainTab = MainTab.HOME) : Screen
 }
@@ -48,6 +49,11 @@ class AppState {
         screen = Screen.Settings
     }
 
+    /** Debug-only tool, reached from Options. */
+    fun openDesignSample() {
+        screen = Screen.DesignSample
+    }
+
     /** Reminders live inside Options, so its back returns there (see [openSettings]). */
     fun openReminders() {
         screen = Screen.Reminders
@@ -59,7 +65,7 @@ class AppState {
      */
     fun openCaptureFromReminder() {
         when (screen) {
-            is Screen.Main, Screen.Goals, Screen.Settings, Screen.Reminders -> openCapture()
+            is Screen.Main, Screen.Goals, Screen.Settings, Screen.Reminders, Screen.DesignSample -> openCapture()
             Screen.Capture, Screen.Review -> Unit
         }
     }

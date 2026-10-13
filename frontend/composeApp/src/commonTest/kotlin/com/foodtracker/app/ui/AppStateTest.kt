@@ -16,7 +16,7 @@ class AppStateTest {
 
     @Test
     fun `a reminder tap opens capture from Main, Goals and Reminders`() {
-        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openSettings() }, { openReminders() })) {
+        for (open in listOf<AppState.() -> Unit>({ openMain(MainTab.SUMMARY) }, { openGoals() }, { openSettings() }, { openReminders() }, { openDesignSample() })) {
             val state = AppState().apply(open)
 
             state.openCaptureFromReminder()

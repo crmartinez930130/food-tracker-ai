@@ -195,4 +195,20 @@
     <string name="portion_medium">Mediana</string>
     <string name="portion_large">Grande</string>
     <string name="capture_or_describe">O describí la comida sin foto:</string>
+    <string name="settings_design_sample">Muestra de diseño</string>
+    <string name="settings_design_sample_hint">Componentes y estilos del rediseño (solo en desarrollo)</string>
+    <string name="design_sample_title">Muestra de diseño</string>
+    <string name="design_sample_type">Tipografía</string>
+    <string name="design_sample_display">Título grande</string>
+    <string name="design_sample_headline">Encabezado</string>
+    <string name="design_sample_body">Texto de cuerpo en Google Sans Flex, para leer cómodo.</string>
+    <string name="design_sample_numbers">Números</string>
+    <string name="design_sample_badges">Insignias</string>
+    <string name="design_sample_bar">Barra segmentada</string>
+    <string name="design_sample_stats">Tarjetas de estadística</string>
+    <string name="design_sample_loading">Carga</string>
+    <string name="design_sample_colors">Colores</string>
+    <string name="design_sample_stat_average">Promedio diario</string>
+    <string name="design_sample_stat_streak">Días en la meta</string>
+    <string name="design_sample_stat_water">Agua</string>
 </resources>

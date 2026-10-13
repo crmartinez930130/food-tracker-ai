@@ -57,6 +57,8 @@ kotlin {
             implementation(libs.compose.ui.backhandler)
             // LifecycleResumeEffect (Reminders re-checks notification permission on resume); already transitive.
             implementation(libs.jetbrains.lifecycle.runtime.compose)
+            // RoundedPolygon/Morph for the expressive shapes (material3's own are internal in common).
+            implementation(libs.androidx.graphics.shapes)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

@@ -3,6 +3,6 @@
     <!-- Launch backdrop shown before Compose draws. windowBackground copies LightColors.background
          in ui/theme/Color.kt - regenerate both together. -->
     <style name="Theme.FoodTracker" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">#FFF7FBF1</item>
+        <item name="android:windowBackground">#FFF6FBF3</item>
     </style>
 </resources>

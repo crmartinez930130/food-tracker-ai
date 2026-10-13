@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,6 +50,7 @@ import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.Portion
 import com.foodtracker.app.data.toReviewAnalysis
+import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
 import com.foodtracker.app.ui.settings.LocalAppLocale
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
@@ -262,7 +262,7 @@ fun CaptureScreen(
         PortionChips(selected = portion, onSelect = { portion = it }, enabled = !isAnalyzing)
         Spacer(Modifier.height(16.dp))
         if (isAnalyzing) {
-            CircularProgressIndicator()
+            ExpressiveLoadingIndicator(size = 56.dp)
         } else {
             Button(
                 onClick = { analyze() },
@@ -306,7 +306,7 @@ private fun FavoritesSection(
         Spacer(Modifier.height(8.dp))
         when {
             error != null -> Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            favorites == null -> CircularProgressIndicator(Modifier.size(24.dp))
+            favorites == null -> ExpressiveLoadingIndicator(size = 32.dp)
             favorites.isEmpty() -> Text(
                 stringResource(Res.string.capture_favorites_empty),
                 style = MaterialTheme.typography.bodyMedium,

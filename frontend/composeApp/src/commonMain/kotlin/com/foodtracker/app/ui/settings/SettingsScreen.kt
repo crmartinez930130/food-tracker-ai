@@ -45,10 +45,13 @@ import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.data.defaultBackendBaseUrl
+import com.foodtracker.app.ui.isDebugBuild
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_back
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
 import food_tracker_frontend.composeapp.generated.resources.ic_chevron_right
+import food_tracker_frontend.composeapp.generated.resources.settings_design_sample
+import food_tracker_frontend.composeapp.generated.resources.settings_design_sample_hint
 import food_tracker_frontend.composeapp.generated.resources.settings_language
 import food_tracker_frontend.composeapp.generated.resources.settings_language_english
 import food_tracker_frontend.composeapp.generated.resources.settings_language_spanish
@@ -102,6 +105,7 @@ fun SettingsScreen(
     preferences: AppPreferences,
     onPreferencesChange: (AppPreferences) -> Unit,
     onOpenReminders: () -> Unit,
+    onOpenDesignSample: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -153,6 +157,23 @@ fun SettingsScreen(
                 Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = null)
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            if (isDebugBuild()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenDesignSample).padding(vertical = 16.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(Res.string.settings_design_sample), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(Res.string.settings_design_sample_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(painterResource(Res.drawable.ic_chevron_right), contentDescription = null)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
             Spacer(Modifier.height(16.dp))
             ServerSection(
                 preferences = preferences,

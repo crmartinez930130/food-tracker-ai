@@ -5,12 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
 
 /** How a screen section should present itself while (re)loading. */
 enum class LoadingPresentation {
@@ -42,7 +42,7 @@ fun LoadingAware(
     content: @Composable () -> Unit,
 ) {
     when (presentation) {
-        LoadingPresentation.INITIAL -> Box(modifier.padding(16.dp)) { CircularProgressIndicator() }
+        LoadingPresentation.INITIAL -> Box(modifier.padding(16.dp)) { ExpressiveLoadingIndicator() }
         LoadingPresentation.STALE -> Column(modifier) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
             Box(Modifier.alpha(0.4f)) { content() }
