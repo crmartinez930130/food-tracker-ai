@@ -1,13 +1,15 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { AnalysisError } from "../errors.js";
+import { sanitizeAnalysis } from "./analysis-sanitizer.js";
 import { logger } from "../logger.js";
 import { MealAnalysisSchema, type MealAnalysis } from "./meal-analysis-schema.js";
 import type { PreprocessedImage } from "./image-preprocessing.js";
 
 const ITEM_RULES = `For each item, estimate its quantity in grams and its calories, protein (g), fat (g), \
 and carbohydrates (g). If a quantity is hard to judge, still provide your best estimate and set its \
-confidence to "low" rather than omitting the item.`;
+confidence to "low" rather than omitting the item. List only foods and drinks in items; never add an \
+item for a total, subtotal or the whole meal - the totals have their own fields.`;
 
 const PHOTO_INSTRUCTION = `You are a nutrition analysis assistant. Look at this photo of a meal and identify \
 each distinct food item visible. ${ITEM_RULES} If no food is visible in the photo, return an empty items \
@@ -131,8 +133,14 @@ export async function analyzeMeal(client: Anthropic, input: AnalyzeMealInput, mo
     throw new AnalysisError("Vision analysis response did not match the expected schema");
   }
 
+  // The model sometimes adds a "Total" row as an item; drop it and keep the totals equal to the items' sum.
+  const { analysis, dropped } = sanitizeAnalysis(response.parsed_output);
+  if (dropped.length > 0) {
+    logger.info("analysis_items_dropped", { model, dropped });
+  }
+
   return {
-    analysis: response.parsed_output,
+    analysis,
     usage: {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
