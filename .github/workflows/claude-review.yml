@@ -18,7 +18,7 @@ jobs:
       issues: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -34,7 +34,7 @@ jobs:
             --jq '.[] | select(.user.type == "Bot" and (.user.login | startswith("claude")) and .state == "CHANGES_REQUESTED") | .id' | wc -l)
           echo "count=$count" >> "$GITHUB_OUTPUT"
 
-      - uses: anthropics/claude-code-action@v1
+      - uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
         id: claude
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
