@@ -30,7 +30,7 @@ The system SHALL accept a meal for analysis via the API, given as a single photo
 - **THEN** the system rejects the request with a 400-style error and does not call the analysis service
 
 ### Requirement: Structured nutrition analysis output
-For each analyzed photo, the system SHALL return, for every detected food item: a name, an estimated quantity in grams, calories, protein (g), fat (g), and carbohydrates (g), plus totals aggregated across all items. The food names and any notes SHALL be written in the language requested with the photo (English by default); quantities, nutrition values and confidence indicators SHALL be the same whatever the language.
+For each analyzed photo, the system SHALL return, for every detected food item: a name, an estimated quantity in grams, calories, protein (g), fat (g), and carbohydrates (g), plus totals aggregated across all items. The items SHALL be only foods and drinks: a summary row (such as "Total" or "Subtotal") or an empty placeholder (no quantity and no nutrition values) SHALL NOT be returned as an item, and the totals SHALL always equal the sum of the returned items. The food names and any notes SHALL be written in the language requested with the photo (English by default); quantities, nutrition values and confidence indicators SHALL be the same whatever the language.
 
 #### Scenario: Multiple foods detected
 - **WHEN** the photo contains more than one distinguishable food item
@@ -43,6 +43,22 @@ For each analyzed photo, the system SHALL return, for every detected food item: 
 #### Scenario: Analysis in Spanish
 - **WHEN** the app, shown in Spanish, submits a photo for analysis
 - **THEN** the returned food names and notes are in Spanish, for example "Tarta de chocolate" rather than "Chocolate cake"
+
+#### Scenario: Model adds a summary row
+- **WHEN** the model's answer lists a banana, a glass of milk and an item named "Total" with all values at zero
+- **THEN** the response contains only the banana and the milk, and the totals are their sum
+
+#### Scenario: Summary row repeating the sum
+- **WHEN** the model's answer includes an item named "Total" whose calories and macros equal the sum of the other items
+- **THEN** that item is not returned and the totals are not doubled
+
+#### Scenario: Empty placeholder row
+- **WHEN** the model's answer includes an item with a blank or repeated name and 0 g with every value at zero
+- **THEN** that item is not returned
+
+#### Scenario: Real food with zero calories
+- **WHEN** the analysis includes "Water", 250 g with 0 kcal
+- **THEN** it is returned as an item
 
 ### Requirement: Analysis failure handling
 The system SHALL return a clear error to the client when the vision analysis cannot be completed, without creating a partial or corrupt meal entry.
