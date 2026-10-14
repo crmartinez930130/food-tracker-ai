@@ -53,7 +53,7 @@ npm test
 
 ### Reaching the backend from your phone
 
-The server binds to `0.0.0.0` by default, so it's reachable from other devices on your home network — not just `localhost`. Find your machine's LAN IP (e.g. `hostname -I` on Linux, or check your network settings) and enter `http://<that-ip>:3000` in the app's Options → Server, together with your access token. `localhost` only works if the app runs on the same machine (e.g. an Android emulator with the right host mapping) — a phone on the same Wi-Fi needs the actual LAN IP.
+The server binds to `0.0.0.0` by default, so it's reachable from other devices on your home network — not just `localhost`. Find your machine's LAN IP (e.g. `hostname -I` on Linux, or check your network settings) and enter `http://<that-ip>:3000` in the app's Options → Server, together with your access token. An Android emulator on the same machine reaches it at `http://10.0.2.2:3000` (the emulator's alias for the host's `localhost`); a phone on the same Wi-Fi needs the actual LAN IP.
 
 ### Security
 
@@ -83,7 +83,49 @@ There is no automatic backup. The entire history lives in `backend/data/food-tra
 
 ## Frontend
 
-The Kotlin Multiplatform + Compose Multiplatform app (Android-first, iOS as a secondary target) has not been scaffolded yet — see `openspec/changes/setup-project-foundation/tasks.md` for its status. Once set up, it will live under `frontend/` and this section will cover how to build and run it.
+The Kotlin Multiplatform + Compose Multiplatform app lives in `frontend/`, in the `composeApp` module. Android is the supported target: the iOS targets are declared in the Gradle build, but there is no Xcode project yet and they aren't built or tested.
+
+### Requirements
+
+- **JDK 17 or newer** (CI uses 21). Gradle uses `JAVA_HOME`, or the `java` on your `PATH`.
+- **Android SDK** with the Android 16 platform (API 36). Point Gradle to it with `ANDROID_HOME`, or with a `frontend/local.properties` file (git-ignored) containing `sdk.dir=/path/to/Android/Sdk`. Android Studio creates that file when you open `frontend/`.
+- An **emulator or phone running Android 8.0 (API 26) or newer**, with USB debugging enabled for a phone.
+
+The Gradle wrapper (`./gradlew`) downloads Gradle and every dependency on the first run.
+
+### Build and install
+
+```bash
+cd frontend
+./gradlew :composeApp:assembleDebug
+```
+
+The APK ends up in `frontend/composeApp/build/outputs/apk/debug/composeApp-debug.apk`. To install it on a running emulator or connected phone:
+
+```bash
+./gradlew :composeApp:installDebug
+# or
+adb install -r composeApp/build/outputs/apk/debug/composeApp-debug.apk
+```
+
+The app shows up as **Food Tracker** in the launcher.
+
+### Test
+
+```bash
+./gradlew :composeApp:testDebugUnitTest
+```
+
+### Connecting to the backend
+
+Start the backend first (see [Backend](#backend)). Then, in the app, open **Options → Server** and fill in:
+
+- **Server address:**
+  - On the **Android emulator**: `http://10.0.2.2:3000`, which is already the default. `10.0.2.2` is the emulator's alias for your computer's `localhost`.
+  - On a **phone**: `http://<your computer's LAN IP>:3000`, e.g. `http://192.168.1.50:3000`. The phone must be on the same Wi-Fi; see [Reaching the backend from your phone](#reaching-the-backend-from-your-phone).
+- **Access token:** the value of `API_TOKEN` in `backend/.env`.
+
+Tap **Test connection** to check both, then **Save**. If the server rejects the token, the app tells you to check it in Options → Server.
 
 ## Workflow
 
