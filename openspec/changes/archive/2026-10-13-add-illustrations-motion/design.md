@@ -52,9 +52,8 @@
 - **Used for:**
   - Home's kcal (`CaloriesCard`) and water (`WaterCard`);
   - Summary's daily average and days-over-goal cards.
-- **Not animated:**
-  - the percentage badge text, which changes with the shape;
-  - the Review total, so typing in a field doesn't make the number jump around.
+- **The badge text** follows the same counted figure, so the percentage and the shape (D5) reach the goal together. This came from a review suggestion: first the text showed the final percentage while the shape was still catching up.
+- **Not animated:** the Review total, so typing in a field doesn't make the number jump around.
 
 ### D4. Growing bars
 - **`SegmentedBar`:** each segment's weight animates from 0 with `animateFloatAsState`. While the total is still small, the empty track fills the rest.
@@ -66,7 +65,7 @@
 - **The rule:** `badgeShapeFor(percent)` is `GOAL_REACHED` when the percent is ≥ 100, and `IN_PROGRESS` otherwise (including null). It is pure and tested at 99, 100 and 112.
 - **The shape:** `ShapeBadge` gets a `morphProgress: Float` overload. It builds `Morph(cookie9, sunny)` once, and a `MorphShape(morph, progress)` that implements `Shape` via `cubicsToPath(morph.asCubics(progress), size)`.
 - **The animation:** `CaloriesCard` animates the progress to 0 or 1 with `spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessLow)` for a visible bounce.
-- **The trigger:** the shape follows the *counted* figure (D3), not the final total. The badge springs into the sunburst the moment the count passes 100% of the goal. Home is rebuilt when it's shown again, after saving a meal for instance, so a target tied to the final total would already be at 1 and never morph. The colors keep their current rule (`errorContainer` when over).
+- **The trigger:** the shape, like the badge's text, follows the *counted* figure (D3), not the final total. The badge springs into the sunburst the moment the count passes 100% of the goal. Home is rebuilt when it's shown again, after saving a meal for instance, so a target tied to the final total would already be at 1 and never morph. The colors keep their current rule (`errorContainer` when over).
 
 ### D6. Screen transitions
 - **The rule:** `screenDepth(screen)` is pure and tested:
@@ -98,6 +97,7 @@
 
 - **Animations on every tab revisit** (bars re-grow, numbers re-count when Home recomposes from scratch). → This is intended "alive" behavior, and the durations are short (≤ 700 ms). The data reloads anyway.
 - **Content that depends on app state during an exit transition.** → Review is handled in D6. The other screens read only their own parameters.
+- **`contentKey` groups by screen type.** → Two `DayDetail`s in a row (different dates) wouldn't animate between each other. No flow navigates from one day straight to another today. If one is added, its key should include the date.
 - **The animation duration scale changing while the app is in the foreground.** → It's re-read on resume. Changing the setting requires leaving the app anyway.
 
 ## Migration Plan

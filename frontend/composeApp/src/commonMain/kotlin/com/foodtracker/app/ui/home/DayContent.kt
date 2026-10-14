@@ -308,11 +308,12 @@ private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, isToday: Boolean, o
                         )
                     }
                 }
-                val percent = goalPercent(totals.calories, goal.targetCalories)
+                // Text and shape both follow the counted figure, so they reach the goal together.
+                val percent = goalPercent(shownCalories.toDouble(), goal.targetCalories)
                 // Springs from the cookie to the sunburst as the counted figure reaches the goal (and back).
                 val reduceMotion = LocalReduceMotion.current
                 val morph by animateFloatAsState(
-                    targetValue = if (badgeShapeFor(goalPercent(shownCalories.toDouble(), goal.targetCalories)) == BadgeShape.GOAL_REACHED) 1f else 0f,
+                    targetValue = if (badgeShapeFor(percent) == BadgeShape.GOAL_REACHED) 1f else 0f,
                     animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessLow),
                     label = "badgeMorph",
                 )
