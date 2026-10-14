@@ -1,5 +1,6 @@
 package com.foodtracker.app.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +43,7 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.UpdateGoalsRequest
 import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
 import com.foodtracker.app.ui.components.SettingsGroup
+import com.foodtracker.app.ui.components.pressBounce
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_back
 import food_tracker_frontend.composeapp.generated.resources.error_load_goal
@@ -222,11 +224,13 @@ fun GoalsScreen(apiClient: FoodTrackerApiClient, onBack: () -> Unit, modifier: M
             }
 
             Spacer(Modifier.height(24.dp))
+            val saveInteraction = remember { MutableInteractionSource() }
             Button(
                 onClick = { save() },
                 enabled = !isSaving,
                 shape = CircleShape,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                interactionSource = saveInteraction,
+                modifier = Modifier.fillMaxWidth().height(56.dp).pressBounce(saveInteraction),
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)

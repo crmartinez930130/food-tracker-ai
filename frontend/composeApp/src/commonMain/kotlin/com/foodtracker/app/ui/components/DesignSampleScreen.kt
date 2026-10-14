@@ -1,6 +1,7 @@
 package com.foodtracker.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import food_tracker_frontend.composeapp.generated.resources.design_sample_body
 import food_tracker_frontend.composeapp.generated.resources.design_sample_colors
 import food_tracker_frontend.composeapp.generated.resources.design_sample_display
 import food_tracker_frontend.composeapp.generated.resources.design_sample_headline
+import food_tracker_frontend.composeapp.generated.resources.design_sample_illustrations
 import food_tracker_frontend.composeapp.generated.resources.design_sample_loading
 import food_tracker_frontend.composeapp.generated.resources.design_sample_numbers
 import food_tracker_frontend.composeapp.generated.resources.design_sample_stat_average
@@ -115,6 +117,11 @@ fun DesignSampleScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 StatCard(stringResource(Res.string.design_sample_stat_average), "1830", Modifier.weight(1f), unit = "kcal", containerColor = colors.primaryContainer)
                 StatCard(stringResource(Res.string.design_sample_stat_streak), "5", Modifier.weight(1f), containerColor = colors.tertiaryContainer)
                 StatCard(stringResource(Res.string.design_sample_stat_water), "1.8", Modifier.weight(1f), unit = "l")
+            }
+
+            Section(Res.string.design_sample_illustrations)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                IllustrationKind.entries.forEach { EmptyIllustration(it) }
             }
 
             Section(Res.string.design_sample_loading)

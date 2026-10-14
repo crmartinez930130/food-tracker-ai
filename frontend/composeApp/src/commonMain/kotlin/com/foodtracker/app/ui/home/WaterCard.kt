@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.ui.components.BigNumber
+import com.foodtracker.app.ui.components.animatedCount
+import com.foodtracker.app.ui.components.animatedFraction
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.water_add_glass
 import food_tracker_frontend.composeapp.generated.resources.water_title
@@ -58,6 +60,7 @@ fun WaterCard(
 ) {
     val totalMl = water?.totalMl ?: 0
     val progress = progressOf(totalMl.toDouble(), targetMl.toDouble())
+    val fraction = animatedFraction(progress.fraction)
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -67,7 +70,7 @@ fun WaterCard(
         Column(Modifier.padding(20.dp)) {
             Text(stringResource(Res.string.water_title), style = MaterialTheme.typography.titleMedium)
             BigNumber(
-                value = "$totalMl",
+                value = "${animatedCount(totalMl)}",
                 unit = waterTargetLabel(targetMl),
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
                 unitStyle = MaterialTheme.typography.titleSmall,
@@ -77,7 +80,7 @@ fun WaterCard(
             Spacer(Modifier.height(12.dp))
             // Going past the water target is fine, so unlike the macros it never turns red.
             LinearProgressIndicator(
-                progress = { progress.fraction },
+                progress = { fraction },
                 modifier = Modifier.fillMaxWidth().height(10.dp),
                 color = colors.tertiary,
                 trackColor = colors.surface,

@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.Cubic
+import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.circle
 import androidx.graphics.shapes.star
@@ -107,4 +108,10 @@ fun RoundedPolygon.toComposePath(size: Size, path: Path = Path()): Path = cubics
 class PolygonShape(private val polygon: RoundedPolygon) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
         Outline.Generic(polygon.toComposePath(size))
+}
+
+/** A [Shape] partway through [morph] at [progress] (0 = its start shape, 1 = its end shape). */
+class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        Outline.Generic(cubicsToPath(morph.asCubics(progress), size))
 }

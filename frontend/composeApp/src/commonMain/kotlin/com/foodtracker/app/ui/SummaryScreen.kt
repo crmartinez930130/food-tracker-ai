@@ -36,6 +36,7 @@ import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
 import com.foodtracker.app.ui.components.SegmentedBar
 import com.foodtracker.app.ui.components.StatCard
+import com.foodtracker.app.ui.components.animatedCount
 import com.foodtracker.app.ui.summary.CalorieChart
 import com.foodtracker.app.ui.summary.ExportSection
 import com.foodtracker.app.ui.summary.PeriodStats
@@ -248,14 +249,14 @@ private fun StatCards(stats: PeriodStats, modifier: Modifier = Modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
                 label = stringResource(Res.string.summary_daily_average),
-                value = "${stats.averageCalories.roundToInt()}",
+                value = "${animatedCount(stats.averageCalories.roundToInt())}",
                 unit = "kcal",
                 containerColor = colors.primaryContainer,
                 modifier = Modifier.weight(1.4f),
             )
             StatCard(
                 label = stringResource(Res.string.summary_over_goal),
-                value = "${stats.daysOverGoal}",
+                value = "${animatedCount(stats.daysOverGoal)}",
                 unit = "/ ${stats.dayCount}",
                 containerColor = if (stats.daysOverGoal > 0) colors.errorContainer else colors.tertiaryContainer,
                 modifier = Modifier.weight(1f),

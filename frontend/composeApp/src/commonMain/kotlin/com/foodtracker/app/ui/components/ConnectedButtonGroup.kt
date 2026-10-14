@@ -1,5 +1,6 @@
 package com.foodtracker.app.ui.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -53,6 +55,7 @@ fun ConnectedButtonGroup(
         options.forEachIndexed { index, label ->
             val selected = index == selectedIndex
             val corners = connectedCorners(index, options.size, selected)
+            val interaction = remember { MutableInteractionSource() }
             Surface(
                 shape = RoundedCornerShape(
                     topStart = corners.topStart.size(),
@@ -65,9 +68,11 @@ fun ConnectedButtonGroup(
                 selected = selected,
                 onClick = { onSelect(index) },
                 enabled = enabled,
+                interactionSource = interaction,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
+                    .pressBounce(interaction)
                     .semantics { role = Role.RadioButton },
             ) {
                 Row(

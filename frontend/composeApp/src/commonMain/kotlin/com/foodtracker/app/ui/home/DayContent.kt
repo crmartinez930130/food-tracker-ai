@@ -1,6 +1,11 @@
 package com.foodtracker.app.ui.home
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
@@ -42,10 +49,17 @@ import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.MealTypeIcon
+import com.foodtracker.app.ui.components.BadgeShape
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.BigNumber
+import com.foodtracker.app.ui.components.EmptyIllustration
+import com.foodtracker.app.ui.components.IllustrationKind
+import com.foodtracker.app.ui.components.LocalReduceMotion
+import com.foodtracker.app.ui.components.MorphingShapeBadge
 import com.foodtracker.app.ui.components.SegmentedBar
-import com.foodtracker.app.ui.components.ShapeBadge
+import com.foodtracker.app.ui.components.animatedCount
+import com.foodtracker.app.ui.components.badgeShapeFor
+import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.displayLabelOrOther
 import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.loadingPresentation
@@ -226,12 +240,16 @@ fun DayContent(
                     }
                     if (meals.isEmpty()) {
                         item(key = "empty") {
-                            Text(
-                                stringResource(Res.string.home_empty_day),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                EmptyIllustration(IllustrationKind.PLATE)
+                                Text(
+                                    stringResource(Res.string.home_empty_day),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 12.dp),
+                                )
+                            }
                         }
                     }
                     for (type in MEAL_TYPE_SECTION_ORDER) {
@@ -256,6 +274,8 @@ fun DayContent(
 private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, isToday: Boolean, onEditGoal: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val progress = progressOf(totals.calories, goal.targetCalories)
+    // The figure counts up; the badge turns into the sunburst the moment the count passes the goal.
+    val shownCalories = animatedCount(totals.calories.roundToInt())
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -269,7 +289,7 @@ private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, isToday: Boolean, o
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    BigNumber(value = "${totals.calories.roundToInt()}", unit = "kcal")
+                    BigNumber(value = "$shownCalories", unit = "kcal")
                     Row {
                         Text(
                             stringResource(Res.string.calorie_ring_of_target, goal.targetCalories.roundToInt()) + " · ",
@@ -288,15 +308,31 @@ private fun CaloriesCard(totals: DayTotals, goal: DailyGoal, isToday: Boolean, o
                         )
                     }
                 }
-                val percent = goalPercent(totals.calories, goal.targetCalories)
-                ShapeBadge(
+                // Text and shape both follow the counted figure, so they reach the goal together.
+                val percent = goalPercent(shownCalories.toDouble(), goal.targetCalories)
+                // Springs from the cookie to the sunburst as the counted figure reaches the goal (and back).
+                val reduceMotion = LocalReduceMotion.current
+                val morph by animateFloatAsState(
+                    targetValue = if (badgeShapeFor(percent) == BadgeShape.GOAL_REACHED) 1f else 0f,
+                    animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessLow),
+                    label = "badgeMorph",
+                )
+                val badgeInteraction = remember { MutableInteractionSource() }
+                MorphingShapeBadge(
                     text = percent?.let { "$it%" } ?: "–",
+                    morphProgress = morph,
                     size = 80.dp,
                     containerColor = if (progress.isOver) colors.errorContainer else colors.primaryContainer,
                     modifier = Modifier
                         .padding(start = 12.dp)
+                        .pressBounce(badgeInteraction)
                         .clip(CircleShape)
-                        .clickable(onClickLabel = stringResource(Res.string.edit_daily_goal), onClick = onEditGoal),
+                        .clickable(
+                            interactionSource = badgeInteraction,
+                            indication = ripple(),
+                            onClickLabel = stringResource(Res.string.edit_daily_goal),
+                            onClick = onEditGoal,
+                        ),
                 )
             }
             if (goal.isDefault) {
