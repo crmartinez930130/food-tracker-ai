@@ -194,3 +194,48 @@ describe("description and portion", () => {
     await expect(analyzeMeal(recordingClient([]), {}, "claude-opus-5")).rejects.toThrow(/image, a description, or both/);
   });
 });
+
+describe("summary rows from the model", () => {
+  const banana = { name: "Banana", estimatedGrams: 118, confidence: "high" as const, calories: 105, proteinGrams: 1.3, fatGrams: 0.4, carbsGrams: 27 };
+  const milk = { name: "Milk", estimatedGrams: 244, confidence: "medium" as const, calories: 122, proteinGrams: 8.1, fatGrams: 4.8, carbsGrams: 12 };
+  const total = { name: "Total", estimatedGrams: 0, confidence: "low" as const, calories: 0, proteinGrams: 0, fatGrams: 0, carbsGrams: 0 };
+
+  it("drops a Total row, sums the totals and logs the drop", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const client = fakeClient(async () => ({
+      parsed_output: { items: [banana, milk, total], totalCalories: 227, totalProteinGrams: 9.4, totalFatGrams: 5.2, totalCarbsGrams: 39 },
+      usage: { input_tokens: 300, output_tokens: 120 },
+    }));
+
+    const { analysis } = await analyzeMeal(client, { description: "a banana and a glass of milk" }, "claude-opus-5");
+
+    expect(analysis.items.map((item) => item.name)).toEqual(["Banana", "Milk"]);
+    expect(analysis).toMatchObject({ totalCalories: 227, totalProteinGrams: 9.4, totalFatGrams: 5.2, totalCarbsGrams: 39 });
+    const dropLine = logSpy.mock.calls.map((call) => String(call[0])).find((line) => line.includes("analysis_items_dropped"));
+    expect(dropLine).toContain('"Total"');
+    expect(dropLine).not.toContain("banana and a glass");
+    logSpy.mockRestore();
+  });
+
+  it("leaves a clean reply's items alone and doesn't log a drop", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const client = fakeClient(async () => ({
+      // The model's own totals are off; the response's totals are the items' sum.
+      parsed_output: { items: [banana, milk], totalCalories: 230, totalProteinGrams: 9, totalFatGrams: 5, totalCarbsGrams: 40 },
+      usage: { input_tokens: 300, output_tokens: 100 },
+    }));
+
+    const { analysis } = await analyzeMeal(client, { description: "a banana and a glass of milk" }, "claude-opus-5");
+
+    expect(analysis.items).toEqual([banana, milk]);
+    expect(analysis.totalCalories).toBe(227);
+    expect(logSpy.mock.calls.some((call) => String(call[0]).includes("analysis_items_dropped"))).toBe(false);
+    logSpy.mockRestore();
+  });
+
+  it("tells the model, in both modes, not to list totals as items", () => {
+    for (const hasImage of [true, false]) {
+      expect(analysisPrompt({ language: "en", hasImage })).toContain("never add an item for a total, subtotal or the whole meal");
+    }
+  });
+});
