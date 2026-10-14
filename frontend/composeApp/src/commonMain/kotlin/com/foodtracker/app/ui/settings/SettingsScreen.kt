@@ -32,7 +32,10 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.foodtracker.app.data.ApiException
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.data.defaultBackendBaseUrl
@@ -46,6 +49,8 @@ import food_tracker_frontend.composeapp.generated.resources.action_back
 import food_tracker_frontend.composeapp.generated.resources.ic_arrow_back
 import food_tracker_frontend.composeapp.generated.resources.ic_notifications
 import food_tracker_frontend.composeapp.generated.resources.ic_palette
+import food_tracker_frontend.composeapp.generated.resources.ic_visibility
+import food_tracker_frontend.composeapp.generated.resources.ic_visibility_off
 import food_tracker_frontend.composeapp.generated.resources.settings_design_sample
 import food_tracker_frontend.composeapp.generated.resources.settings_design_sample_hint
 import food_tracker_frontend.composeapp.generated.resources.settings_general
@@ -67,6 +72,11 @@ import food_tracker_frontend.composeapp.generated.resources.settings_server_save
 import food_tracker_frontend.composeapp.generated.resources.settings_server_test
 import food_tracker_frontend.composeapp.generated.resources.settings_server_testing
 import food_tracker_frontend.composeapp.generated.resources.settings_server_timeout
+import food_tracker_frontend.composeapp.generated.resources.settings_server_token
+import food_tracker_frontend.composeapp.generated.resources.settings_server_token_hide
+import food_tracker_frontend.composeapp.generated.resources.settings_server_token_hint
+import food_tracker_frontend.composeapp.generated.resources.settings_server_token_show
+import food_tracker_frontend.composeapp.generated.resources.settings_server_unauthorized
 import food_tracker_frontend.composeapp.generated.resources.settings_theme
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_dark
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_light
@@ -163,7 +173,8 @@ fun SettingsScreen(
                 Column(Modifier.padding(16.dp)) {
                     ServerSection(
                         preferences = preferences,
-                        onSave = { url -> onPreferencesChange(preferences.copy(serverUrl = url)) },
+                        onSave = { url, token -> onPreferencesChange(preferences.copy(serverUrl = url, accessToken = token)) },
+                        onRestoreDefault = { onPreferencesChange(preferences.copy(serverUrl = null)) },
                     )
                 }
             }
@@ -177,17 +188,26 @@ private sealed interface ServerStatus {
     data object Saved : ServerStatus
     data object Testing : ServerStatus
     data object Connected : ServerStatus
+    data object Unauthorized : ServerStatus
     data object Timeout : ServerStatus
     data class Failed(val detail: String?) : ServerStatus
 }
+
+private const val HTTP_UNAUTHORIZED = 401
 
 /** How long "Test connection" waits before reporting the server as unreachable. */
 private const val CONNECTION_TEST_TIMEOUT_MS = 5_000L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit) {
+private fun ServerSection(
+    preferences: AppPreferences,
+    onSave: (url: String, token: String?) -> Unit,
+    onRestoreDefault: () -> Unit,
+) {
     var text by remember(preferences.serverUrl) { mutableStateOf(effectiveServerUrl(preferences)) }
+    var token by remember(preferences.accessToken) { mutableStateOf(preferences.accessToken.orEmpty()) }
+    var tokenVisible by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<ServerStatus?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -209,6 +229,28 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
         modifier = Modifier.fillMaxWidth(),
     )
+    OutlinedTextField(
+        value = token,
+        onValueChange = {
+            token = it
+            status = null
+        },
+        label = { Text(stringResource(Res.string.settings_server_token)) },
+        supportingText = { Text(stringResource(Res.string.settings_server_token_hint)) },
+        singleLine = true,
+        isError = status == ServerStatus.Unauthorized,
+        visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+        trailingIcon = {
+            IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                Icon(
+                    painterResource(if (tokenVisible) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility),
+                    contentDescription = stringResource(if (tokenVisible) Res.string.settings_server_token_hide else Res.string.settings_server_token_show),
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Button(onClick = {
             val url = normalizeServerUrl(text)
@@ -216,7 +258,8 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
                 status = ServerStatus.Invalid
             } else {
                 text = url
-                onSave(url)
+                token = normalizeAccessToken(token).orEmpty()
+                onSave(url, normalizeAccessToken(token))
                 status = ServerStatus.Saved
             }
         }) { Text(stringResource(Res.string.settings_server_save)) }
@@ -228,24 +271,27 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
                     return@OutlinedButton
                 }
                 status = ServerStatus.Testing
-                scope.launch { status = testConnection(url) }
+                scope.launch { status = testConnection(url, normalizeAccessToken(token)) }
             },
             enabled = status != ServerStatus.Testing,
         ) { Text(stringResource(Res.string.settings_server_test)) }
         TextButton(onClick = {
-            onSave(null)
+            // Only the address: the token belongs to the user's server, not to the default.
+            onRestoreDefault()
             text = defaultBackendBaseUrl()
             status = null
         }) { Text(stringResource(Res.string.settings_server_restore)) }
     }
     status?.let { current ->
-        val isProblem = current == ServerStatus.Invalid || current == ServerStatus.Timeout || current is ServerStatus.Failed
+        val isProblem = current == ServerStatus.Invalid || current == ServerStatus.Unauthorized ||
+            current == ServerStatus.Timeout || current is ServerStatus.Failed
         Text(
             when (current) {
                 ServerStatus.Invalid -> stringResource(Res.string.settings_server_invalid)
                 ServerStatus.Saved -> stringResource(Res.string.settings_server_saved)
                 ServerStatus.Testing -> stringResource(Res.string.settings_server_testing)
                 ServerStatus.Connected -> stringResource(Res.string.settings_server_connected)
+                ServerStatus.Unauthorized -> stringResource(Res.string.settings_server_unauthorized)
                 ServerStatus.Timeout -> stringResource(Res.string.settings_server_timeout)
                 is ServerStatus.Failed ->
                     stringResource(Res.string.settings_server_failed, current.detail ?: stringResource(Res.string.unknown_error))
@@ -257,11 +303,11 @@ private fun ServerSection(preferences: AppPreferences, onSave: (String?) -> Unit
     }
 }
 
-/** Tries the typed (not necessarily saved) address with a throwaway client. */
-private suspend fun testConnection(url: String): ServerStatus {
+/** Tries the typed (not necessarily saved) address and token with a throwaway client. */
+private suspend fun testConnection(url: String, token: String?): ServerStatus {
     // Timeouts at the engine level too: a blocking connect to a host that drops packets (firewall,
     // sleeping PC) may not react to coroutine cancellation, which is all withTimeoutOrNull does.
-    val httpClient = createHttpClient().config {
+    val httpClient = createHttpClient(tokenProvider = { token }).config {
         install(HttpTimeout) {
             connectTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
             socketTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
@@ -273,6 +319,8 @@ private suspend fun testConnection(url: String): ServerStatus {
             FoodTrackerApiClient(httpClient) { url }.getGoals()
             ServerStatus.Connected
         } ?: ServerStatus.Timeout
+    } catch (e: ApiException) {
+        if (e.status == HTTP_UNAUTHORIZED) ServerStatus.Unauthorized else ServerStatus.Failed(e.message)
     } catch (e: HttpRequestTimeoutException) {
         ServerStatus.Timeout
     } catch (e: ConnectTimeoutException) {

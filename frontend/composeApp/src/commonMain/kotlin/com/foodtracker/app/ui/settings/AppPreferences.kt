@@ -20,6 +20,8 @@ data class AppPreferences(
     val theme: ThemePreference = ThemePreference.SYSTEM,
     /** Backend address chosen in Options; null means the platform default (see [effectiveServerUrl]). */
     val serverUrl: String? = null,
+    /** The backend's API_TOKEN, sent with every request; null until the user enters one. */
+    val accessToken: String? = null,
 )
 
 private val preferencesJson = Json { ignoreUnknownKeys = true; coerceInputValues = true }
@@ -67,3 +69,6 @@ fun normalizeServerUrl(input: String): String? {
         if (port.isNotEmpty()) append(':').append(port.toInt())
     }
 }
+
+/** A typed access token as stored: trimmed, and null when blank (no token is sent then). */
+fun normalizeAccessToken(input: String): String? = input.trim().ifEmpty { null }

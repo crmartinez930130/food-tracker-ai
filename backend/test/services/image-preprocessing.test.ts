@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import { MAX_LONG_EDGE_PX, preprocessImage } from "../../src/services/image-preprocessing.js";
+import { MAX_LONG_EDGE_PX, detectImageType, preprocessImage } from "../../src/services/image-preprocessing.js";
 
 async function makeSampleImage(width: number, height: number): Promise<Buffer> {
   return sharp({
@@ -59,5 +59,28 @@ describe("preprocessImage", () => {
 
     expect(result.width).toBe(400);
     expect(result.height).toBe(300);
+  });
+});
+
+describe("detectImageType", () => {
+  it("recognizes JPEG and PNG by their first bytes", async () => {
+    const png = await makeSampleImage(10, 10);
+    const jpeg = await sharp(png).jpeg().toBuffer();
+
+    expect(detectImageType(png)).toBe("png");
+    expect(detectImageType(jpeg)).toBe("jpeg");
+  });
+
+  it("rejects other formats whatever they claim to be", () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>');
+    // An ISO-BMFF box: size, "ftyp", brand "heic".
+    const heif = Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]);
+    const gif = Buffer.from("GIF89a");
+
+    expect(detectImageType(svg)).toBeNull();
+    expect(detectImageType(heif)).toBeNull();
+    expect(detectImageType(gif)).toBeNull();
+    expect(detectImageType(Buffer.alloc(0))).toBeNull();
+    expect(detectImageType(Buffer.from([0xff, 0xd8]))).toBeNull();
   });
 });

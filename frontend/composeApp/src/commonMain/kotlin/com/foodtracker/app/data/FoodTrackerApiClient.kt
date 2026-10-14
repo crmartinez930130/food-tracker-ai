@@ -19,8 +19,11 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 
-/** Thrown when the backend responds with a non-2xx status; [message] is the backend's own error text. */
-class ApiException(message: String) : Exception(message)
+/**
+ * Thrown when the backend responds with a non-2xx status; [message] is the backend's own error
+ * text and [status] the HTTP status (401: the access token was missing or rejected).
+ */
+class ApiException(message: String, val status: Int) : Exception(message)
 
 @Serializable
 private data class ApiErrorBody(val error: String)
@@ -48,7 +51,7 @@ class FoodTrackerApiClient(
         if (!status.isSuccess()) {
             val message = runCatching { body<ApiErrorBody>().error }
                 .getOrDefault("Request failed with status ${status.value}")
-            throw ApiException(message)
+            throw ApiException(message, status.value)
         }
         return body()
     }

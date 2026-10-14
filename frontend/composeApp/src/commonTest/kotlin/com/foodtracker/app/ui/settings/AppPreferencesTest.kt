@@ -53,4 +53,18 @@ class AppPreferencesTest {
         assertFalse(resolveDarkTheme(ThemePreference.LIGHT, systemDark = true))
         assertTrue(resolveDarkTheme(ThemePreference.DARK, systemDark = false))
     }
+
+    @Test
+    fun `the access token round-trips and a typed one is trimmed, blank meaning none`() {
+        val preferences = AppPreferences(serverUrl = "http://192.168.1.50:3000", accessToken = "test-token-0123456789")
+
+        assertEquals(preferences, decodeAppPreferences(encodeAppPreferences(preferences)))
+        assertEquals("abc-0123456789-xyz", normalizeAccessToken("  abc-0123456789-xyz \n"))
+        assertEquals(null, normalizeAccessToken("   "))
+    }
+
+    @Test
+    fun `preferences saved before the token existed load with no token`() {
+        assertEquals(null, decodeAppPreferences("""{"language":"SPANISH","serverUrl":"http://192.168.1.50:3000"}""").accessToken)
+    }
 }

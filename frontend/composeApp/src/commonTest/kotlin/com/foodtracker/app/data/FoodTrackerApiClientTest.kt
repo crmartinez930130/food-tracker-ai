@@ -159,6 +159,44 @@ class FoodTrackerApiClientTest {
             api.analyzeMeal(byteArrayOf(1, 2, 3), null, null, "en")
         }
         assertEquals("Vision analysis request failed", exception.message)
+        assertEquals(502, exception.status)
+    }
+
+    @Test
+    fun `every request carries the access token when one is set, and none otherwise`() = runBlocking {
+        val seen = mutableListOf<String?>()
+        val engine = MockEngine { request ->
+            seen += request.headers[HttpHeaders.Authorization]
+            respond(
+                content = ByteReadChannel("[]"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        var token: String? = "test-token-0123456789"
+        val api = FoodTrackerApiClient(createHttpClient(engine, tokenProvider = { token }), baseUrlProvider = { "http://test.local" })
+
+        api.listMeals("2026-01-01")
+        token = null
+        api.listMeals("2026-01-01")
+
+        assertEquals(listOf<String?>("Bearer test-token-0123456789", null), seen)
+    }
+
+    @Test
+    fun `a rejected token surfaces as ApiException with status 401`() = runBlocking {
+        val engine = MockEngine { _ ->
+            respond(
+                content = ByteReadChannel("""{"error":"Missing or invalid access token"}"""),
+                status = HttpStatusCode.Unauthorized,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val api = FoodTrackerApiClient(createHttpClient(engine, tokenProvider = { "wrong-token-0123456789" }), baseUrlProvider = { "http://test.local" })
+
+        val exception = assertFailsWith<ApiException> { api.getGoals() }
+
+        assertEquals(401, exception.status)
     }
 
     @Test

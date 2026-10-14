@@ -1,4 +1,5 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import { MulterError } from "multer";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { AppDatabase } from "./db/client.js";
 import { createMealsRouter } from "./routes/meals.js";
@@ -8,15 +9,24 @@ import { createWaterRouter } from "./routes/water.js";
 import { createWeightRouter } from "./routes/weight.js";
 import { AnalysisError, NotFoundError, ValidationError } from "./errors.js";
 import { logger } from "./logger.js";
+import { requireAccessToken } from "./http/access-token.js";
+import type { RateLimiter } from "./http/rate-limit.js";
 
 export interface AppDeps {
   db: AppDatabase;
   anthropicClient: Anthropic;
   model: string;
+  /** Every /api request must carry it as `Authorization: Bearer <apiToken>`. */
+  apiToken: string;
+  /** Limits the paid meal analysis (see createRateLimiter). */
+  analyzeLimiter: RateLimiter;
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.disable("x-powered-by");
+  // Before anything else under /api, so an unauthenticated request never reaches a router or parser.
+  app.use("/api", requireAccessToken(deps.apiToken));
   app.use(express.json());
 
   app.use("/api/meals", createMealsRouter(deps));
@@ -32,6 +42,15 @@ export function createApp(deps: AppDeps): Express {
     }
     if (err instanceof NotFoundError) {
       res.status(404).json({ error: err.message });
+      return;
+    }
+    // Upload problems found by multer: a photo over the size limit, or a malformed upload.
+    if (err instanceof MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Photo too large; the limit is 15 MB" });
+      } else {
+        res.status(400).json({ error: `Invalid upload: ${err.message}` });
+      }
       return;
     }
     if (err instanceof AnalysisError) {

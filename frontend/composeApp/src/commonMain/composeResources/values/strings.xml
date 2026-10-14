@@ -6,6 +6,7 @@
     <string name="action_delete">Eliminar</string>
     <string name="action_save">Guardar</string>
     <string name="action_ok">Aceptar</string>
+    <string name="error_unauthorized">el servidor rechazó el token de acceso. Revisalo en Opciones → Servidor.</string>
     <string name="unknown_error">error desconocido</string>
     <string name="no_items">(sin alimentos)</string>
     <string name="unit_kcal">%1$d kcal</string>
@@ -193,11 +194,16 @@
     <string name="settings_server">Servidor</string>
     <string name="settings_server_hint">Dirección del backend. En el teléfono, usá la IP de la PC en tu red, por ejemplo http://192.168.1.50:3000.</string>
     <string name="settings_server_field">Dirección del servidor</string>
+    <string name="settings_server_token">Token de acceso</string>
+    <string name="settings_server_token_hint">El mismo valor que API_TOKEN en el .env del backend.</string>
+    <string name="settings_server_token_show">Mostrar token</string>
+    <string name="settings_server_token_hide">Ocultar token</string>
+    <string name="settings_server_unauthorized">El servidor rechazó el token de acceso.</string>
     <string name="settings_server_save">Guardar</string>
     <string name="settings_server_test">Probar conexión</string>
     <string name="settings_server_restore">Restablecer</string>
     <string name="settings_server_invalid">Ingresá una dirección como http://192.168.1.50:3000</string>
-    <string name="settings_server_saved">Dirección guardada.</string>
+    <string name="settings_server_saved">Dirección y token guardados.</string>
     <string name="settings_server_testing">Probando…</string>
     <string name="settings_server_connected">Conectado.</string>
     <string name="settings_server_timeout">El servidor no respondió a tiempo.</string>
