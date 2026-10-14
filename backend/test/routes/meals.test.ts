@@ -64,6 +64,23 @@ describe("POST /api/meals/analyze", () => {
     expect(called).toBe(false);
   });
 
+  it("rejects a file disguised as a JPEG before decoding it", async () => {
+    let called = false;
+    const { app } = buildTestApp(async () => {
+      called = true;
+      return { parsed_output: null, usage: { input_tokens: 0, output_tokens: 0 } };
+    });
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>');
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", svg, { filename: "meal.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Unsupported image format; only JPEG and PNG are accepted");
+    expect(called).toBe(false);
+  });
+
   it("returns an empty-items analysis rather than an error when no food is detected", async () => {
     const { app } = buildTestApp(async () => ({
       parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },

@@ -8,15 +8,24 @@ import { createWaterRouter } from "./routes/water.js";
 import { createWeightRouter } from "./routes/weight.js";
 import { AnalysisError, NotFoundError, ValidationError } from "./errors.js";
 import { logger } from "./logger.js";
+import { requireAccessToken } from "./http/access-token.js";
+import type { RateLimiter } from "./http/rate-limit.js";
 
 export interface AppDeps {
   db: AppDatabase;
   anthropicClient: Anthropic;
   model: string;
+  /** Every /api request must carry it as `Authorization: Bearer <apiToken>`. */
+  apiToken: string;
+  /** Limits the paid meal analysis (see createRateLimiter). */
+  analyzeLimiter: RateLimiter;
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.disable("x-powered-by");
+  // Before anything else under /api, so an unauthenticated request never reaches a router or parser.
+  app.use("/api", requireAccessToken(deps.apiToken));
   app.use(express.json());
 
   app.use("/api/meals", createMealsRouter(deps));

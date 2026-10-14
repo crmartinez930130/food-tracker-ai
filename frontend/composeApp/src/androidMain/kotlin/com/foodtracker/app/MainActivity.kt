@@ -37,7 +37,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handleReminderTap(intent)
         syncNotificationChannel()
         // Every API client reads BackendConfig lazily, so this covers all requests from here on.
-        BackendConfig.baseUrl = effectiveServerUrl(PreferencesStore.load(this))
+        PreferencesStore.load(this).let { stored ->
+            BackendConfig.baseUrl = effectiveServerUrl(stored)
+            BackendConfig.accessToken = stored.accessToken
+        }
         setContent {
             // Options choices: owned here so the system bars can follow the chosen theme too.
             var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
@@ -57,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     PreferencesStore.save(this, updated)
                     preferences = updated
                     BackendConfig.baseUrl = effectiveServerUrl(updated)
+                    BackendConfig.accessToken = updated.accessToken
                     // Keeps the channel name (shown in system settings) in the chosen language.
                     syncNotificationChannel()
                 },

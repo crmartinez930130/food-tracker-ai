@@ -43,7 +43,8 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 // A fresh receiver process has the phone's locale; texts must use the app's language.
                 applyAppLocale(context)
-                if (shouldShowReminder(meal, mealsTodayOrNull(effectiveServerUrl(PreferencesStore.load(context))))) {
+                val preferences = PreferencesStore.load(context)
+                if (shouldShowReminder(meal, mealsTodayOrNull(effectiveServerUrl(preferences), preferences.accessToken))) {
                     ReminderNotifications.show(context, meal)
                 }
             } finally {
@@ -56,15 +57,16 @@ class ReminderReceiver : BroadcastReceiver() {
 
     /**
      * Today's meals, or null if the backend can't answer quickly - then the reminder is shown anyway.
-     * A fresh receiver process never set BackendConfig, so the saved address is passed in explicitly.
+     * A fresh receiver process never set BackendConfig, so the saved address and token are passed in explicitly.
      */
-    private suspend fun mealsTodayOrNull(serverUrl: String): List<MealEntry>? {
+    private suspend fun mealsTodayOrNull(serverUrl: String, accessToken: String?): List<MealEntry>? {
         // Engine timeouts too: a blocking connect to a sleeping laptop may not react to cancellation.
         val httpClient = createHttpClient(
             Android.create {
                 connectTimeout = MEALS_TIMEOUT_MS.toInt()
                 socketTimeout = MEALS_TIMEOUT_MS.toInt()
             },
+            tokenProvider = { accessToken },
         )
         return try {
             withTimeoutOrNull(MEALS_TIMEOUT_MS) { FoodTrackerApiClient(httpClient) { serverUrl }.listMeals(todayDateString()) }

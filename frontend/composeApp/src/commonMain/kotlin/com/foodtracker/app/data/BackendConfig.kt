@@ -9,4 +9,7 @@ expect fun defaultBackendBaseUrl(): String
 
 object BackendConfig {
     var baseUrl: String = defaultBackendBaseUrl()
+
+    /** The backend's access token (Options → Server); sent with every request when set. */
+    var accessToken: String? = null
 }

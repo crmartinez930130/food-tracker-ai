@@ -12,11 +12,12 @@ import {
   updateMeal,
 } from "../db/meal-repository.js";
 import { exportFileName, exportMealsCsv } from "../services/csv-export.js";
-import { preprocessImage } from "../services/image-preprocessing.js";
+import { detectImageType, preprocessImage } from "../services/image-preprocessing.js";
 import { analyzeMeal, parseAnalysisLanguage, parseAnalysisPortion } from "../services/vision-analysis.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { SaveMealRequestSchema, UpdateMealRequestSchema } from "./schemas.js";
 import { asyncHandler } from "./async-handler.js";
+import { rateLimit, type RateLimiter } from "../http/rate-limit.js";
 import { invalidDateMessage, isCalendarDate, parseDateRange } from "./dates.js";
 import { validationErrorFrom } from "./validation.js";
 
@@ -25,6 +26,7 @@ export interface MealsRouterDeps {
   db: AppDatabase;
   anthropicClient: Anthropic;
   model: string;
+  analyzeLimiter: RateLimiter;
 }
 
 const upload = multer({
@@ -50,11 +52,13 @@ function parseId(raw: string): number {
   return id;
 }
 
-export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDeps): Router {
+export function createMealsRouter({ db, anthropicClient, model, analyzeLimiter }: MealsRouterDeps): Router {
   const router = Router();
 
   router.post(
     "/analyze",
+    // Before multer: a rejected call never buffers its upload.
+    rateLimit(analyzeLimiter),
     upload.single("photo"),
     asyncHandler(async (req, res) => {
       // Multer puts the form's text fields in req.body (the photo itself is optional).
@@ -65,6 +69,9 @@ export function createMealsRouter({ db, anthropicClient, model }: MealsRouterDep
       }
       if (!req.file && !description) {
         throw new ValidationError("Provide a photo, a description, or both");
+      }
+      if (req.file && !detectImageType(req.file.buffer)) {
+        throw new ValidationError("Unsupported image format; only JPEG and PNG are accepted");
       }
       const image = req.file ? await preprocessImage(req.file.buffer) : undefined;
       const result = await analyzeMeal(
