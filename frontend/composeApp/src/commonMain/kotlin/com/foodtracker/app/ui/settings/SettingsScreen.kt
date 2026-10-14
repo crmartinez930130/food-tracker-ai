@@ -77,6 +77,7 @@ import food_tracker_frontend.composeapp.generated.resources.settings_server_toke
 import food_tracker_frontend.composeapp.generated.resources.settings_server_token_hint
 import food_tracker_frontend.composeapp.generated.resources.settings_server_token_show
 import food_tracker_frontend.composeapp.generated.resources.settings_server_unauthorized
+import food_tracker_frontend.composeapp.generated.resources.settings_server_unencrypted
 import food_tracker_frontend.composeapp.generated.resources.settings_theme
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_dark
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_light
@@ -224,6 +225,12 @@ private fun ServerSection(
             status = null
         },
         label = { Text(stringResource(Res.string.settings_server_field)) },
+        // A note, not an error: plain HTTP is the expected setup on the home network.
+        supportingText = if (isUnencrypted(text)) {
+            { Text(stringResource(Res.string.settings_server_unencrypted)) }
+        } else {
+            null
+        },
         singleLine = true,
         isError = status == ServerStatus.Invalid,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),

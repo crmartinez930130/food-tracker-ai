@@ -72,3 +72,6 @@ fun normalizeServerUrl(input: String): String? {
 
 /** A typed access token as stored: trimmed, and null when blank (no token is sent then). */
 fun normalizeAccessToken(input: String): String? = input.trim().ifEmpty { null }
+
+/** True when [url] would talk to the backend without encryption (plain `http://`). */
+fun isUnencrypted(url: String): Boolean = url.trim().startsWith("http://", ignoreCase = true)

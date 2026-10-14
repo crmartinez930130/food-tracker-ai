@@ -3,7 +3,9 @@ package com.foodtracker.app.ui.settings
 import com.foodtracker.app.data.defaultBackendBaseUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ServerUrlTest {
 
@@ -63,5 +65,13 @@ class ServerUrlTest {
         val preferences = AppPreferences(serverUrl = "http://192.168.1.50:3000")
 
         assertEquals(preferences, decodeAppPreferences(encodeAppPreferences(preferences)))
+    }
+
+    @Test
+    fun `plain http is flagged as unencrypted, https is not`() {
+        assertTrue(isUnencrypted("http://192.168.1.50:3000"))
+        assertTrue(isUnencrypted("  HTTP://192.168.1.50:3000"))
+        assertFalse(isUnencrypted("https://food.example.com"))
+        assertFalse(isUnencrypted("192.168.1.50:3000"))
     }
 }

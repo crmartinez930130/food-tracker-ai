@@ -55,6 +55,26 @@ npm test
 
 The server binds to `0.0.0.0` by default, so it's reachable from other devices on your home network — not just `localhost`. Find your machine's LAN IP (e.g. `hostname -I` on Linux, or check your network settings) and enter `http://<that-ip>:3000` in the app's Options → Server, together with your access token. `localhost` only works if the app runs on the same machine (e.g. an Android emulator with the right host mapping) — a phone on the same Wi-Fi needs the actual LAN IP.
 
+### Security
+
+The backend is meant for **your home network** and a single user.
+
+What protects it:
+- **Access token:** every `/api` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
+- **Analysis limit:** at most `ANALYZE_RATE_LIMIT_PER_MINUTE` analyses per minute (20 by default), since each one is a paid API call.
+- **Upload checks:** only real JPEG/PNG photos up to 15 MB reach the image decoder.
+- **App data stays on the phone:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers.
+
+What it does **not** do:
+- **No HTTPS.** The app talks to the backend over `http://`, so meals, weight and water travel **unencrypted** over the network. That's acceptable on your home Wi-Fi; on public or shared networks, anyone on that network could read them. The app shows a note in Options → Server for `http://` addresses.
+- **One shared token.** Anyone with your `.env` or your phone's app data has full access.
+
+Do:
+- Keep the server on your home network. **Never forward port 3000 on your router** or expose it to the internet.
+- To use the app away from home, connect through a VPN to your home network (e.g. Tailscale) instead of opening the port.
+- If the token may have leaked, generate a new one, put it in `backend/.env`, restart the server and enter it in the app.
+- Set a monthly spending limit for your key in the Anthropic console.
+
 ### Backing up your data
 
 There is no automatic backup. The entire history lives in `backend/data/food-tracker.sqlite`. To back it up, just copy that file somewhere safe while the server is stopped (or use SQLite's `.backup` command if you want to do it while running).

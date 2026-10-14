@@ -58,6 +58,7 @@ The app SHALL let the user set the address of the backend server and its access 
 - **Saving:** a saved address SHALL be used by every request to the backend from then on, without restarting the app. That includes the check a meal reminder makes while the app is not running. It SHALL persist across restarts.
 - **Default:** when no address has been saved, the app SHALL use its built-in default, which is the emulator's host alias on Android.
 - **Restore default:** the user SHALL be able to go back to the default.
+- **Unencrypted addresses:** when the address uses `http://`, the setting SHALL say that the connection isn't encrypted and is meant for trusted networks. This SHALL inform, not block saving.
 - **Access token:** the token SHALL be entered in a field hidden by default, which the user can reveal. It SHALL be saved together with the address and sent with every request to the backend, including the meal reminder's check. When the server rejects the token, the app SHALL say so and point to this setting, instead of showing the server's raw error.
 - **Connection test:** the user SHALL be able to test the address and token being edited before saving them. The test SHALL report whether the server answered and, if not, the reason, telling a rejected token apart from an unreachable server.
 
@@ -88,3 +89,22 @@ The app SHALL let the user set the address of the backend server and its access 
 #### Scenario: Rejected token
 - **WHEN** the saved token doesn't match the server's
 - **THEN** screens show that the server rejected the access token and point to Options → Server, and the connection test reports the token as rejected
+
+#### Scenario: Unencrypted address
+- **WHEN** the address field contains `http://192.168.1.50:3000`
+- **THEN** a note under it says the connection isn't encrypted and to use it only on trusted networks, and it can still be saved
+
+#### Scenario: Encrypted address
+- **WHEN** the address field contains an `https://` address
+- **THEN** no unencrypted-connection note is shown
+
+### Requirement: Settings stay on the device
+The app's settings (language, theme, server address, access token and meal reminders) SHALL NOT be included in Android's cloud backups or in device-to-device transfers, on any supported Android version. Setting the app up on a new phone SHALL start from the defaults.
+
+#### Scenario: Cloud backup
+- **WHEN** Android backs up the phone to the cloud
+- **THEN** none of the app's settings, including the access token, are part of the backup
+
+#### Scenario: New phone
+- **WHEN** the user moves to a new phone with a device-to-device transfer and installs the app
+- **THEN** the app starts with its default settings and no access token
