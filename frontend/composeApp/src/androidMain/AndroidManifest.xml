@@ -15,8 +15,14 @@
         </intent>
     </queries>
 
+    <!-- Settings (incl. the backend's access token) never leave the phone: no cloud backup and no
+         device-to-device transfer. Cleartext is needed for the home-network backend over http://
+         (see README "Security"). -->
     <application
         android:label="Food Tracker"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.FoodTracker">
         <activity

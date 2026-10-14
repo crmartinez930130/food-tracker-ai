@@ -194,6 +194,7 @@
     <string name="settings_server">Servidor</string>
     <string name="settings_server_hint">Dirección del backend. En el teléfono, usá la IP de la PC en tu red, por ejemplo http://192.168.1.50:3000.</string>
     <string name="settings_server_field">Dirección del servidor</string>
+    <string name="settings_server_unencrypted">Conexión sin cifrar: usala solo en redes de confianza.</string>
     <string name="settings_server_token">Token de acceso</string>
     <string name="settings_server_token_hint">El mismo valor que API_TOKEN en el .env del backend.</string>
     <string name="settings_server_token_show">Mostrar token</string>
