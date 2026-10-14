@@ -64,6 +64,34 @@ describe("POST /api/meals/analyze", () => {
     expect(called).toBe(false);
   });
 
+  it("answers 413, not 500, for a photo over the size limit", async () => {
+    let called = false;
+    const { app } = buildTestApp(async () => {
+      called = true;
+      return { parsed_output: null, usage: { input_tokens: 0, output_tokens: 0 } };
+    });
+    const oversized = Buffer.alloc(16 * 1024 * 1024, 0xff);
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", oversized, { filename: "big.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toBe("Photo too large; the limit is 15 MB");
+    expect(called).toBe(false);
+  });
+
+  it("answers 400 for an upload in an unexpected field", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("picture", Buffer.from([0xff, 0xd8, 0xff]), { filename: "a.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/^Invalid upload/);
+  });
+
   it("rejects a file disguised as a JPEG before decoding it", async () => {
     let called = false;
     const { app } = buildTestApp(async () => {

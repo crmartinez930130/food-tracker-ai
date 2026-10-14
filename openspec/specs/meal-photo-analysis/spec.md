@@ -29,6 +29,10 @@ The system SHALL accept a meal for analysis via the API, given as a single photo
 - **WHEN** the client calls `POST /api/meals/analyze` without a photo and without a description, or with a blank description only
 - **THEN** the system rejects the request with a 400-style error and does not call the analysis service
 
+#### Scenario: Photo too large
+- **WHEN** the client submits a photo larger than 15 MB
+- **THEN** the system rejects it with a 413 error and a clear message, not a server error, and does not call the analysis service
+
 #### Scenario: File disguised as a JPEG
 - **WHEN** the client submits an SVG or HEIF file declared as `image/jpeg`
 - **THEN** the system rejects it with a 400-style error without decoding it and without calling the analysis service

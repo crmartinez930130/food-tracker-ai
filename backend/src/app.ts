@@ -1,4 +1,5 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import { MulterError } from "multer";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { AppDatabase } from "./db/client.js";
 import { createMealsRouter } from "./routes/meals.js";
@@ -41,6 +42,15 @@ export function createApp(deps: AppDeps): Express {
     }
     if (err instanceof NotFoundError) {
       res.status(404).json({ error: err.message });
+      return;
+    }
+    // Upload problems found by multer: a photo over the size limit, or a malformed upload.
+    if (err instanceof MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Photo too large; the limit is 15 MB" });
+      } else {
+        res.status(400).json({ error: `Invalid upload: ${err.message}` });
+      }
       return;
     }
     if (err instanceof AnalysisError) {

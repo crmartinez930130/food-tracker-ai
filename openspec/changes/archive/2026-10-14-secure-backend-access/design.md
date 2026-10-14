@@ -58,6 +58,9 @@
 
 ### D4. Dependency upgrades
 - **Versions:** `sharp` ^0.35.5, `drizzle-orm` ^0.45.4 and `drizzle-kit` at the matching release.
+- **multer 2.x:** a clean `npm ci` flagged multer 1.x as deprecated for vulnerabilities fixed in 2.x, although `npm audit` didn't report them. multer is the upload parser, so it's upgraded too. It needs no code change.
+- **Upload errors:** while smoke-testing multer 2, a photo over 15 MB returned 500, because multer's `LIMIT_FILE_SIZE` error wasn't mapped. The error handler now maps `MulterError`: 413 "Photo too large; the limit is 15 MB" for size, and 400 "Invalid upload: …" otherwise. Both are tested.
+- **`allowScripts`:** npm 11 reads `allowScripts`. The new `drizzle-kit` brings `esbuild@0.25.12`, whose postinstall is approved, and `sharp` 0.35 no longer has an install script, so its entry is gone.
 - **Breaking changes** are handled where tests show them. No schema or migration change is expected.
 - **Express:** `app.disable("x-powered-by")`.
 - **Check:** `npm audit --omit=dev` must report no high or critical findings.
