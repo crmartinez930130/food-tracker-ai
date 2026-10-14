@@ -75,6 +75,8 @@ Do:
 - If the token may have leaked, generate a new one, put it in `backend/.env`, restart the server and enter it in the app.
 - Set a monthly spending limit for your key in the Anthropic console.
 
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
 ### Backing up your data
 
 There is no automatic backup. The entire history lives in `backend/data/food-tracker.sqlite`. To back it up, just copy that file somewhere safe while the server is stopped (or use SQLite's `.backup` command if you want to do it while running).
@@ -86,3 +88,7 @@ The Kotlin Multiplatform + Compose Multiplatform app (Android-first, iOS as a se
 ## Workflow
 
 Every issue is delivered as a Pull Request, checked by CI and reviewed by an automated Claude reviewer before a manual merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE)

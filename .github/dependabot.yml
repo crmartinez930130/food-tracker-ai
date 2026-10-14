@@ -1,0 +1,12 @@
+# Workflow actions are pinned by commit SHA; Dependabot keeps those pins (and their version
+# comments) up to date with one grouped PR per week.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
