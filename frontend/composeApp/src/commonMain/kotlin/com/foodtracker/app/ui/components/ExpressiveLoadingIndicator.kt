@@ -53,6 +53,10 @@ fun ExpressiveLoadingIndicator(
     color: Color = MaterialTheme.colorScheme.primary,
     containerColor: Color? = null,
 ) {
+    if (LocalReduceMotion.current) {
+        StillIndicator(modifier, size, color, containerColor)
+        return
+    }
     val shapes = ExpressiveShapes.loadingSequence
     val morphs = remember { shapes.indices.map { Morph(shapes[it], shapes[(it + 1) % shapes.size]) } }
     val transition = rememberInfiniteTransition(label = "expressive-loading")
@@ -79,5 +83,18 @@ fun ExpressiveLoadingIndicator(
         rotate(rotation) {
             translate(inset, inset) { drawPath(path, color) }
         }
+    }
+}
+
+/** Under reduce motion: the same indicator, standing still on the cookie shape. */
+@Composable
+private fun StillIndicator(modifier: Modifier, size: Dp, color: Color, containerColor: Color?) {
+    val path = remember { Path() }
+    Canvas(modifier.size(size).semantics { progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate }) {
+        containerColor?.let { drawCircle(it) }
+        val inset = this.size.minDimension * if (containerColor != null) 0.2f else 0.04f
+        val inner = Size(this.size.width - 2 * inset, this.size.height - 2 * inset)
+        cubicsToPath(ExpressiveShapes.cookie9.cubics, inner, path)
+        translate(inset, inset) { drawPath(path, color) }
     }
 }

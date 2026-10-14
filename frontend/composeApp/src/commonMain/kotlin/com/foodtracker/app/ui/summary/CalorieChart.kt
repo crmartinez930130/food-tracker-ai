@@ -1,5 +1,8 @@
 package com.foodtracker.app.ui.summary
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
@@ -11,14 +14,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,6 +32,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyTotals
+import com.foodtracker.app.ui.components.LocalReduceMotion
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.chart_calories_description
 import food_tracker_frontend.composeapp.generated.resources.chart_calories_no_data
@@ -70,6 +75,17 @@ fun CalorieChart(
     val goalText = stringResource(Res.string.chart_goal_label, goalCalories.roundToInt())
 
     val currentOnBarTap by rememberUpdatedState(onBarTap)
+    // Bars grow from the axis whenever the period's data changes.
+    val reduceMotion = LocalReduceMotion.current
+    val growth = remember { Animatable(if (reduceMotion) 1f else 0f) }
+    LaunchedEffect(days, reduceMotion) {
+        if (reduceMotion) {
+            growth.snapTo(1f)
+        } else {
+            growth.snapTo(0f)
+            growth.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow))
+        }
+    }
     val chartModifier = Modifier
         .fillMaxWidth()
         .height(220.dp)
@@ -91,7 +107,7 @@ fun CalorieChart(
         val bottom = CornerRadius(min(barWidth / 2f, 4.dp.toPx()))
 
         days.forEachIndexed { index, day ->
-            val barHeight = chartHeight * barFraction(day.totalCalories, scaleMax)
+            val barHeight = chartHeight * barFraction(day.totalCalories, scaleMax) * growth.value
             if (barHeight > 0f) {
                 val left = index * slot + (slot - barWidth) / 2f
                 val bar = Path().apply {

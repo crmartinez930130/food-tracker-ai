@@ -1,5 +1,9 @@
 package com.foodtracker.app.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
@@ -9,8 +13,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.ui.components.LocalReduceMotion
+import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.history.HistoryScreen
 import com.foodtracker.app.ui.home.HomeScreen
 import com.foodtracker.app.ui.summary.SummaryView
@@ -45,7 +52,12 @@ fun MainScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(onClick = onStartCapture) {
+            val fabInteraction = remember { MutableInteractionSource() }
+            FloatingActionButton(
+                onClick = onStartCapture,
+                interactionSource = fabInteraction,
+                modifier = Modifier.pressBounce(fabInteraction),
+            ) {
                 Icon(painterResource(Res.drawable.ic_add), contentDescription = stringResource(Res.string.action_log_meal))
             }
         },
@@ -73,24 +85,31 @@ fun MainScreen(
         },
     ) { contentPadding ->
         Box(modifier = Modifier.padding(contentPadding)) {
-            when (tab) {
-                MainTab.HOME -> HomeScreen(
-                    apiClient = apiClient,
-                    onEditGoal = onEditGoal,
-                    onOpenSettings = onOpenSettings,
-                )
-                MainTab.HISTORY -> HistoryScreen(
-                    apiClient = apiClient,
-                    month = historyMonth,
-                    onMonthChange = onHistoryMonthChange,
-                    onOpenDay = onOpenDay,
-                )
-                MainTab.SUMMARY -> SummaryScreen(
-                    apiClient = apiClient,
-                    view = summaryView,
-                    onViewChange = onSummaryViewChange,
-                    onOpenDay = onOpenDay,
-                )
+            // Tabs cross-fade; under reduce motion they switch at once.
+            Crossfade(
+                targetState = tab,
+                animationSpec = if (LocalReduceMotion.current) snap() else tween(durationMillis = 200),
+                label = "mainTab",
+            ) { shownTab ->
+                when (shownTab) {
+                    MainTab.HOME -> HomeScreen(
+                        apiClient = apiClient,
+                        onEditGoal = onEditGoal,
+                        onOpenSettings = onOpenSettings,
+                    )
+                    MainTab.HISTORY -> HistoryScreen(
+                        apiClient = apiClient,
+                        month = historyMonth,
+                        onMonthChange = onHistoryMonthChange,
+                        onOpenDay = onOpenDay,
+                    )
+                    MainTab.SUMMARY -> SummaryScreen(
+                        apiClient = apiClient,
+                        view = summaryView,
+                        onViewChange = onSummaryViewChange,
+                        onOpenDay = onOpenDay,
+                    )
+                }
             }
         }
     }

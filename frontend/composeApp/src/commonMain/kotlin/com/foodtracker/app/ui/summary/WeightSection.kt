@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,19 +29,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.WeightEntry
 import com.foodtracker.app.ui.components.BigNumber
+import com.foodtracker.app.ui.components.EmptyIllustration
+import com.foodtracker.app.ui.components.IllustrationKind
 import com.foodtracker.app.ui.shortDate
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
 import food_tracker_frontend.composeapp.generated.resources.action_delete
 import food_tracker_frontend.composeapp.generated.resources.action_save
 import food_tracker_frontend.composeapp.generated.resources.ic_delete
+import food_tracker_frontend.composeapp.generated.resources.weight_change
 import food_tracker_frontend.composeapp.generated.resources.weight_dialog_title
 import food_tracker_frontend.composeapp.generated.resources.weight_empty
 import food_tracker_frontend.composeapp.generated.resources.weight_error_range
-import food_tracker_frontend.composeapp.generated.resources.weight_change
 import food_tracker_frontend.composeapp.generated.resources.weight_field
 import food_tracker_frontend.composeapp.generated.resources.weight_log
 import food_tracker_frontend.composeapp.generated.resources.weight_title
@@ -79,12 +82,16 @@ fun WeightSection(
             }
 
             if (perDay.isEmpty()) {
-                Text(
-                    stringResource(Res.string.weight_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp)) {
+                    EmptyIllustration(IllustrationKind.SCALE)
+                    Text(
+                        stringResource(Res.string.weight_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
             } else {
                 val change = perDay.last().weightKg - perDay.first().weightKg
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -44,6 +45,9 @@ fun segmentFractions(values: List<Double>): List<Float> {
     return clamped.map { (it / total).toFloat() }
 }
 
+/** Below this a growing segment isn't drawn (a weight must be positive, and a sliver looks like noise). */
+private const val MIN_VISIBLE_FRACTION = 0.001f
+
 /** Proportional colored segments with a dot legend - Greenwave's "Serene" bar. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -61,7 +65,9 @@ fun SegmentedBar(
                 .height(12.dp)
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(6.dp)),
         ) {
-            segments.zip(fractions).filter { (_, fraction) -> fraction > 0f }.forEach { (segment, fraction) ->
+            // Each segment grows from 0; until they're all in place the empty track fills the rest.
+            val grown = fractions.map { animatedFraction(it) }
+            segments.zip(grown).filter { (_, fraction) -> fraction > MIN_VISIBLE_FRACTION }.forEach { (segment, fraction) ->
                 Box(
                     Modifier
                         .weight(fraction)
@@ -69,6 +75,8 @@ fun SegmentedBar(
                         .background(segment.color, RoundedCornerShape(6.dp)),
                 )
             }
+            val rest = 1f - grown.filter { it > MIN_VISIBLE_FRACTION }.sum()
+            if (rest > MIN_VISIBLE_FRACTION && grown.any { it > MIN_VISIBLE_FRACTION }) Spacer(Modifier.weight(rest))
         }
         if (showLegend) {
             FlowRow(

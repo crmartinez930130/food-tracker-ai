@@ -1,5 +1,6 @@
 package com.foodtracker.app.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
 import com.foodtracker.app.ui.components.SegmentedBar
+import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.util.currentLocalHour
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
@@ -245,17 +247,20 @@ fun ReviewScreen(
             }
 
             // Fixed over the list, so saving (and the total) is always one tap away.
+            val saveInteraction = remember { MutableInteractionSource() }
             Button(
                 onClick = { save() },
                 enabled = !isSaving,
                 shape = CircleShape,
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                interactionSource = saveInteraction,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(16.dp)
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .pressBounce(saveInteraction),
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)

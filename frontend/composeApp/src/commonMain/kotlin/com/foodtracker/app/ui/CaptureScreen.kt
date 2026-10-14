@@ -2,23 +2,24 @@ package com.foodtracker.app.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -59,7 +60,10 @@ import com.foodtracker.app.data.Portion
 import com.foodtracker.app.data.toReviewAnalysis
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
+import com.foodtracker.app.ui.components.EmptyIllustration
 import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
+import com.foodtracker.app.ui.components.IllustrationKind
+import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.settings.LocalAppLocale
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.capture_analyze
@@ -326,11 +330,13 @@ fun CaptureScreen(
                     )
                 }
             } else {
+                val analyzeInteraction = remember { MutableInteractionSource() }
                 Button(
                     onClick = { analyze() },
                     enabled = canAnalyze(hasPhoto = currentPhoto != null, description = description),
                     shape = CircleShape,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    interactionSource = analyzeInteraction,
+                    modifier = Modifier.fillMaxWidth().height(56.dp).pressBounce(analyzeInteraction),
                 ) { Text(stringResource(Res.string.capture_analyze), style = MaterialTheme.typography.titleMedium) }
             }
 
@@ -363,9 +369,11 @@ private fun PhotoTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Card(
         onClick = onClick,
-        modifier = modifier.height(132.dp),
+        interactionSource = interaction,
+        modifier = modifier.height(132.dp).pressBounce(interaction),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
@@ -399,11 +407,16 @@ private fun FavoritesSection(
         when {
             error != null -> Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             favorites == null -> ExpressiveLoadingIndicator(size = 32.dp)
-            favorites.isEmpty() -> Text(
-                stringResource(Res.string.capture_favorites_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            favorites.isEmpty() -> Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                EmptyIllustration(IllustrationKind.STAR)
+                Text(
+                    stringResource(Res.string.capture_favorites_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
             else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(favorites, key = { it.id }) { meal ->
                     FavoriteCard(meal, onRelog = { onRelog(meal) }, onRemove = { onRemove(meal) })
