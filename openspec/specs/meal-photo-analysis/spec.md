@@ -7,7 +7,7 @@ Turns a photo of a meal into a structured, reviewable estimate of the foods pres
 ## Requirements
 
 ### Requirement: Photo submission for analysis
-The system SHALL accept a meal for analysis via the API, given as a single photo (JPEG or PNG), a text description, or both, and SHALL return a structured nutrition analysis without persisting a meal entry. A request with neither a photo nor a non-blank description SHALL be rejected with a 400-style error. The submission MAY include the language, Spanish (`es`) or English (`en`), in which the analysis texts are wanted; a missing or unrecognized language SHALL be treated as English and SHALL NOT cause the request to be rejected.
+The system SHALL accept a meal for analysis via the API, given as a single photo (JPEG or PNG, recognized by the file's content rather than its declared type), a text description, or both, and SHALL return a structured nutrition analysis without persisting a meal entry. A request with neither a photo nor a non-blank description SHALL be rejected with a 400-style error. The submission MAY include the language, Spanish (`es`) or English (`en`), in which the analysis texts are wanted; a missing or unrecognized language SHALL be treated as English and SHALL NOT cause the request to be rejected.
 
 #### Scenario: Valid photo submitted
 - **WHEN** the client submits a JPEG or PNG image via `POST /api/meals/analyze`
@@ -28,6 +28,10 @@ The system SHALL accept a meal for analysis via the API, given as a single photo
 #### Scenario: Neither photo nor description
 - **WHEN** the client calls `POST /api/meals/analyze` without a photo and without a description, or with a blank description only
 - **THEN** the system rejects the request with a 400-style error and does not call the analysis service
+
+#### Scenario: File disguised as a JPEG
+- **WHEN** the client submits an SVG or HEIF file declared as `image/jpeg`
+- **THEN** the system rejects it with a 400-style error without decoding it and without calling the analysis service
 
 ### Requirement: Structured nutrition analysis output
 For each analyzed photo, the system SHALL return, for every detected food item: a name, an estimated quantity in grams, calories, protein (g), fat (g), and carbohydrates (g), plus totals aggregated across all items. The items SHALL be only foods and drinks: a summary row (such as "Total" or "Subtotal") or an empty placeholder (no quantity and no nutrition values) SHALL NOT be returned as an item, and the totals SHALL always equal the sum of the returned items. The food names and any notes SHALL be written in the language requested with the photo (English by default); quantities, nutrition values and confidence indicators SHALL be the same whatever the language.
