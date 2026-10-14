@@ -10,12 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -32,9 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.MealType
+import com.foodtracker.app.ui.MealTypeIcon
 import com.foodtracker.app.ui.displayLabel
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_back
@@ -111,26 +114,35 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
             for (meal in REMINDER_MEALS) {
                 val reminder = settings.reminderFor(meal)
-                ReminderRow(
+                ReminderCard(
                     reminder = reminder,
                     onEnabledChange = { setEnabled(reminder, it) },
                     onEditTime = { editingTimeOf = meal },
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(12.dp))
             }
 
             if (notificationsBlocked) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    stringResource(Res.string.reminders_blocked),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { platform.openNotificationSettings() }) { Text(stringResource(Res.string.reminders_open_settings)) }
+                Spacer(Modifier.height(4.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(stringResource(Res.string.reminders_blocked), style = MaterialTheme.typography.bodyMedium)
+                        FilledTonalButton(
+                            onClick = { platform.openNotificationSettings() },
+                            modifier = Modifier.padding(top = 12.dp),
+                        ) { Text(stringResource(Res.string.reminders_open_settings)) }
+                    }
+                }
             }
         }
     }
@@ -156,18 +168,37 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+/** One meal's reminder on its own card: icon, name, the time (tap to change) and its switch. */
 @Composable
-private fun ReminderRow(
+private fun ReminderCard(
     reminder: MealReminder,
     onEnabledChange: (Boolean) -> Unit,
     onEditTime: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(reminder.meal.displayLabel(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        TextButton(onClick = onEditTime) {
-            Text(timeLabel(reminder.hour, reminder.minute), style = MaterialTheme.typography.titleMedium)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
+            MealTypeIcon(reminder.meal)
+            Text(
+                reminder.meal.displayLabel(),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f).padding(start = 16.dp),
+            )
+            TextButton(onClick = onEditTime) {
+                Text(
+                    timeLabel(reminder.hour, reminder.minute),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+                    color = if (reminder.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = reminder.enabled, onCheckedChange = onEnabledChange, modifier = Modifier.padding(start = 4.dp))
         }
-        Switch(checked = reminder.enabled, onCheckedChange = onEnabledChange)
     }
 }
 

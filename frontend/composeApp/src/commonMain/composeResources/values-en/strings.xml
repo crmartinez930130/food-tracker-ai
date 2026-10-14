@@ -104,6 +104,7 @@
     <string name="goals_protein">Protein (g)</string>
     <string name="goals_fat">Fat (g)</string>
     <string name="goals_carbs">Carbs (g)</string>
+    <string name="goals_macros_section">Calories and macros</string>
     <string name="goals_water_section">Water</string>
     <string name="goals_water_target">Daily water (ml)</string>
     <string name="goals_glass_size">Glass size (ml)</string>
@@ -171,7 +172,8 @@
     <string name="reminder_channel_description">Optional daily reminders to log breakfast, lunch or dinner</string>
     <string name="settings_title">Options</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_system">Phone language</string>
+    <string name="settings_general">General</string>
+    <string name="settings_language_phone">Phone</string>
     <string name="settings_language_spanish">Español</string>
     <string name="settings_language_english">English</string>
     <string name="settings_theme">Theme</string>

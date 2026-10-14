@@ -1,9 +1,7 @@
 package com.foodtracker.app.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +41,7 @@ import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.ui.LoadingAware
+import com.foodtracker.app.ui.MealTypeIcon
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.SegmentedBar
@@ -65,13 +64,8 @@ import food_tracker_frontend.composeapp.generated.resources.error_update_favorit
 import food_tracker_frontend.composeapp.generated.resources.error_update_water
 import food_tracker_frontend.composeapp.generated.resources.home_calories_title
 import food_tracker_frontend.composeapp.generated.resources.home_empty_day
-import food_tracker_frontend.composeapp.generated.resources.ic_bakery_dining
-import food_tracker_frontend.composeapp.generated.resources.ic_cookie
 import food_tracker_frontend.composeapp.generated.resources.ic_delete
-import food_tracker_frontend.composeapp.generated.resources.ic_dinner_dining
 import food_tracker_frontend.composeapp.generated.resources.ic_edit
-import food_tracker_frontend.composeapp.generated.resources.ic_lunch_dining
-import food_tracker_frontend.composeapp.generated.resources.ic_restaurant
 import food_tracker_frontend.composeapp.generated.resources.ic_star
 import food_tracker_frontend.composeapp.generated.resources.ic_star_filled
 import food_tracker_frontend.composeapp.generated.resources.macro_carbs
@@ -86,7 +80,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -340,19 +333,6 @@ private fun MacroBar(totals: DayTotals, goal: DailyGoal, modifier: Modifier = Mo
     )
 }
 
-/** Icon and square color for each meal type; snack and "Other" share the neutral container. */
-@Composable
-private fun MealType?.iconStyle(): Triple<DrawableResource, Color, Color> {
-    val colors = MaterialTheme.colorScheme
-    return when (this) {
-        MealType.BREAKFAST -> Triple(Res.drawable.ic_bakery_dining, colors.tertiaryContainer, colors.onTertiaryContainer)
-        MealType.LUNCH -> Triple(Res.drawable.ic_lunch_dining, colors.primaryContainer, colors.onPrimaryContainer)
-        MealType.DINNER -> Triple(Res.drawable.ic_dinner_dining, colors.secondaryContainer, colors.onSecondaryContainer)
-        MealType.SNACK -> Triple(Res.drawable.ic_cookie, colors.surfaceContainerHighest, colors.onSurfaceVariant)
-        null -> Triple(Res.drawable.ic_restaurant, colors.surfaceContainerHighest, colors.onSurfaceVariant)
-    }
-}
-
 @Composable
 private fun MealGroupCard(
     type: MealType?,
@@ -362,7 +342,6 @@ private fun MealGroupCard(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val (icon, squareColor, iconColor) = type.iconStyle()
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -370,12 +349,7 @@ private fun MealGroupCard(
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(40.dp).background(squareColor, MaterialTheme.shapes.small),
-                ) {
-                    Icon(painterResource(icon), contentDescription = null, tint = iconColor, modifier = Modifier.size(22.dp))
-                }
+                MealTypeIcon(type)
                 Text(
                     type.displayLabelOrOther(),
                     style = MaterialTheme.typography.titleMedium,
