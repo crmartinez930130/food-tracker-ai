@@ -67,7 +67,7 @@
 
 11. **Testing:**
     - `commonTest` covers `OutboxRepository` with fake stores and `MockEngine`: send-or-queue outcomes per status, sending order, stopping when offline, merge-then-delete, rejection without retry, retry and discard, server scoping, the `clientId` deduplication helper, and the per-row decode fix.
-    - The worker, the migration and the reminder are exercised on the emulator. The migration is checked by installing over the current build, which has a version 1 database.
+    - The worker's parts are unit-tested: `storedSettingsOutbox` (the client it builds from the stored server and token) in `commonTest`, and its result mapping and work request (constraints, backoff, worker class) in `androidUnitTest`. Running it inside WorkManager isn't: that needs Robolectric and `work-testing`, and the worker opens the Room database through the bundled SQLite, whose Android artifact has no host-JVM library. That part, the migration and the reminder are exercised on the emulator. The migration is checked by installing over the current build, which has a version 1 database.
 
 ## Risks / Trade-offs
 

@@ -8,6 +8,10 @@ import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.SaveMealRequest
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.data.WaterEntry
+import com.foodtracker.app.data.createHttpClient
+import com.foodtracker.app.data.platformHttpClientEngine
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
@@ -188,3 +192,25 @@ internal fun withWaterEntry(water: WaterDay, entry: WaterEntry): WaterDay =
     } else {
         water.copy(totalMl = water.totalMl + entry.amountMl, entries = water.entries + entry)
     }
+
+/**
+ * The outbox a background sender uses (offline-queue): a fresh process never set BackendConfig, so
+ * the stored server address and access token are passed in. The caller closes [httpClient].
+ */
+fun storedSettingsOutbox(
+    serverUrl: String,
+    accessToken: String?,
+    outbox: OutboxStore,
+    dayCache: DayCacheStore,
+    engine: HttpClientEngine = platformHttpClientEngine(),
+): Pair<OutboxRepository, HttpClient> {
+    val httpClient = createHttpClient(engine, tokenProvider = { accessToken })
+    val repository = OutboxRepository(
+        api = FoodTrackerApiClient(httpClient) { serverUrl },
+        outbox = outbox,
+        dayCache = dayCache,
+        requestSync = {},
+        serverUrl = { serverUrl },
+    )
+    return repository to httpClient
+}

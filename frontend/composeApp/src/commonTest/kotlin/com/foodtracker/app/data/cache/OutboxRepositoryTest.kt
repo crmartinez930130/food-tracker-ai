@@ -263,4 +263,35 @@ class OutboxRepositoryTest {
         assertEquals(false, f.repository.undoPendingWater(DAY))
         assertEquals(1, f.outbox.rows.value.size)
     }
+
+    @Test
+    fun `the background sender uses the stored server and token`() = runBlocking<Unit> {
+        val outbox = FakeOutbox()
+        val stored = "http://192.168.1.129:3000"
+        outbox.insert(
+            OutboxRow(
+                clientId = "c1", kind = OutboxKind.WATER, day = DAY, serverUrl = stored, createdAt = 0,
+                payloadJson = """{"amountMl":250,"loggedAt":"$LUNCH_AT","clientId":"c1"}""",
+            ),
+        )
+        var url = ""
+        var authorization: String? = null
+        val engine = MockEngine { request ->
+            url = request.url.toString()
+            authorization = request.headers[HttpHeaders.Authorization]
+            respond(
+                ByteReadChannel("""{"id":1,"amountMl":250,"loggedAt":"$LUNCH_AT","clientId":"c1"}"""),
+                HttpStatusCode.Created,
+                headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val (repository, httpClient) = storedSettingsOutbox(stored, "stored-token", outbox, FakeDayCache(), engine)
+
+        val report = repository.sendAll()
+        httpClient.close()
+
+        assertEquals(SendReport(sent = 1, offline = false), report)
+        assertEquals("$stored/api/water", url)
+        assertEquals("Bearer stored-token", authorization)
+    }
 }

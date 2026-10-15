@@ -5,12 +5,12 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.foodtracker.app.data.FoodTrackerApiClient
-import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.settings.PreferencesStore
 import com.foodtracker.app.ui.settings.effectiveServerUrl
 import java.util.concurrent.TimeUnit
@@ -25,30 +25,36 @@ object OutboxSync {
 
     /** Schedules a send unless one is already waiting (its backoff is kept). */
     fun request(context: Context) {
-        val work = OneTimeWorkRequestBuilder<OutboxSyncWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, work)
+        WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, syncRequest())
     }
+
+    /** A send that waits for a network and, while the backend can't be reached, retries with growing waits. */
+    internal fun syncRequest(): OneTimeWorkRequest =
+        OneTimeWorkRequestBuilder<OutboxSyncWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
+            .build()
+
+    /** Retry later while rows wait for the backend; done otherwise (sent, or refused rows the user handles). */
+    internal fun resultFor(report: SendReport): ListenableWorker.Result =
+        if (report.offline) ListenableWorker.Result.retry() else ListenableWorker.Result.success()
+
+    internal const val BACKOFF_SECONDS = 30L
 }
 
+/** Sends the queue with the stored server and token; see [OutboxSync.resultFor] for what it reports. */
 class OutboxSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        // A fresh process never set BackendConfig: the stored address and token are used explicitly.
         val preferences = PreferencesStore.load(applicationContext)
-        val serverUrl = effectiveServerUrl(preferences)
         val database = cacheDatabase(applicationContext)
-        val httpClient = createHttpClient(tokenProvider = { preferences.accessToken })
+        val (outbox, httpClient) = storedSettingsOutbox(
+            serverUrl = effectiveServerUrl(preferences),
+            accessToken = preferences.accessToken,
+            outbox = database.outboxDao(),
+            dayCache = database.dayCacheDao(),
+        )
         return try {
-            val outbox = OutboxRepository(
-                api = FoodTrackerApiClient(httpClient) { serverUrl },
-                outbox = database.outboxDao(),
-                dayCache = database.dayCacheDao(),
-                requestSync = {},
-                serverUrl = { serverUrl },
-            )
-            if (outbox.sendAll().offline) Result.retry() else Result.success()
+            OutboxSync.resultFor(outbox.sendAll())
         } finally {
             httpClient.close()
         }

@@ -25,7 +25,7 @@
 
 ## 5. Background sending and reminders
 
-- [x] 5.1 Add `work-runtime`, the `CoroutineWorker`, unique-work scheduling with network constraint and backoff, a `requestSync` hook used on `Queued`, and `sendAll` on `MainActivity.onStart` (D6). Verify with `./gradlew :composeApp:assembleDebug` and on the emulator (6.1).
+- [x] 5.1 Add `work-runtime`, the `CoroutineWorker`, unique-work scheduling with network constraint and backoff, a `requestSync` hook used on `Queued`, and `sendAll` on `MainActivity.onStart` (D6). Verify with unit tests: `OutboxSyncTest` (the worker's result for offline and done runs, and the request's network constraint, exponential 30 s backoff and worker class) and an `OutboxRepositoryTest` case for `storedSettingsOutbox` (the worker sends to the stored server with the stored token); the worker running inside WorkManager on the emulator (6.1).
 - [x] 5.2 Make the reminder check count today's pending meals of the reminder's type, also when the API check fails (D9). Verify with a unit test of the decision function (pending lunch → no notification, with and without API meals).
 
 ## 6. Verification
