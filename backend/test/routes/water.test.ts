@@ -7,6 +7,57 @@ const localToday = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 
+describe("POST /api/water with a clientId", () => {
+  const clientId = "0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f";
+  const loggedAt = new Date(2026, 2, 5, 12, 0).toISOString();
+  const day = async (app: Parameters<typeof request>[0]) =>
+    (await request(app).get("/api/water").query({ date: "2026-03-05" })).body;
+
+  it("creates the entry with 201, then answers a retry with 200 and the stored entry", async () => {
+    const { app } = buildTestApp();
+
+    const first = await request(app).post("/api/water").send({ amountMl: 250, loggedAt, clientId });
+    const retry = await request(app).post("/api/water").send({ amountMl: 500, loggedAt, clientId });
+
+    expect(first.status).toBe(201);
+    expect(first.body).toMatchObject({ amountMl: 250, loggedAt, clientId });
+    expect(retry.status).toBe(200);
+    expect(retry.body).toEqual(first.body);
+    expect(await day(app)).toMatchObject({ totalMl: 250, entries: [first.body] });
+  });
+
+  it("treats the same id in upper case as the same entry", async () => {
+    const { app } = buildTestApp();
+    await request(app).post("/api/water").send({ amountMl: 250, loggedAt, clientId });
+
+    const retry = await request(app).post("/api/water").send({ amountMl: 250, loggedAt, clientId: clientId.toUpperCase() });
+
+    expect(retry.status).toBe(200);
+    expect((await day(app)).totalMl).toBe(250);
+  });
+
+  it("rejects a clientId that isn't a UUID with 400, storing nothing", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/water").send({ amountMl: 250, loggedAt, clientId: 42 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/clientId/);
+    expect((await day(app)).totalMl).toBe(0);
+  });
+
+  it("returns clientId null for entries logged without one, and stores each", async () => {
+    const { app } = buildTestApp();
+
+    const first = await request(app).post("/api/water").send({ amountMl: 250, loggedAt });
+    const second = await request(app).post("/api/water").send({ amountMl: 250, loggedAt, clientId: null });
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect([first.body.clientId, second.body.clientId]).toEqual([null, null]);
+    expect((await day(app)).totalMl).toBe(500);
+  });
+});
+
 describe("POST /api/water", () => {
   it("logs an amount now, reflected in today's total", async () => {
     const { app } = buildTestApp();

@@ -10,8 +10,29 @@ export interface WaterDay {
   entries: WaterLog[];
 }
 
+/** A log's result: the entry, and whether this call created it or it was already stored. */
+export interface LogWaterResult {
+  entry: WaterLog;
+  created: boolean;
+}
+
+/**
+ * Logs water at most once per `clientId` (lower case): when an entry with it is already stored,
+ * that entry is returned and nothing is written. Lookup and insert run in one transaction.
+ */
+export function logWater(db: AppDatabase, amountMl: number, loggedAt: string, clientId?: string | null): LogWaterResult {
+  return db.transaction((tx) => {
+    if (clientId) {
+      const existing = tx.select().from(waterLogs).where(eq(waterLogs.clientId, clientId)).get();
+      if (existing) return { entry: existing, created: false };
+    }
+    const entry = tx.insert(waterLogs).values({ amountMl, loggedAt, clientId: clientId ?? null }).returning().get();
+    return { entry, created: true };
+  });
+}
+
 export function createWaterLog(db: AppDatabase, amountMl: number, loggedAt: string): WaterLog {
-  return db.insert(waterLogs).values({ amountMl, loggedAt }).returning().get();
+  return logWater(db, amountMl, loggedAt).entry;
 }
 
 /**

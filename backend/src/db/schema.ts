@@ -1,21 +1,27 @@
-import { sqliteTable, integer, real, text, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, real, text, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
 export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
-export const meals = sqliteTable("meals", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  occurredAt: text("occurred_at").notNull(),
-  createdAt: text("created_at").notNull(),
-  totalCalories: real("total_calories").notNull(),
-  totalProteinGrams: real("total_protein_grams").notNull(),
-  totalFatGrams: real("total_fat_grams").notNull(),
-  totalCarbsGrams: real("total_carbs_grams").notNull(),
-  notes: text("notes"),
-  mealType: text("meal_type", { enum: MEAL_TYPES }),
-  isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
-});
+export const meals = sqliteTable(
+  "meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    occurredAt: text("occurred_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    totalCalories: real("total_calories").notNull(),
+    totalProteinGrams: real("total_protein_grams").notNull(),
+    totalFatGrams: real("total_fat_grams").notNull(),
+    totalCarbsGrams: real("total_carbs_grams").notNull(),
+    notes: text("notes"),
+    mealType: text("meal_type", { enum: MEAL_TYPES }),
+    isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
+    // UUID the client generates per meal, so a retried save returns the stored meal (lower case).
+    clientId: text("client_id"),
+  },
+  (table) => ({ clientIdIdx: uniqueIndex("meals_client_id_idx").on(table.clientId) }),
+);
 
 export const mealItems = sqliteTable("meal_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -65,8 +71,13 @@ export const waterLogs = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     amountMl: integer("amount_ml").notNull(),
     loggedAt: text("logged_at").notNull(),
+    // Like meals' clientId: a retried log returns the stored entry.
+    clientId: text("client_id"),
   },
-  (table) => ({ loggedAtIdx: index("water_logs_logged_at_idx").on(table.loggedAt) }),
+  (table) => ({
+    loggedAtIdx: index("water_logs_logged_at_idx").on(table.loggedAt),
+    clientIdIdx: uniqueIndex("water_logs_client_id_idx").on(table.clientId),
+  }),
 );
 
 export const mealsRelations = relations(meals, ({ many }) => ({

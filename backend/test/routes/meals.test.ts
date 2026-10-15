@@ -125,6 +125,79 @@ describe("POST /api/meals/analyze", () => {
   });
 });
 
+describe("POST /api/meals with a clientId", () => {
+  const clientId = "0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f";
+  const occurredAt = new Date(2026, 2, 5, 12, 0).toISOString();
+  const mealsOnDay = async (app: Parameters<typeof request>[0]) =>
+    (await request(app).get("/api/meals").query({ date: "2026-03-05" })).body as unknown[];
+
+  it("creates the meal with 201 and returns its clientId", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId });
+
+    expect(res.status).toBe(201);
+    expect(res.body.clientId).toBe(clientId);
+  });
+
+  it("answers a retry with 200 and the stored meal, listed only once", async () => {
+    const { app } = buildTestApp();
+    const first = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId });
+
+    const retry = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId });
+
+    expect(retry.status).toBe(200);
+    expect(retry.body).toEqual(first.body);
+    expect(await mealsOnDay(app)).toHaveLength(1);
+  });
+
+  it("ignores the other fields of a retry", async () => {
+    const { app } = buildTestApp();
+    const first = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId });
+
+    const retry = await request(app)
+      .post("/api/meals")
+      .send({ items: [{ ...sampleItem, calories: 999 }], notes: "changed", occurredAt, clientId });
+
+    expect(retry.status).toBe(200);
+    expect(retry.body).toEqual(first.body);
+  });
+
+  it("treats the same id in upper case as the same meal", async () => {
+    const { app } = buildTestApp();
+    await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId });
+
+    const retry = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], occurredAt, clientId: clientId.toUpperCase() });
+
+    expect(retry.status).toBe(200);
+    expect(retry.body.clientId).toBe(clientId);
+    expect(await mealsOnDay(app)).toHaveLength(1);
+  });
+
+  it("rejects a clientId that isn't a UUID with 400, storing nothing", async () => {
+    const { app } = buildTestApp();
+
+    const res = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId: "meal-1" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/clientId/);
+    expect(await mealsOnDay(app)).toHaveLength(0);
+  });
+
+  it("creates two meals for two saves without a clientId, as before", async () => {
+    const { app } = buildTestApp();
+
+    const first = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt });
+    const second = await request(app).post("/api/meals").send({ items: [sampleItem], occurredAt, clientId: null });
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect([first.body.clientId, second.body.clientId]).toEqual([null, null]);
+    expect(await mealsOnDay(app)).toHaveLength(2);
+  });
+});
+
 describe("POST /api/meals", () => {
   it("saves the corrected values when the client edits the analysis before confirming", async () => {
     const { app } = buildTestApp();
