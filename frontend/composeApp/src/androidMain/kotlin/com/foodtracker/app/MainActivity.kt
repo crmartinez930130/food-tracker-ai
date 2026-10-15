@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.foodtracker.app.data.BackendConfig
+import com.foodtracker.app.data.cache.cacheDatabase
 import com.foodtracker.app.reminders.ReminderNotifications
 import com.foodtracker.app.reminders.ReminderScheduler
 import com.foodtracker.app.reminders.ReminderStore
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
             BackendConfig.baseUrl = effectiveServerUrl(stored)
             BackendConfig.accessToken = stored.accessToken
         }
+        val cacheStore = cacheDatabase(this).dayCacheDao()
         setContent {
             // Options choices: owned here so the system bars can follow the chosen theme too.
             var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
@@ -55,10 +57,15 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             App(
+                cacheStore = cacheStore,
                 preferences = preferences,
                 onPreferencesChange = { updated ->
                     PreferencesStore.save(this, updated)
                     preferences = updated
+                    // Another server's data must never show: drop the cache (a new token keeps it).
+                    if (effectiveServerUrl(updated) != BackendConfig.baseUrl) {
+                        lifecycleScope.launch { cacheStore.clear() }
+                    }
                     BackendConfig.baseUrl = effectiveServerUrl(updated)
                     BackendConfig.accessToken = updated.accessToken
                     // Keeps the channel name (shown in system settings) in the chosen language.

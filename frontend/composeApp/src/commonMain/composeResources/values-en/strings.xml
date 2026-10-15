@@ -52,6 +52,8 @@
     <string name="add_to_favorites">Add to favorites</string>
     <string name="remove_from_favorites">Remove from favorites</string>
     <string name="error_load_day">Couldn't load this day: %1$s</string>
+    <string name="offline_notice_today">No connection · data from %1$s</string>
+    <string name="offline_notice_other_day">No connection · data from %1$s at %2$s</string>
     <string name="error_update_favorite">Couldn't update favorite: %1$s</string>
     <string name="error_delete_meal">Couldn't delete meal: %1$s</string>
     <string name="water_title">Water</string>

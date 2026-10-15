@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,9 +31,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +42,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.LogWaterRequest
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
+import com.foodtracker.app.data.cache.CachedDay
+import com.foodtracker.app.data.cache.DayRepository
+import com.foodtracker.app.data.cache.RefreshResult
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.MealTypeIcon
 import com.foodtracker.app.ui.components.BadgeShape
@@ -63,6 +68,7 @@ import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.displayLabelOrOther
 import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.loadingPresentation
+import com.foodtracker.app.ui.shortDate
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_delete
 import food_tracker_frontend.composeapp.generated.resources.add_to_favorites
@@ -88,12 +94,16 @@ import food_tracker_frontend.composeapp.generated.resources.macro_progress_grams
 import food_tracker_frontend.composeapp.generated.resources.macro_protein
 import food_tracker_frontend.composeapp.generated.resources.macros_short
 import food_tracker_frontend.composeapp.generated.resources.no_items
+import food_tracker_frontend.composeapp.generated.resources.offline_notice_other_day
+import food_tracker_frontend.composeapp.generated.resources.offline_notice_today
 import food_tracker_frontend.composeapp.generated.resources.remove_from_favorites
 import food_tracker_frontend.composeapp.generated.resources.unit_kcal
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -102,6 +112,24 @@ private val MEAL_TYPE_SECTION_ORDER: List<MealType?> =
     listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK, null)
 
 private data class DayTotals(val calories: Double, val protein: Double, val fat: Double, val carbs: Double)
+
+/** [errorText] for use in composition: null for the moment it takes to resolve the strings. */
+@Composable
+private fun produceErrorText(message: StringResource, error: Exception): String? {
+    val text by produceState<String?>(null, message, error) { value = errorText(message, error) }
+    return text
+}
+
+/** "No connection · data from 14:32", with the date too when the copy isn't from [today]. */
+@Composable
+private fun offlineNotice(refreshedAt: Long, today: LocalDate): String {
+    val age = cacheAge(refreshedAt, today)
+    return if (age.date == null) {
+        stringResource(Res.string.offline_notice_today, age.time)
+    } else {
+        stringResource(Res.string.offline_notice_other_day, shortDate(age.date), age.time)
+    }
+}
 
 /** Summed from the same meals the list shows, so the totals and the list can never disagree. */
 private fun List<MealEntry>.dayTotals() = DayTotals(
@@ -114,49 +142,70 @@ private fun List<MealEntry>.dayTotals() = DayTotals(
 /**
  * One day's calories, macros, water and meals, with every action on them (favorite, delete, log
  * or undo water). Home shows it for today; it takes the day so other screens can show past days.
+ *
+ * The day comes from [dayRepository]: its cached copy at once, then the backend's (offline-cache).
+ * Without a cached copy it loads as before, dimming the previous day meanwhile.
  */
 @Composable
 fun DayContent(
     apiClient: FoodTrackerApiClient,
+    dayRepository: DayRepository,
     date: String,
     today: String,
     onEditGoal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var meals by remember { mutableStateOf<List<MealEntry>>(emptyList()) }
-    var goal by remember { mutableStateOf<DailyGoal?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    // What's on screen and which day it belongs to: the previous day stays (dimmed) until the new one is known.
+    var shown by remember { mutableStateOf<CachedDay?>(null) }
+    var shownDate by remember { mutableStateOf<String?>(null) }
+    // Whether [date]'s cached copy has been read yet (a few milliseconds), so the spinner doesn't flash first.
+    var cacheRead by remember(date) { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(true) }
+    // The last refresh's outcome for [date]; null while one runs or after a success.
+    var refreshProblem by remember(date) { mutableStateOf<RefreshResult?>(null) }
+    var actionError by remember(date) { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
-    var water by remember { mutableStateOf<WaterDay?>(null) }
     var waterError by remember { mutableStateOf<String?>(null) }
-    // Serializes water taps, so each refetch reflects every earlier log/undo (taps can be rapid).
+    // Serializes water taps, so each refresh reflects every earlier log/undo (taps can be rapid).
     val waterMutex = remember { Mutex() }
-    val currentDate by rememberUpdatedState(date)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(date, reloadKey) {
-        isLoading = true
-        errorMessage = null
-        try {
-            meals = apiClient.listMeals(date)
-            goal = apiClient.getGoals()
-            water = apiClient.getWater(date)
-            waterError = null
-        } catch (e: Exception) {
-            errorMessage = errorText(Res.string.error_load_day, e)
-        } finally {
-            isLoading = false
+    LaunchedEffect(date) {
+        dayRepository.observe(date).collect { cached ->
+            cacheRead = true
+            if (cached != null) {
+                shown = cached
+                shownDate = date
+            } else if (shownDate == date) {
+                // Dropped from the cache (e.g. it no longer decodes): load it again.
+                shown = null
+                shownDate = null
+            }
         }
+    }
+
+    LaunchedEffect(date, reloadKey) {
+        isRefreshing = true
+        val result = dayRepository.refresh(date)
+        refreshProblem = result.takeUnless { it == RefreshResult.Success }
+        isRefreshing = false
+    }
+
+    // Back in the foreground: the day may have changed elsewhere. The first resume is the opening itself.
+    var resumedBefore by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        if (resumedBefore) reloadKey++ else resumedBefore = true
+        onPauseOrDispose {}
     }
 
     fun toggleFavorite(meal: MealEntry) {
         scope.launch {
             try {
                 apiClient.setFavorite(meal.id, !meal.isFavorite)
+                actionError = null
                 reloadKey++
             } catch (e: Exception) {
-                errorMessage = errorText(Res.string.error_update_favorite, e)
+                actionError = errorText(Res.string.error_update_favorite, e)
             }
         }
     }
@@ -165,102 +214,135 @@ fun DayContent(
         scope.launch {
             try {
                 apiClient.deleteMeal(id)
+                actionError = null
                 reloadKey++
             } catch (e: Exception) {
-                errorMessage = errorText(Res.string.error_delete_meal, e)
+                actionError = errorText(Res.string.error_delete_meal, e)
             }
         }
     }
 
-    // Only water is refetched afterwards, not the day's meals.
+    // The refresh updates the cache, and with it the water shown for that day.
     fun changeWater(action: suspend (day: String) -> Unit) {
         val day = date
         scope.launch {
             waterMutex.withLock {
                 try {
                     action(day)
-                    val refreshed = apiClient.getWater(day)
-                    // The shown day may have changed meanwhile (e.g. at midnight); don't show this one there.
-                    if (currentDate == day) water = refreshed
                     waterError = null
                 } catch (e: Exception) {
                     waterError = errorText(Res.string.error_update_water, e)
+                    return@withLock
                 }
+                dayRepository.refresh(day)
             }
         }
     }
 
-    val currentGoal = goal
+    val problem = refreshProblem
+    val loadError = when (problem) {
+        is RefreshResult.Failed -> produceErrorText(Res.string.error_load_day, problem.error)
+        is RefreshResult.Offline -> produceErrorText(Res.string.error_load_day, problem.cause)
+        else -> null
+    }
+    val cachedDay = shown
     when {
-        errorMessage != null -> Text(
-            errorMessage.orEmpty(),
+        // This day isn't cached and couldn't be loaded: the error alone, as without a cache.
+        shownDate != date && problem != null && !isRefreshing -> Text(
+            loadError.orEmpty(),
             color = MaterialTheme.colorScheme.error,
             modifier = modifier.padding(horizontal = 16.dp),
         )
-        // Dims the previous day while the new one loads, instead of showing it unmarked.
-        else -> LoadingAware(loadingPresentation(isLoading, hasContent = currentGoal != null), modifier) {
-            if (currentGoal != null) {
+        // Reading the cache takes a few milliseconds; nothing is better than a flashing spinner.
+        cachedDay == null && !cacheRead -> Box(modifier)
+        // Dims the previous day while a day that isn't cached loads, instead of showing it unmarked.
+        else -> LoadingAware(loadingPresentation(isLoading = shownDate != date, hasContent = cachedDay != null), modifier) {
+            if (cachedDay != null) {
+                val meals = cachedDay.meals
+                val water = cachedDay.water
+                val currentGoal = cachedDay.goal
+                val notice = when {
+                    shownDate != date -> null
+                    problem is RefreshResult.Offline -> offlineNotice(cachedDay.refreshedAt, LocalDate.parse(today))
+                    problem is RefreshResult.Failed -> loadError
+                    else -> null
+                }
                 val totals = meals.dayTotals()
                 val grouped = meals.groupBy { it.mealType }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item(key = "calories") {
-                        CaloriesCard(totals = totals, goal = currentGoal, isToday = date == today, onEditGoal = onEditGoal)
+                Column(Modifier.fillMaxSize()) {
+                    // Outside the list: inserted above its first item, it would land just off screen.
+                    for (text in listOfNotNull(notice, actionError)) {
+                        Text(
+                            text,
+                            color = if (text == notice && problem is RefreshResult.Offline) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                        )
                     }
-                    item(key = "water") {
-                        Column {
-                            WaterCard(
-                                water = water,
-                                targetMl = currentGoal.targetWaterMl,
-                                glassMl = currentGoal.waterGlassMl,
-                                onAddGlass = {
-                                    changeWater { day ->
-                                        apiClient.logWater(LogWaterRequest(currentGoal.waterGlassMl, loggedAtFor(day, today)))
-                                    }
-                                },
-                                onUndo = {
-                                    // Picked under the lock from fresh data, so rapid undos each remove a different entry.
-                                    changeWater { day ->
-                                        apiClient.getWater(day).entries.lastOrNull()?.let { apiClient.deleteWater(it.id) }
-                                    }
-                                },
-                            )
-                            waterError?.let {
-                                Text(
-                                    it,
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(top = 4.dp),
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        item(key = "calories") {
+                            CaloriesCard(totals = totals, goal = currentGoal, isToday = date == today, onEditGoal = onEditGoal)
+                        }
+                        item(key = "water") {
+                            Column {
+                                WaterCard(
+                                    water = water,
+                                    targetMl = currentGoal.targetWaterMl,
+                                    glassMl = currentGoal.waterGlassMl,
+                                    onAddGlass = {
+                                        changeWater { day ->
+                                            apiClient.logWater(LogWaterRequest(currentGoal.waterGlassMl, loggedAtFor(day, today)))
+                                        }
+                                    },
+                                    onUndo = {
+                                        // Picked under the lock from fresh data, so rapid undos each remove a different entry.
+                                        changeWater { day ->
+                                            apiClient.getWater(day).entries.lastOrNull()?.let { apiClient.deleteWater(it.id) }
+                                        }
+                                    },
                                 )
+                                waterError?.let {
+                                    Text(
+                                        it,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                }
                             }
                         }
-                    }
-                    if (meals.isEmpty()) {
-                        item(key = "empty") {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                EmptyIllustration(IllustrationKind.PLATE)
-                                Text(
-                                    stringResource(Res.string.home_empty_day),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(top = 12.dp),
-                                )
+                        if (meals.isEmpty()) {
+                            item(key = "empty") {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                    EmptyIllustration(IllustrationKind.PLATE)
+                                    Text(
+                                        stringResource(Res.string.home_empty_day),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(top = 12.dp),
+                                    )
+                                }
                             }
                         }
-                    }
-                    for (type in MEAL_TYPE_SECTION_ORDER) {
-                        val mealsOfType = grouped[type] ?: continue
-                        item(key = "group-${type?.name ?: "other"}") {
-                            MealGroupCard(
-                                type = type,
-                                meals = mealsOfType,
-                                onToggleFavorite = ::toggleFavorite,
-                                onDelete = { deleteMeal(it.id) },
-                            )
+                        for (type in MEAL_TYPE_SECTION_ORDER) {
+                            val mealsOfType = grouped[type] ?: continue
+                            item(key = "group-${type?.name ?: "other"}") {
+                                MealGroupCard(
+                                    type = type,
+                                    meals = mealsOfType,
+                                    onToggleFavorite = ::toggleFavorite,
+                                    onDelete = { deleteMeal(it.id) },
+                                )
+                            }
                         }
                     }
                 }

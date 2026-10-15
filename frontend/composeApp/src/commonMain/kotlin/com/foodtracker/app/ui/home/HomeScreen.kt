@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.ui.longDate
 import com.foodtracker.app.util.currentLocalDateTime
 import com.foodtracker.app.util.millisUntilNextMinute
@@ -40,6 +41,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun HomeScreen(
     apiClient: FoodTrackerApiClient,
+    dayRepository: DayRepository,
     onEditGoal: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -49,7 +51,7 @@ fun HomeScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         HomeHeader(now = now, onEditGoal = onEditGoal, onOpenSettings = onOpenSettings)
-        DayContent(apiClient = apiClient, date = today, today = today, onEditGoal = onEditGoal, modifier = Modifier.weight(1f))
+        DayContent(apiClient = apiClient, dayRepository = dayRepository, date = today, today = today, onEditGoal = onEditGoal, modifier = Modifier.weight(1f))
     }
 }
 
