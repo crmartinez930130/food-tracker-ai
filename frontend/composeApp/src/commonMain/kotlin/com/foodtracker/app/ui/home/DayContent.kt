@@ -163,7 +163,7 @@ fun DayContent(
     var isRefreshing by remember { mutableStateOf(true) }
     // The last refresh's outcome for [date]; null while one runs or after a success.
     var refreshProblem by remember(date) { mutableStateOf<RefreshResult?>(null) }
-    var actionError by remember { mutableStateOf<String?>(null) }
+    var actionError by remember(date) { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var waterError by remember { mutableStateOf<String?>(null) }
     // Serializes water taps, so each refresh reflects every earlier log/undo (taps can be rapid).
