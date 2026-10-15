@@ -7,9 +7,16 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room3)
 }
 
 kotlin {
+    // Room's database constructor is an expect object, a Beta language feature.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -17,8 +24,8 @@ kotlin {
         }
     }
 
+    // No iosX64 (Intel simulators): Kotlin deprecated it and Room 3 doesn't publish it.
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64(),
     ).forEach { iosTarget ->
@@ -59,6 +66,9 @@ kotlin {
             implementation(libs.jetbrains.lifecycle.runtime.compose)
             // RoundedPolygon/Morph for the expressive shapes (material3's own are internal in common).
             implementation(libs.androidx.graphics.shapes)
+            // Local cache of the days shown (offline-cache); bundled SQLite, the same on every platform.
+            implementation(libs.androidx.room3.runtime)
+            implementation(libs.androidx.sqlite.bundled)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -99,4 +109,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+room3 {
+    schemaDirectory("$projectDir/schemas")
+}
+
+dependencies {
+    // Room generates its code per target with KSP. The iOS ones only run on a Mac.
+    add("kspAndroid", libs.androidx.room3.compiler)
+    add("kspIosArm64", libs.androidx.room3.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
 }

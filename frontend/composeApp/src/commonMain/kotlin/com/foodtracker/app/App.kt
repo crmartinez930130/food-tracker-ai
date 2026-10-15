@@ -21,6 +21,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntOffset
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.DayCacheStore
+import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.AppState
 import com.foodtracker.app.ui.CaptureScreen
@@ -44,16 +46,19 @@ import com.foodtracker.app.ui.theme.FoodTrackerTheme
 import com.foodtracker.app.ui.transitionDirection
 
 /**
+ * [cacheStore] is the platform's local database for the days already seen (offline-cache).
  * [openCaptureRequests] is bumped by the platform each time a meal reminder is tapped; every new
  * value asks to open Capture (see AppState.openCaptureFromReminder).
  */
 @Composable
 fun App(
+    cacheStore: DayCacheStore,
     preferences: AppPreferences = AppPreferences(),
     onPreferencesChange: (AppPreferences) -> Unit = {},
     openCaptureRequests: Int = 0,
 ) {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
+    val dayRepository = remember(cacheStore) { DayRepository(apiClient, cacheStore) }
     // Outside AppEnvironment's language key, so switching language keeps the current screen.
     val appState = remember { AppState() }
     val language = resolveLanguage(preferences.language, deviceLanguage())
@@ -102,6 +107,7 @@ fun App(
 
                         is Screen.DayDetail -> DayDetailScreen(
                             apiClient = apiClient,
+                            dayRepository = dayRepository,
                             date = screen.date,
                             onBack = { appState.closeDayDetail() },
                             onEditGoal = { appState.openGoals() },
@@ -123,6 +129,7 @@ fun App(
                             tab = screen.tab,
                             onTabChange = { appState.selectMainTab(it) },
                             apiClient = apiClient,
+                            dayRepository = dayRepository,
                             historyMonth = appState.historyMonth,
                             onHistoryMonthChange = { appState.historyMonth = it },
                             summaryView = appState.summaryView,

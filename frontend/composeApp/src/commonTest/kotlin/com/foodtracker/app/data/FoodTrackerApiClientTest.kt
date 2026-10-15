@@ -1,6 +1,7 @@
 package com.foodtracker.app.data
 
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.plugins.HttpTimeoutCapability
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.request.HttpRequestData
@@ -576,5 +577,26 @@ class FoodTrackerApiClientTest {
         // Any null for items/notes/mealType would be rejected or would clear data on the backend.
         assertEquals(mapOf("notes" to JsonPrimitive("x")), Json.parseToJsonElement(sentBody).jsonObject.toMap())
     }
-}
 
+    @Test
+    fun `bounds only the time to connect, not the request`() = runBlocking {
+        var connectTimeout: Long? = null
+        var requestTimeout: Long? = null
+        var socketTimeout: Long? = null
+        val engine = MockEngine { request ->
+            request.getCapabilityOrNull(HttpTimeoutCapability)?.let {
+                connectTimeout = it.connectTimeoutMillis
+                requestTimeout = it.requestTimeoutMillis
+                socketTimeout = it.socketTimeoutMillis
+            }
+            respond(ByteReadChannel("[]"), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        val client = FoodTrackerApiClient(createHttpClient(engine) { null }, baseUrlProvider = { "http://test.local" })
+
+        client.listMeals("2026-01-01")
+
+        assertEquals(CONNECT_TIMEOUT_MS, connectTimeout)
+        assertEquals(null, requestTimeout)
+        assertEquals(null, socketTimeout)
+    }
+}

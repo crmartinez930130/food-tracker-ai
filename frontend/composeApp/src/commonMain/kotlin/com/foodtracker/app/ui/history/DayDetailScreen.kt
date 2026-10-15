@@ -12,6 +12,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.ui.home.DayContent
 import com.foodtracker.app.ui.longDate
 import com.foodtracker.app.util.currentLocalDateTime
@@ -27,6 +28,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun DayDetailScreen(
     apiClient: FoodTrackerApiClient,
+    dayRepository: DayRepository,
     date: String,
     onBack: () -> Unit,
     onEditGoal: () -> Unit,
@@ -48,6 +50,7 @@ fun DayDetailScreen(
     ) { padding ->
         DayContent(
             apiClient = apiClient,
+            dayRepository = dayRepository,
             date = date,
             today = currentLocalDateTime().date.toString(),
             onEditGoal = onEditGoal,
