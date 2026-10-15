@@ -54,6 +54,11 @@
     <string name="error_load_day">No se pudo cargar este día: %1$s</string>
     <string name="offline_notice_today">Sin conexión · datos de las %1$s</string>
     <string name="offline_notice_other_day">Sin conexión · datos del %1$s a las %2$s</string>
+    <string name="meal_pending">Pendiente</string>
+    <string name="outbox_rejected">No se pudo enviar: %1$s</string>
+    <string name="outbox_retry">Reintentar</string>
+    <string name="outbox_discard">Descartar</string>
+    <string name="unit_ml">%1$d ml</string>
     <string name="error_update_favorite">No se pudo actualizar el favorito: %1$s</string>
     <string name="error_delete_meal">No se pudo eliminar la comida: %1$s</string>
     <string name="water_title">Agua</string>

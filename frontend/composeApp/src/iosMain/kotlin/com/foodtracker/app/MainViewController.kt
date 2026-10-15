@@ -5,4 +5,4 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.foodtracker.app.data.cache.cacheDatabase
 import platform.UIKit.UIViewController
 
-fun MainViewController(): UIViewController = ComposeUIViewController { App(cacheStore = remember { cacheDatabase().dayCacheDao() }) }
+fun MainViewController(): UIViewController = ComposeUIViewController { App(database = remember { cacheDatabase() }, requestSync = {}) }

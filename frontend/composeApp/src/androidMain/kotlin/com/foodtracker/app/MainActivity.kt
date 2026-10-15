@@ -16,7 +16,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.foodtracker.app.data.BackendConfig
+import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.data.cache.OutboxSync
 import com.foodtracker.app.data.cache.cacheDatabase
+import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.reminders.ReminderNotifications
 import com.foodtracker.app.reminders.ReminderScheduler
 import com.foodtracker.app.reminders.ReminderStore
@@ -30,6 +34,9 @@ class MainActivity : ComponentActivity() {
     /** Bumped each time a reminder notification is tapped; App opens Capture on every new value. */
     private val openCaptureRequests = mutableIntStateOf(0)
 
+    /** Sends the offline queue whenever the app comes to the foreground (offline-queue). */
+    private lateinit var outbox: OutboxRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Restores reminder alarms dropped by a force-stop (the settings are the source of truth).
@@ -42,7 +49,14 @@ class MainActivity : ComponentActivity() {
             BackendConfig.baseUrl = effectiveServerUrl(stored)
             BackendConfig.accessToken = stored.accessToken
         }
-        val cacheStore = cacheDatabase(this).dayCacheDao()
+        val database = cacheDatabase(this)
+        val cacheStore = database.dayCacheDao()
+        outbox = OutboxRepository(
+            FoodTrackerApiClient(createHttpClient()),
+            database.outboxDao(),
+            cacheStore,
+            requestSync = { OutboxSync.request(this) },
+        )
         setContent {
             // Options choices: owned here so the system bars can follow the chosen theme too.
             var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
@@ -57,14 +71,20 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             App(
-                cacheStore = cacheStore,
+                database = database,
+                requestSync = { OutboxSync.request(this) },
                 preferences = preferences,
                 onPreferencesChange = { updated ->
                     PreferencesStore.save(this, updated)
                     preferences = updated
                     // Another server's data must never show: drop the cache (a new token keeps it).
-                    if (effectiveServerUrl(updated) != BackendConfig.baseUrl) {
-                        lifecycleScope.launch { cacheStore.clear() }
+                    // Only the other servers' rows: a refresh of the new one may already have landed.
+                    val serverUrl = effectiveServerUrl(updated)
+                    if (serverUrl != BackendConfig.baseUrl) {
+                        lifecycleScope.launch {
+                            cacheStore.deleteOtherServers(serverUrl)
+                            database.favoritesCacheDao().deleteOtherServers(serverUrl)
+                        }
                     }
                     BackendConfig.baseUrl = effectiveServerUrl(updated)
                     BackendConfig.accessToken = updated.accessToken
@@ -73,6 +93,14 @@ class MainActivity : ComponentActivity() {
                 },
                 openCaptureRequests = openCaptureRequests.intValue,
             )
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Whatever couldn't be sent goes now if the backend answers; otherwise WorkManager keeps trying.
+        lifecycleScope.launch {
+            if (outbox.sendAll().offline) OutboxSync.request(this@MainActivity)
         }
     }
 

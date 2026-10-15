@@ -8,10 +8,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,34 +26,6 @@ private const val GOAL_JSON = """{"targetCalories":2000,"targetProteinGrams":125
 "targetWaterMl":2000,"waterGlassMl":250,"isDefault":false}"""
 private const val WATER_JSON = """{"date":"2026-03-05","totalMl":250,"entries":[{"id":1,"amountMl":250,"loggedAt":"2026-03-05T12:00:00.000Z","clientId":null}]}"""
 
-/** An in-memory [DayCacheStore], so the repository is tested without Android or a database. */
-private class FakeStore : DayCacheStore {
-    val days = MutableStateFlow<Map<String, DayCacheRow>>(emptyMap())
-    val goal = MutableStateFlow<GoalCacheRow?>(null)
-
-    override fun observeDay(date: String): Flow<DayCacheRow?> = days.map { it[date] }
-
-    override fun observeGoal(): Flow<GoalCacheRow?> = goal
-
-    override suspend fun save(day: DayCacheRow, goal: GoalCacheRow) {
-        days.value = days.value + (day.date to day)
-        this.goal.value = goal
-    }
-
-    override suspend fun deleteDay(date: String) {
-        days.value = days.value - date
-    }
-
-    override suspend fun deleteGoal() {
-        goal.value = null
-    }
-
-    override suspend fun clear() {
-        days.value = emptyMap()
-        goal.value = null
-    }
-}
-
 /** What the fake backend does: answer with JSON, answer with an error status, or not answer at all. */
 private sealed interface Backend {
     data object Ok : Backend
@@ -65,7 +34,7 @@ private sealed interface Backend {
 }
 
 private class Fixture(var backend: Backend = Backend.Ok, var server: String = SERVER) {
-    val store = FakeStore()
+    val store = FakeDayCache()
     var clock = 1_000L
     /** Runs on each request, before it is answered (e.g. to switch servers mid-refresh). */
     var onRequest: () -> Unit = {}
@@ -96,7 +65,7 @@ private class Fixture(var backend: Backend = Backend.Ok, var server: String = SE
 
 class DayRepositoryTest {
     @Test
-    fun `a refresh caches the day and the goal`() = runBlocking {
+    fun `a refresh caches the day and the goal`() = runBlocking<Unit> {
         val f = Fixture()
 
         assertEquals(RefreshResult.Success, f.repository.refresh(DAY))
@@ -109,12 +78,12 @@ class DayRepositoryTest {
     }
 
     @Test
-    fun `nothing is cached before the first refresh`() = runBlocking {
+    fun `nothing is cached before the first refresh`() = runBlocking<Unit> {
         assertNull(Fixture().repository.observe(DAY).first())
     }
 
     @Test
-    fun `an unreachable backend is Offline and keeps the cached copy`() = runBlocking {
+    fun `an unreachable backend is Offline and keeps the cached copy`() = runBlocking<Unit> {
         val f = Fixture()
         f.repository.refresh(DAY)
         f.backend = Backend.Unreachable
@@ -125,7 +94,7 @@ class DayRepositoryTest {
     }
 
     @Test
-    fun `an error answer is Failed with its status and keeps the cached copy`() = runBlocking {
+    fun `an error answer is Failed with its status and keeps the cached copy`() = runBlocking<Unit> {
         for (status in listOf(HttpStatusCode.Unauthorized, HttpStatusCode.InternalServerError)) {
             val f = Fixture()
             f.repository.refresh(DAY)
@@ -139,7 +108,7 @@ class DayRepositoryTest {
     }
 
     @Test
-    fun `another server's rows are not shown`() = runBlocking {
+    fun `another server's rows are not shown`() = runBlocking<Unit> {
         val f = Fixture()
         f.repository.refresh(DAY)
 
@@ -149,7 +118,7 @@ class DayRepositoryTest {
     }
 
     @Test
-    fun `a refresh whose server changed while it ran is not cached`() = runBlocking {
+    fun `a refresh whose server changed while it ran is not cached`() = runBlocking<Unit> {
         val f = Fixture()
         f.onRequest = { f.server = "http://other.local:3000" }
 
@@ -160,23 +129,37 @@ class DayRepositoryTest {
     }
 
     @Test
-    fun `a row that no longer decodes is treated as missing and deleted`() = runBlocking {
+    fun `a day that no longer decodes is deleted alone, keeping the goal`() = runBlocking<Unit> {
         val f = Fixture()
         f.repository.refresh(DAY)
         f.store.days.value = f.store.days.value.mapValues { it.value.copy(mealsJson = """{"unexpected":true}""") }
 
         assertNull(f.repository.observe(DAY).first())
         assertEquals(emptyMap(), f.store.days.value)
+        assertNotNull(f.store.goal.value)
     }
 
     @Test
-    fun `clear empties the cache`() = runBlocking {
+    fun `a goal that no longer decodes is deleted alone, keeping the day`() = runBlocking<Unit> {
         val f = Fixture()
         f.repository.refresh(DAY)
-
-        f.repository.clear()
+        f.store.goal.value = f.store.goal.value?.copy(goalJson = "[]")
 
         assertNull(f.repository.observe(DAY).first())
         assertNull(f.store.goal.value)
+        assertNotNull(f.store.days.value[DAY])
+    }
+
+    @Test
+    fun `deleteOtherServers keeps the current server's rows and drops the rest`() = runBlocking<Unit> {
+        val f = Fixture()
+        f.repository.refresh(DAY)
+        f.server = "http://other.local:3000"
+        f.repository.refresh("2026-03-06")
+
+        f.repository.deleteOtherServers("http://other.local:3000")
+
+        assertEquals(setOf("2026-03-06"), f.store.days.value.keys)
+        assertEquals("http://other.local:3000", f.store.goal.value?.serverUrl)
     }
 }

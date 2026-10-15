@@ -1,5 +1,6 @@
 package com.foodtracker.app.data.cache
 
+import androidx.room3.AutoMigration
 import androidx.room3.ColumnInfo
 import androidx.room3.ConstructedBy
 import androidx.room3.Dao
@@ -46,6 +47,11 @@ interface DayCacheStore {
 
     fun observeGoal(): Flow<GoalCacheRow?>
 
+    suspend fun day(date: String): DayCacheRow?
+
+    /** Writes one day alone, e.g. with a just-sent entry merged in (offline-queue). */
+    suspend fun saveDay(day: DayCacheRow)
+
     /** Writes a refreshed day and the goal together. */
     suspend fun save(day: DayCacheRow, goal: GoalCacheRow)
 
@@ -53,7 +59,8 @@ interface DayCacheStore {
 
     suspend fun deleteGoal()
 
-    suspend fun clear()
+    /** Deletes the cached rows of every server but [url], so a refresh of [url] that already landed stays. */
+    suspend fun deleteOtherServers(url: String)
 }
 
 @Dao
@@ -64,15 +71,18 @@ abstract class DayCacheDao : DayCacheStore {
     @Query("SELECT * FROM goal_cache WHERE id = $GOAL_ROW_ID")
     abstract override fun observeGoal(): Flow<GoalCacheRow?>
 
+    @Query("SELECT * FROM day_cache WHERE date = :date")
+    abstract override suspend fun day(date: String): DayCacheRow?
+
     @Upsert
-    abstract suspend fun upsertDay(day: DayCacheRow)
+    abstract override suspend fun saveDay(day: DayCacheRow)
 
     @Upsert
     abstract suspend fun upsertGoal(goal: GoalCacheRow)
 
     @Transaction
     override suspend fun save(day: DayCacheRow, goal: GoalCacheRow) {
-        upsertDay(day)
+        saveDay(day)
         upsertGoal(goal)
     }
 
@@ -82,21 +92,36 @@ abstract class DayCacheDao : DayCacheStore {
     @Query("DELETE FROM goal_cache")
     abstract override suspend fun deleteGoal()
 
-    @Query("DELETE FROM day_cache")
-    abstract suspend fun deleteAllDays()
+    @Query("DELETE FROM day_cache WHERE server_url != :url")
+    abstract suspend fun deleteDaysOfOtherServers(url: String)
+
+    @Query("DELETE FROM goal_cache WHERE server_url != :url")
+    abstract suspend fun deleteGoalOfOtherServers(url: String)
 
     @Transaction
-    override suspend fun clear() {
-        deleteAllDays()
-        deleteGoal()
+    override suspend fun deleteOtherServers(url: String) {
+        deleteDaysOfOtherServers(url)
+        deleteGoalOfOtherServers(url)
     }
 }
 
-/** The app's local database. It only holds the cache for now; #70 adds the send queue. */
-@Database(entities = [DayCacheRow::class, GoalCacheRow::class], version = 1, exportSchema = true)
+/**
+ * The app's local database: the cache of what was seen (offline-cache) and the queue of what waits
+ * to be sent (offline-queue). Version 2 added the outbox and the favorites cache.
+ */
+@Database(
+    entities = [DayCacheRow::class, GoalCacheRow::class, OutboxRow::class, FavoritesCacheRow::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 @ConstructedBy(CacheDatabaseConstructor::class)
 abstract class CacheDatabase : RoomDatabase() {
     abstract fun dayCacheDao(): DayCacheDao
+
+    abstract fun outboxDao(): OutboxDao
+
+    abstract fun favoritesCacheDao(): FavoritesCacheDao
 }
 
 // The Room compiler generates the `actual` implementations.

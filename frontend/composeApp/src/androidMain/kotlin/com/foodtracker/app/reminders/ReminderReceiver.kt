@@ -6,6 +6,10 @@ import android.content.Intent
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
+import com.foodtracker.app.data.SaveMealRequest
+import com.foodtracker.app.data.cache.OutboxKind
+import com.foodtracker.app.data.cache.cacheDatabase
+import com.foodtracker.app.data.cache.decodeOrNull
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.reminders.shouldShowReminder
 import com.foodtracker.app.ui.settings.PreferencesStore
@@ -44,7 +48,8 @@ class ReminderReceiver : BroadcastReceiver() {
                 // A fresh receiver process has the phone's locale; texts must use the app's language.
                 applyAppLocale(context)
                 val preferences = PreferencesStore.load(context)
-                if (shouldShowReminder(meal, mealsTodayOrNull(effectiveServerUrl(preferences), preferences.accessToken))) {
+                val serverUrl = effectiveServerUrl(preferences)
+                if (shouldShowReminder(meal, mealsTodayOrNull(serverUrl, preferences.accessToken), queuedMealTypesToday(context, serverUrl))) {
                     ReminderNotifications.show(context, meal)
                 }
             } finally {
@@ -76,6 +81,20 @@ class ReminderReceiver : BroadcastReceiver() {
             httpClient.close()
         }
     }
+
+    /**
+     * The types of today's meals waiting in the offline queue for [serverUrl]: they count as logged.
+     * Empty if the queue can't be read - then the reminder is decided as before.
+     */
+    private suspend fun queuedMealTypesToday(context: Context, serverUrl: String): List<MealType?> =
+        try {
+            cacheDatabase(context).outboxDao().pendingOfDay(todayDateString(), serverUrl)
+                .filter { it.kind == OutboxKind.MEAL }
+                .mapNotNull { row -> decodeOrNull<SaveMealRequest>(row.payloadJson) }
+                .map { it.mealType }
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     private companion object {
         const val MEALS_TIMEOUT_MS = 4_000L

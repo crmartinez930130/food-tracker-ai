@@ -54,14 +54,18 @@ data class MealEntry(
     val totalProteinGrams: Double,
     val totalFatGrams: Double,
     val totalCarbsGrams: Double,
+    /** The id the app generated when it saved this meal (null for meals saved without one). */
+    val clientId: String? = null,
 )
 
+/** [clientId] identifies this save across retries: the backend stores the meal once (offline-queue). */
 @Serializable
 data class SaveMealRequest(
     val items: List<MealItem>,
     val notes: String? = null,
     val occurredAt: String? = null,
     val mealType: MealType? = null,
+    val clientId: String? = null,
 )
 
 /**
@@ -171,6 +175,8 @@ data class WaterEntry(
     val id: Int,
     val amountMl: Int,
     val loggedAt: String,
+    /** The id the app generated when it logged this glass (null for entries logged without one). */
+    val clientId: String? = null,
 )
 
 /** The water logged on one local day ([date], YYYY-MM-DD), oldest entry first. */
@@ -187,6 +193,8 @@ data class LogWaterRequest(
     val amountMl: Int,
     /** Omitted (not sent as null) when absent, so the backend logs it now. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val loggedAt: String? = null,
+    /** Identifies this glass across retries, like [SaveMealRequest.clientId]; omitted when absent. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val clientId: String? = null,
 )
 
 /** The local day (YYYY-MM-DD) of the earliest logged meal, or null when there are none. */

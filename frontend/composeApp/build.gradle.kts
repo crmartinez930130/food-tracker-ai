@@ -47,6 +47,8 @@ kotlin {
             implementation(libs.androidx.exifinterface)
             // FileProvider, for sharing the CSV export (already transitive via activity-compose).
             implementation(libs.androidx.core)
+            // Sends the offline queue in the background (offline-queue).
+            implementation(libs.androidx.work.runtime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

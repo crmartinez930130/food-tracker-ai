@@ -57,6 +57,7 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.Portion
+import com.foodtracker.app.data.cache.FavoritesRepository
 import com.foodtracker.app.data.toReviewAnalysis
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
@@ -113,6 +114,7 @@ private enum class PhotoSource { CAMERA, GALLERY }
 @Composable
 fun CaptureScreen(
     apiClient: FoodTrackerApiClient,
+    favoritesRepository: FavoritesRepository,
     onAnalyzed: (MealAnalysis) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -135,11 +137,13 @@ fun CaptureScreen(
 
     LaunchedEffect(favoritesReloadKey) {
         favoritesError = null
+        // The copy from the last load first, so favorites can be re-logged offline (offline-queue).
+        if (favorites == null) favorites = favoritesRepository.cached()
         try {
-            favorites = apiClient.listFavorites()
+            favorites = favoritesRepository.load()
         } catch (e: Exception) {
-            // Non-blocking: the photo options keep working without the list.
-            favoritesError = errorText(Res.string.error_load_favorites, e)
+            // Non-blocking: the photo options keep working without the list. With a copy shown, no error.
+            if (favorites == null) favoritesError = errorText(Res.string.error_load_favorites, e)
         }
     }
 

@@ -132,4 +132,11 @@ class ReminderSettingsTest {
     fun `an untagged meal doesn't count as any meal`() {
         assertTrue(shouldShowReminder(MealType.LUNCH, listOf(meal(null))))
     }
+
+    @Test
+    fun `a lunch queued offline counts as logged, also when the backend can't be asked`() {
+        assertFalse(shouldShowReminder(MealType.LUNCH, emptyList(), queuedToday = listOf(MealType.LUNCH)))
+        assertFalse(shouldShowReminder(MealType.LUNCH, null, queuedToday = listOf(MealType.LUNCH)))
+        assertTrue(shouldShowReminder(MealType.LUNCH, null, queuedToday = listOf(MealType.BREAKFAST, null)))
+    }
 }
