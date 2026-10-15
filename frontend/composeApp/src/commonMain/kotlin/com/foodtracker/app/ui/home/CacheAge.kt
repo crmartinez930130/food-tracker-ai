@@ -15,3 +15,10 @@ fun cacheAge(refreshedAt: Long, today: LocalDate, timeZone: TimeZone = TimeZone.
     val time = "${at.hour.toString().padStart(2, '0')}:${at.minute.toString().padStart(2, '0')}"
     return CacheAge(date = at.date.takeIf { it != today }, time = time)
 }
+
+/** An ISO instant's local wall-clock time, "13:05", e.g. when a capture was taken. */
+@OptIn(ExperimentalTime::class)
+fun localClockTime(isoInstant: String, timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+    val at = Instant.parse(isoInstant).toLocalDateTime(timeZone)
+    return "${at.hour.toString().padStart(2, '0')}:${at.minute.toString().padStart(2, '0')}"
+}

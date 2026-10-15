@@ -58,6 +58,16 @@
     <string name="outbox_rejected">No se pudo enviar: %1$s</string>
     <string name="outbox_retry">Reintentar</string>
     <string name="outbox_discard">Descartar</string>
+    <string name="capture_ready_channel_name">Comidas para revisar</string>
+    <string name="capture_ready_channel_description">Avisa cuando se analizaron comidas registradas sin conexión.</string>
+    <string name="capture_ready_title">Tenés comidas listas para revisar</string>
+    <string name="capture_ready_text">Tocá para verlas en Inicio.</string>
+    <string name="capture_waiting">Esperando análisis · %1$s</string>
+    <string name="capture_ready">Lista para revisar · %1$s</string>
+    <string name="capture_failed">No se pudo analizar: %1$s</string>
+    <string name="capture_photo_missing">la foto ya no está en el teléfono</string>
+    <string name="capture_review">Revisar</string>
+    <string name="capture_photo_only">Foto</string>
     <string name="unit_ml">%1$d ml</string>
     <string name="error_update_favorite">No se pudo actualizar el favorito: %1$s</string>
     <string name="error_delete_meal">No se pudo eliminar la comida: %1$s</string>

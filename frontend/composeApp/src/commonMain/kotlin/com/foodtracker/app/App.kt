@@ -19,9 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.IntOffset
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.cache.CacheDatabase
+import com.foodtracker.app.data.cache.CapturePhotoStore
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.FavoritesRepository
 import com.foodtracker.app.data.cache.OutboxRepository
@@ -30,6 +33,7 @@ import com.foodtracker.app.ui.AppState
 import com.foodtracker.app.ui.CaptureScreen
 import com.foodtracker.app.ui.GoalsScreen
 import com.foodtracker.app.ui.MainScreen
+import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.ReviewScreen
 import com.foodtracker.app.ui.Screen
 import com.foodtracker.app.ui.TransitionDirection
@@ -46,16 +50,19 @@ import com.foodtracker.app.ui.settings.resolveLanguage
 import com.foodtracker.app.ui.systemAnimationsDisabled
 import com.foodtracker.app.ui.theme.FoodTrackerTheme
 import com.foodtracker.app.ui.transitionDirection
+import kotlinx.coroutines.launch
 
 /**
  * [database] is the platform's local database: the days already seen (offline-cache) and what waits
- * to be sent (offline-queue). [requestSync] asks the platform to send the queue in the background.
+ * to be sent (offline-queue); [capturePhotos] keeps the photos of captures waiting for analysis.
+ * [requestSync] asks the platform to send the queue and analyze captures in the background.
  * [openCaptureRequests] is bumped by the platform each time a meal reminder is tapped; every new
  * value asks to open Capture (see AppState.openCaptureFromReminder).
  */
 @Composable
 fun App(
     database: CacheDatabase,
+    capturePhotos: CapturePhotoStore,
     requestSync: () -> Unit,
     preferences: AppPreferences = AppPreferences(),
     onPreferencesChange: (AppPreferences) -> Unit = {},
@@ -63,12 +70,17 @@ fun App(
 ) {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
     val dayRepository = remember(database) { DayRepository(apiClient, database.dayCacheDao()) }
+    val captureRepository = remember(database) {
+        CaptureQueueRepository(apiClient, database.captureDao(), capturePhotos, requestSync)
+    }
     val favoritesRepository = remember(database) { FavoritesRepository(apiClient, database.favoritesCacheDao()) }
     val outboxRepository = remember(database) {
         OutboxRepository(apiClient, database.outboxDao(), database.dayCacheDao(), requestSync)
     }
     // Outside AppEnvironment's language key, so switching language keeps the current screen.
     val appState = remember { AppState() }
+    // Outlives the screens: completing a reviewed capture must finish after Review is gone.
+    val appScope = rememberCoroutineScope()
     val language = resolveLanguage(preferences.language, deviceLanguage())
     val darkTheme = resolveDarkTheme(preferences.theme, isSystemInDarkTheme())
 
@@ -91,7 +103,9 @@ fun App(
                         is Screen.Capture -> CaptureScreen(
                             apiClient = apiClient,
                             favoritesRepository = favoritesRepository,
+                            captureRepository = captureRepository,
                             onAnalyzed = { analysis -> appState.openReview(analysis) },
+                            onKept = { appState.openMain() },
                             onCancel = { appState.openMain() },
                         )
 
@@ -99,11 +113,18 @@ fun App(
                             // Captured on entry: leaving clears pendingAnalysis, and Review must keep its
                             // content while it animates out.
                             val analysis = remember { appState.pendingAnalysis }
+                            val capture = remember { appState.pendingCapture }
                             if (analysis != null) {
                                 ReviewScreen(
                                     initialAnalysis = analysis,
                                     outbox = outboxRepository,
-                                    onSaved = { appState.openMain() },
+                                    occurredAt = capture?.capturedAt,
+                                    clientId = capture?.clientId,
+                                    onSaved = {
+                                        // Saved or queued as a meal: the capture and its photo aren't needed anymore.
+                                        capture?.let { appScope.launch { captureRepository.complete(it.id) } }
+                                        appState.openMain()
+                                    },
                                     onCancel = { appState.openMain() },
                                 )
                             }
@@ -118,6 +139,8 @@ fun App(
                             apiClient = apiClient,
                             dayRepository = dayRepository,
                             outbox = outboxRepository,
+                            captureRepository = captureRepository,
+                            onReviewCapture = { analysis, capture -> appState.openReview(analysis, capture) },
                             date = screen.date,
                             onBack = { appState.closeDayDetail() },
                             onEditGoal = { appState.openGoals() },
@@ -141,6 +164,8 @@ fun App(
                             apiClient = apiClient,
                             dayRepository = dayRepository,
                             outbox = outboxRepository,
+                            captureRepository = captureRepository,
+                            onReviewCapture = { analysis, capture -> appState.openReview(analysis, capture) },
                             historyMonth = appState.historyMonth,
                             onHistoryMonthChange = { appState.historyMonth = it },
                             summaryView = appState.summaryView,

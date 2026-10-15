@@ -58,6 +58,16 @@
     <string name="outbox_rejected">Couldn't send it: %1$s</string>
     <string name="outbox_retry">Retry</string>
     <string name="outbox_discard">Discard</string>
+    <string name="capture_ready_channel_name">Meals to review</string>
+    <string name="capture_ready_channel_description">Lets you know when meals logged without a connection were analyzed.</string>
+    <string name="capture_ready_title">You have meals ready to review</string>
+    <string name="capture_ready_text">Tap to see them on Home.</string>
+    <string name="capture_waiting">Waiting for analysis · %1$s</string>
+    <string name="capture_ready">Ready to review · %1$s</string>
+    <string name="capture_failed">Couldn't analyze it: %1$s</string>
+    <string name="capture_photo_missing">the photo is no longer on the phone</string>
+    <string name="capture_review">Review</string>
+    <string name="capture_photo_only">Photo</string>
     <string name="unit_ml">%1$d ml</string>
     <string name="error_update_favorite">Couldn't update favorite: %1$s</string>
     <string name="error_delete_meal">Couldn't delete meal: %1$s</string>

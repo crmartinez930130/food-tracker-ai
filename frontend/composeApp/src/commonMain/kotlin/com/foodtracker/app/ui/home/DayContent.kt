@@ -47,10 +47,13 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.LogWaterRequest
+import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.data.cache.CachedDay
+import com.foodtracker.app.data.cache.CaptureQueueRepository
+import com.foodtracker.app.data.cache.CaptureRow
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.OutboxRepository
 import com.foodtracker.app.data.cache.OutboxRow
@@ -58,6 +61,7 @@ import com.foodtracker.app.data.cache.RefreshResult
 import com.foodtracker.app.data.cache.SaveOutcome
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.MealTypeIcon
+import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.components.BadgeShape
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.BigNumber
@@ -185,6 +189,8 @@ fun DayContent(
     apiClient: FoodTrackerApiClient,
     dayRepository: DayRepository,
     outbox: OutboxRepository,
+    captureRepository: CaptureQueueRepository,
+    onReviewCapture: (MealAnalysis, ReviewCapture) -> Unit,
     date: String,
     today: String,
     onEditGoal: () -> Unit,
@@ -203,6 +209,8 @@ fun DayContent(
     var waterError by remember { mutableStateOf<String?>(null) }
     // The day's queued entries (offline-queue), shown as pending or rejected on top of the cached day.
     var outboxRows by remember(date) { mutableStateOf<List<OutboxRow>>(emptyList()) }
+    // The day's captures kept for analysis (offline-queue); they never count in the totals.
+    var captures by remember(date) { mutableStateOf<List<CaptureRow>>(emptyList()) }
     // Serializes water taps, so each refresh reflects every earlier log/undo (taps can be rapid).
     val waterMutex = remember { Mutex() }
     val scope = rememberCoroutineScope()
@@ -223,6 +231,10 @@ fun DayContent(
 
     LaunchedEffect(date) {
         outbox.observeDay(date).collect { outboxRows = it }
+    }
+
+    LaunchedEffect(date) {
+        captureRepository.observeDay(date).collect { captures = it }
     }
 
     LaunchedEffect(date, reloadKey) {
@@ -289,6 +301,11 @@ fun DayContent(
 
     fun discardRejected(id: Long) {
         scope.launch { outbox.discard(id) }
+    }
+
+    fun reviewCapture(capture: CaptureRow) {
+        val analysis = captureRepository.analysisOf(capture) ?: return
+        onReviewCapture(analysis, ReviewCapture(capture.id, capture.capturedAt, capture.clientId))
     }
 
     val problem = refreshProblem
@@ -375,6 +392,19 @@ fun DayContent(
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                }
+                            }
+                        }
+                        if (shownDate == date) {
+                            for (capture in captures) {
+                                item(key = "capture-${capture.id}") {
+                                    CaptureCard(
+                                        capture = capture,
+                                        loadPhoto = { captureRepository.photoOf(capture) },
+                                        onReview = { reviewCapture(capture) },
+                                        onRetry = { scope.launch { captureRepository.retry(capture.id) } },
+                                        onDiscard = { scope.launch { captureRepository.discard(capture.id) } },
                                     )
                                 }
                             }

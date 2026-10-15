@@ -25,6 +25,12 @@ sealed interface Screen {
 }
 
 /**
+ * A kept capture being reviewed (offline-queue): the saved meal takes its time and client id, and the
+ * capture is completed once the meal is saved.
+ */
+data class ReviewCapture(val id: Long, val capturedAt: String, val clientId: String)
+
+/**
  * Owns which screen is showing, the in-flight analysis being reviewed, and the navigation state
  * that has to outlive a screen (where Goals returns to, which month History shows).
  */
@@ -33,6 +39,10 @@ class AppState {
         private set
 
     var pendingAnalysis: MealAnalysis? by mutableStateOf(null)
+        private set
+
+    /** The kept capture [pendingAnalysis] comes from, when Review was opened from one. */
+    var pendingCapture: ReviewCapture? by mutableStateOf(null)
         private set
 
     /** Where Goals' back goes: the screen it was opened from (Home or a day's detail). */
@@ -48,8 +58,9 @@ class AppState {
         screen = Screen.Capture
     }
 
-    fun openReview(analysis: MealAnalysis) {
+    fun openReview(analysis: MealAnalysis, capture: ReviewCapture? = null) {
         pendingAnalysis = analysis
+        pendingCapture = capture
         screen = Screen.Review
     }
 
@@ -98,6 +109,7 @@ class AppState {
 
     fun openMain(tab: MainTab = MainTab.HOME) {
         pendingAnalysis = null
+        pendingCapture = null
         screen = Screen.Main(tab)
     }
 

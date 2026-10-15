@@ -16,8 +16,9 @@ import com.foodtracker.app.ui.settings.effectiveServerUrl
 import java.util.concurrent.TimeUnit
 
 /**
- * Sends the offline queue in the background (offline-queue): when the phone has a network, and again
- * with growing waits while the backend can't be reached. WorkManager keeps it across process death
+ * The offline work in the background (offline-queue): sends the queued meals and water, then analyzes
+ * the kept captures, when the phone has a network, and again with growing waits while the backend
+ * can't be reached. WorkManager keeps it across process death
  * and reboots; a force-stop suspends it until the app is opened again.
  */
 object OutboxSync {
@@ -35,28 +36,34 @@ object OutboxSync {
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .build()
 
-    /** Retry later while rows wait for the backend; done otherwise (sent, or refused rows the user handles). */
-    internal fun resultFor(report: SendReport): ListenableWorker.Result =
-        if (report.offline) ListenableWorker.Result.retry() else ListenableWorker.Result.success()
+    /** Retry later while anything waits for the backend; done otherwise (refused rows are the user's to handle). */
+    internal fun resultFor(sent: SendReport, analyzed: AnalyzeReport): ListenableWorker.Result =
+        if (sent.offline || analyzed.offline) ListenableWorker.Result.retry() else ListenableWorker.Result.success()
 
     internal const val BACKOFF_SECONDS = 30L
 }
 
-/** Sends the queue with the stored server and token; see [OutboxSync.resultFor] for what it reports. */
+/** Sends the queue and analyzes the kept captures with the stored server and token; see [OutboxSync.resultFor]. */
 class OutboxSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val preferences = PreferencesStore.load(applicationContext)
+        val serverUrl = effectiveServerUrl(preferences)
         val database = cacheDatabase(applicationContext)
-        val (outbox, httpClient) = storedSettingsOutbox(
-            serverUrl = effectiveServerUrl(preferences),
-            accessToken = preferences.accessToken,
-            outbox = database.outboxDao(),
-            dayCache = database.dayCacheDao(),
+        val (outbox, outboxClient) = storedSettingsOutbox(serverUrl, preferences.accessToken, database.outboxDao(), database.dayCacheDao())
+        val (captures, captureClient) = storedSettingsCaptureQueue(
+            serverUrl,
+            preferences.accessToken,
+            database.captureDao(),
+            AndroidCapturePhotoStore(applicationContext),
         )
         return try {
-            OutboxSync.resultFor(outbox.sendAll())
+            val sent = outbox.sendAll()
+            val analyzed = captures.analyzeWaiting()
+            if (CaptureNotifications.shouldNotify(analyzed)) CaptureNotifications.showReady(applicationContext)
+            OutboxSync.resultFor(sent, analyzed)
         } finally {
-            httpClient.close()
+            outboxClient.close()
+            captureClient.close()
         }
     }
 }
