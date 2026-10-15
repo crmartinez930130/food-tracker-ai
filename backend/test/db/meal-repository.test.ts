@@ -10,6 +10,7 @@ import {
   listMealsBetween,
   listFavoriteMeals,
   listMealsByDate,
+  saveMeal,
   updateMeal,
 } from "../../src/db/meal-repository.js";
 import type { MealItemInput } from "../../src/domain/meal.js";
@@ -50,6 +51,38 @@ describe("createMeal", () => {
   it("persists an explicit occurredAt when provided", () => {
     const entry = createMeal(db, { items: [sampleItem], occurredAt: "2026-01-01T08:00:00.000Z" });
     expect(entry.occurredAt).toBe("2026-01-01T08:00:00.000Z");
+  });
+});
+
+describe("saveMeal with a clientId", () => {
+  const clientId = "0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f";
+  const occurredAt = "2026-03-05T12:00:00.000Z";
+
+  it("creates the meal with its items the first time", () => {
+    const { entry, created } = saveMeal(db, { items: [sampleItem], occurredAt, clientId });
+
+    expect(created).toBe(true);
+    expect(entry.clientId).toBe(clientId);
+    expect(entry.items.map((item) => item.name)).toEqual([sampleItem.name]);
+  });
+
+  it("returns the stored meal on a retry, without storing another", () => {
+    const first = saveMeal(db, { items: [sampleItem], occurredAt, clientId });
+
+    const retry = saveMeal(db, { items: [{ ...sampleItem, calories: 999 }], occurredAt, notes: "changed", clientId });
+
+    expect(retry.created).toBe(false);
+    expect(retry.entry).toEqual(first.entry);
+    expect(listMealsBetween(db, "2026-03-01", "2026-03-31")).toHaveLength(1);
+  });
+
+  it("always creates a meal saved without a clientId", () => {
+    const first = saveMeal(db, { items: [sampleItem], occurredAt });
+    const second = saveMeal(db, { items: [sampleItem], occurredAt });
+
+    expect([first.created, second.created]).toEqual([true, true]);
+    expect(second.entry.id).not.toBe(first.entry.id);
+    expect([first.entry.clientId, second.entry.clientId]).toEqual([null, null]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { AppDatabase } from "../db/client.js";
-import { createWaterLog, deleteWaterLog, waterForDay } from "../db/water-repository.js";
+import { deleteWaterLog, logWater, waterForDay } from "../db/water-repository.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { asyncHandler } from "./async-handler.js";
 import { invalidDateMessage, isCalendarDate } from "./dates.js";
@@ -37,9 +37,11 @@ export function createWaterRouter({ db }: WaterRouterDeps): Router {
       if (loggedAtMs > now + FUTURE_MARGIN_MS) {
         throw new ValidationError("loggedAt: can't be in the future");
       }
-      // Stored as UTC ISO whatever offset was sent, so entries sort correctly as strings.
-      const entry = createWaterLog(db, parsed.data.amountMl, new Date(loggedAtMs).toISOString());
-      res.status(201).json(entry);
+      // Stored as UTC ISO whatever offset was sent, so entries sort correctly as strings. A retry of
+      // an entry already stored (same clientId) gets that entry back with 200.
+      const loggedAt = new Date(loggedAtMs).toISOString();
+      const { entry, created } = logWater(db, parsed.data.amountMl, loggedAt, parsed.data.clientId);
+      res.status(created ? 201 : 200).json(entry);
     }),
   );
 

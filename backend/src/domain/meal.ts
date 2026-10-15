@@ -29,6 +29,8 @@ export interface MealEntry extends MealTotals {
   notes: string | null;
   mealType: MealType | null;
   isFavorite: boolean;
+  /** The client's id for this meal, set when it was saved with one (see [SaveMealInput.clientId]). */
+  clientId: string | null;
   items: MealItem[];
 }
 
@@ -37,6 +39,8 @@ export interface SaveMealInput {
   notes?: string | null;
   occurredAt?: string | null;
   mealType?: MealType | null;
+  /** Lower-case UUID the client generates per meal; a retried save with it returns the stored meal. */
+  clientId?: string | null;
 }
 
 export interface UpdateMealInput {

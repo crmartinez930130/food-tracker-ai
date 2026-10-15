@@ -33,6 +33,7 @@ function toMealEntry(
     notes: mealRow.notes,
     mealType: mealRow.mealType,
     isFavorite: mealRow.isFavorite,
+    clientId: mealRow.clientId,
     items,
     totalCalories: mealRow.totalCalories,
     totalProteinGrams: mealRow.totalProteinGrams,
@@ -54,27 +55,49 @@ function itemRowsFor(mealId: number, input: SaveMealInput["items"]): NewMealItem
   }));
 }
 
+/** A save's result: the meal, and whether this call created it or it was already stored. */
+export interface SaveMealResult {
+  entry: MealEntry;
+  created: boolean;
+}
+
+/**
+ * Saves a meal at most once per `clientId`: when a meal with it is already stored, that meal is
+ * returned and nothing is written. The lookup and the inserts run in one transaction, so a retry
+ * can't slip in between them and the meal never ends up stored without its items. Reads go
+ * through `db`: better-sqlite3 has one connection, so they see the transaction's own writes.
+ */
+export function saveMeal(db: AppDatabase, input: SaveMealInput): SaveMealResult {
+  return db.transaction((tx) => {
+    if (input.clientId) {
+      const existing = tx.select({ id: meals.id }).from(meals).where(eq(meals.clientId, input.clientId)).get();
+      if (existing) return { entry: getMealById(db, existing.id)!, created: false };
+    }
+
+    const now = new Date().toISOString();
+    const [mealRow] = tx
+      .insert(meals)
+      .values({
+        occurredAt: input.occurredAt ?? now,
+        createdAt: now,
+        notes: input.notes ?? null,
+        mealType: input.mealType ?? null,
+        clientId: input.clientId ?? null,
+        ...computeTotals(input.items),
+      })
+      .returning()
+      .all();
+
+    if (input.items.length > 0) {
+      tx.insert(mealItems).values(itemRowsFor(mealRow.id, input.items)).run();
+    }
+
+    return { entry: getMealById(db, mealRow.id)!, created: true };
+  });
+}
+
 export function createMeal(db: AppDatabase, input: SaveMealInput): MealEntry {
-  const now = new Date().toISOString();
-  const totals = computeTotals(input.items);
-
-  const [mealRow] = db
-    .insert(meals)
-    .values({
-      occurredAt: input.occurredAt ?? now,
-      createdAt: now,
-      notes: input.notes ?? null,
-      mealType: input.mealType ?? null,
-      ...totals,
-    })
-    .returning()
-    .all();
-
-  if (input.items.length > 0) {
-    db.insert(mealItems).values(itemRowsFor(mealRow.id, input.items)).run();
-  }
-
-  return getMealById(db, mealRow.id)!;
+  return saveMeal(db, input).entry;
 }
 
 export function getMealById(db: AppDatabase, id: number): MealEntry | null {

@@ -3,12 +3,12 @@ import multer from "multer";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { AppDatabase } from "../db/client.js";
 import {
-  createMeal,
   deleteMeal,
   firstMealDate,
   getMealById,
   listFavoriteMeals,
   listMealsByDate,
+  saveMeal,
   updateMeal,
 } from "../db/meal-repository.js";
 import { exportFileName, exportMealsCsv } from "../services/csv-export.js";
@@ -95,8 +95,9 @@ export function createMealsRouter({ db, anthropicClient, model, analyzeLimiter }
       if (!parsed.success) {
         throw validationErrorFrom(parsed.error);
       }
-      const entry = createMeal(db, parsed.data);
-      res.status(201).json(entry);
+      // A retry of a save already stored (same clientId) gets that meal back with 200.
+      const { entry, created } = saveMeal(db, parsed.data);
+      res.status(created ? 201 : 200).json(entry);
     }),
   );
 

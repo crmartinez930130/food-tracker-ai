@@ -43,6 +43,13 @@
       "when": 1791760196829,
       "tag": "0005_quiet_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792073599870,
+      "tag": "0006_fast_mysterio",
+      "breakpoints": true
     }
   ]
 }
