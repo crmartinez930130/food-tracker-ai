@@ -20,8 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.MealAnalysis
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.longDate
 import com.foodtracker.app.util.currentLocalDateTime
 import com.foodtracker.app.util.millisUntilNextMinute
@@ -44,6 +47,8 @@ fun HomeScreen(
     apiClient: FoodTrackerApiClient,
     dayRepository: DayRepository,
     outbox: OutboxRepository,
+    captureRepository: CaptureQueueRepository,
+    onReviewCapture: (MealAnalysis, ReviewCapture) -> Unit,
     onEditGoal: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,7 +58,17 @@ fun HomeScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         HomeHeader(now = now, onEditGoal = onEditGoal, onOpenSettings = onOpenSettings)
-        DayContent(apiClient = apiClient, dayRepository = dayRepository, outbox = outbox, date = today, today = today, onEditGoal = onEditGoal, modifier = Modifier.weight(1f))
+        DayContent(
+            apiClient = apiClient,
+            dayRepository = dayRepository,
+            outbox = outbox,
+            captureRepository = captureRepository,
+            onReviewCapture = onReviewCapture,
+            date = today,
+            today = today,
+            onEditGoal = onEditGoal,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

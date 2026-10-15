@@ -16,8 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.MealAnalysis
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.components.LocalReduceMotion
 import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.history.HistoryScreen
@@ -43,6 +46,8 @@ fun MainScreen(
     apiClient: FoodTrackerApiClient,
     dayRepository: DayRepository,
     outbox: OutboxRepository,
+    captureRepository: CaptureQueueRepository,
+    onReviewCapture: (MealAnalysis, ReviewCapture) -> Unit,
     historyMonth: LocalDate,
     onHistoryMonthChange: (LocalDate) -> Unit,
     summaryView: SummaryView,
@@ -100,6 +105,8 @@ fun MainScreen(
                         apiClient = apiClient,
                         dayRepository = dayRepository,
                         outbox = outbox,
+                        captureRepository = captureRepository,
+                        onReviewCapture = onReviewCapture,
                         onEditGoal = onEditGoal,
                         onOpenSettings = onOpenSettings,
                     )

@@ -31,4 +31,10 @@ class CacheAgeTest {
         // 22:30 in Buenos Aires is already the next day in UTC.
         assertEquals(CacheAge(date = null, time = "22:30"), cacheAge(at("2026-10-15T22:30"), LocalDate(2026, 10, 15), zone))
     }
+
+    @Test
+    fun `a capture's time is the local wall-clock one`() {
+        assertEquals("13:05", localClockTime("2026-03-05T16:05:00Z", zone))
+        assertEquals("09:07", localClockTime("2026-03-05T12:07:59.999Z", zone))
+    }
 }

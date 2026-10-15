@@ -107,13 +107,14 @@ abstract class DayCacheDao : DayCacheStore {
 
 /**
  * The app's local database: the cache of what was seen (offline-cache) and the queue of what waits
- * to be sent (offline-queue). Version 2 added the outbox and the favorites cache.
+ * to be sent (offline-queue). Version 2 added the outbox and the favorites cache; version 3 the
+ * captures kept for analysis.
  */
 @Database(
-    entities = [DayCacheRow::class, GoalCacheRow::class, OutboxRow::class, FavoritesCacheRow::class],
-    version = 2,
+    entities = [DayCacheRow::class, GoalCacheRow::class, OutboxRow::class, FavoritesCacheRow::class, CaptureRow::class],
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @ConstructedBy(CacheDatabaseConstructor::class)
 abstract class CacheDatabase : RoomDatabase() {
@@ -122,6 +123,8 @@ abstract class CacheDatabase : RoomDatabase() {
     abstract fun outboxDao(): OutboxDao
 
     abstract fun favoritesCacheDao(): FavoritesCacheDao
+
+    abstract fun captureDao(): CaptureDao
 }
 
 // The Room compiler generates the `actual` implementations.

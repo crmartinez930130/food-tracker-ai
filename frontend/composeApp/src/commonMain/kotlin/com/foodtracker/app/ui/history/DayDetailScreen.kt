@@ -12,8 +12,11 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.MealAnalysis
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.home.DayContent
 import com.foodtracker.app.ui.longDate
 import com.foodtracker.app.util.currentLocalDateTime
@@ -31,6 +34,8 @@ fun DayDetailScreen(
     apiClient: FoodTrackerApiClient,
     dayRepository: DayRepository,
     outbox: OutboxRepository,
+    captureRepository: CaptureQueueRepository,
+    onReviewCapture: (MealAnalysis, ReviewCapture) -> Unit,
     date: String,
     onBack: () -> Unit,
     onEditGoal: () -> Unit,
@@ -54,6 +59,8 @@ fun DayDetailScreen(
             apiClient = apiClient,
             dayRepository = dayRepository,
             outbox = outbox,
+            captureRepository = captureRepository,
+            onReviewCapture = onReviewCapture,
             date = date,
             today = currentLocalDateTime().date.toString(),
             onEditGoal = onEditGoal,

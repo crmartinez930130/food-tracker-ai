@@ -17,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.foodtracker.app.data.BackendConfig
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.AndroidCapturePhotoStore
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.OutboxRepository
 import com.foodtracker.app.data.cache.OutboxSync
 import com.foodtracker.app.data.cache.cacheDatabase
@@ -34,8 +36,9 @@ class MainActivity : ComponentActivity() {
     /** Bumped each time a reminder notification is tapped; App opens Capture on every new value. */
     private val openCaptureRequests = mutableIntStateOf(0)
 
-    /** Sends the offline queue whenever the app comes to the foreground (offline-queue). */
+    /** Send the offline queue and analyze kept captures whenever the app comes to the foreground (offline-queue). */
     private lateinit var outbox: OutboxRepository
+    private lateinit var captures: CaptureQueueRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +60,13 @@ class MainActivity : ComponentActivity() {
             cacheStore,
             requestSync = { OutboxSync.request(this) },
         )
+        val capturePhotos = AndroidCapturePhotoStore(this)
+        captures = CaptureQueueRepository(
+            FoodTrackerApiClient(createHttpClient()),
+            database.captureDao(),
+            capturePhotos,
+            requestSync = { OutboxSync.request(this) },
+        )
         setContent {
             // Options choices: owned here so the system bars can follow the chosen theme too.
             var preferences by remember { mutableStateOf(PreferencesStore.load(this)) }
@@ -72,6 +82,7 @@ class MainActivity : ComponentActivity() {
             }
             App(
                 database = database,
+                capturePhotos = capturePhotos,
                 requestSync = { OutboxSync.request(this) },
                 preferences = preferences,
                 onPreferencesChange = { updated ->
@@ -98,9 +109,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Whatever couldn't be sent goes now if the backend answers; otherwise WorkManager keeps trying.
+        // Whatever couldn't be sent or analyzed goes now if the backend answers; otherwise WorkManager keeps trying.
         lifecycleScope.launch {
-            if (outbox.sendAll().offline) OutboxSync.request(this@MainActivity)
+            val sent = outbox.sendAll()
+            val analyzed = captures.analyzeWaiting()
+            if (sent.offline || analyzed.offline) OutboxSync.request(this@MainActivity)
         }
     }
 

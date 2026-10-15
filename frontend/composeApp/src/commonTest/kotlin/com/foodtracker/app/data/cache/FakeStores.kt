@@ -88,3 +88,52 @@ class FakeFavoritesCache : FavoritesCacheStore {
         if (row?.serverUrl != url) row = null
     }
 }
+
+/** An in-memory [CaptureStore] with the same ordering and filters as the Room DAO. */
+class FakeCaptureStore : CaptureStore {
+    val rows = MutableStateFlow<List<CaptureRow>>(emptyList())
+    private var nextId = 1L
+
+    override fun observeDay(day: String, serverUrl: String): Flow<List<CaptureRow>> =
+        rows.map { all -> all.filter { it.day == day && it.serverUrl == serverUrl } }
+
+    override suspend fun waiting(serverUrl: String) = rows.value.filter { it.serverUrl == serverUrl && it.status == CaptureStatus.WAITING }
+
+    override suspend fun get(id: Long) = rows.value.firstOrNull { it.id == id }
+
+    override suspend fun insert(row: CaptureRow): Long {
+        val id = nextId++
+        rows.value = rows.value + row.copy(id = id)
+        return id
+    }
+
+    override suspend fun markReady(id: Long, analysisJson: String) =
+        update(id) { it.copy(status = CaptureStatus.READY, analysisJson = analysisJson, error = null, errorStatus = null) }
+
+    override suspend fun markFailed(id: Long, error: String, status: Int?) =
+        update(id) { it.copy(status = CaptureStatus.FAILED, error = error, errorStatus = status) }
+
+    override suspend fun markWaiting(id: Long) = update(id) { it.copy(status = CaptureStatus.WAITING, error = null, errorStatus = null) }
+
+    override suspend fun delete(id: Long) {
+        rows.value = rows.value.filterNot { it.id == id }
+    }
+
+    private fun update(id: Long, change: (CaptureRow) -> CaptureRow) {
+        rows.value = rows.value.map { if (it.id == id) change(it) else it }
+    }
+}
+
+class FakePhotoStore : CapturePhotoStore {
+    val files = mutableMapOf<String, ByteArray>()
+
+    override suspend fun write(name: String, bytes: ByteArray) {
+        files[name] = bytes
+    }
+
+    override suspend fun read(name: String) = files[name]
+
+    override suspend fun delete(name: String) {
+        files -= name
+    }
+}

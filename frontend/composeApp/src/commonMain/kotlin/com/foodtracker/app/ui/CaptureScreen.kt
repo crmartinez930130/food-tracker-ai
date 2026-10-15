@@ -57,6 +57,8 @@ import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealEntry
 import com.foodtracker.app.data.Portion
+import com.foodtracker.app.data.cache.AnalyzeOutcome
+import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.FavoritesRepository
 import com.foodtracker.app.data.toReviewAnalysis
 import com.foodtracker.app.ui.components.BigNumber
@@ -115,7 +117,10 @@ private enum class PhotoSource { CAMERA, GALLERY }
 fun CaptureScreen(
     apiClient: FoodTrackerApiClient,
     favoritesRepository: FavoritesRepository,
+    captureRepository: CaptureQueueRepository,
     onAnalyzed: (MealAnalysis) -> Unit,
+    /** The backend couldn't be reached: the capture was kept to be analyzed later (offline-queue). */
+    onKept: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -190,9 +195,11 @@ fun CaptureScreen(
         errorMessage = null
         scope.launch {
             try {
-                onAnalyzed(apiClient.analyzeMeal(bytes, description, portion, language))
-            } catch (e: Exception) {
-                errorMessage = errorText(Res.string.error_analyze_photo, e)
+                when (val outcome = captureRepository.analyzeOrKeep(bytes, description, portion, language)) {
+                    is AnalyzeOutcome.Analyzed -> onAnalyzed(outcome.analysis)
+                    AnalyzeOutcome.Kept -> onKept()
+                    is AnalyzeOutcome.Rejected -> errorMessage = errorText(Res.string.error_analyze_photo, outcome.error)
+                }
             } finally {
                 isAnalyzing = false
             }

@@ -90,9 +90,17 @@ import food_tracker_frontend.composeapp.generated.resources.review_save_total
 import food_tracker_frontend.composeapp.generated.resources.review_title
 import food_tracker_frontend.composeapp.generated.resources.review_total_title
 import kotlin.math.roundToInt
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+
+/** The local hour of an ISO instant, e.g. a kept capture's time. */
+@OptIn(ExperimentalTime::class)
+private fun localHourOf(isoInstant: String): Int = Instant.parse(isoInstant).toLocalDateTime(TimeZone.currentSystemDefault()).hour
 
 /** UI-only default (see design.md of the add-meal-type change) - the backend never derives a type from a timestamp. */
 private fun suggestedMealType(hourOfDay: Int): MealType = when {
@@ -139,12 +147,16 @@ fun ReviewScreen(
     onSaved: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    /** A kept capture's time and id (offline-queue); by default the meal takes the Save tap's time. */
+    occurredAt: String? = null,
+    clientId: String? = null,
 ) {
     val items = remember(initialAnalysis) {
         mutableStateListOf(*initialAnalysis.items.map { EditableItemState(it) }.toTypedArray())
     }
     var notes by remember { mutableStateOf(initialAnalysis.notes ?: "") }
-    var mealType by remember { mutableStateOf(suggestedMealType(currentLocalHour())) }
+    // A kept capture suggests the type of its own time (a lunch photo reviewed at night is still lunch).
+    var mealType by remember { mutableStateOf(suggestedMealType(occurredAt?.let { localHourOf(it) } ?: currentLocalHour())) }
     var isSaving by remember { mutableStateOf(false) }
     var showDiscardPrompt by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -157,13 +169,15 @@ fun ReviewScreen(
         errorMessage = null
         scope.launch {
             try {
-                // Stamped with this tap: sent now, or queued with it when the backend can't be reached.
+                // Stamped with this tap (or the capture's time): sent now, or queued with it when the
+                // backend can't be reached.
                 val outcome = outbox.saveMeal(
                     SaveMealRequest(
                         items = items.map { it.toMealItem() },
                         notes = notes.ifBlank { null },
-                        occurredAt = currentInstantIso(),
+                        occurredAt = occurredAt ?: currentInstantIso(),
                         mealType = mealType,
+                        clientId = clientId,
                     ),
                 )
                 when (outcome) {

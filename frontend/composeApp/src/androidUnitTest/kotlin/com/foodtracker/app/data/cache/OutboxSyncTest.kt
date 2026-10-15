@@ -7,15 +7,26 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class OutboxSyncTest {
+    private val done = AnalyzeReport(ready = 0, offline = false)
+    private val sent = SendReport(sent = 0, offline = false)
+
     @Test
-    fun `the worker retries later while the backend can't be reached`() {
-        assertEquals(ListenableWorker.Result.retry(), OutboxSync.resultFor(SendReport(sent = 1, offline = true)))
+    fun `the worker retries later while either queue waits for the backend`() {
+        assertEquals(ListenableWorker.Result.retry(), OutboxSync.resultFor(SendReport(sent = 1, offline = true), done))
+        assertEquals(ListenableWorker.Result.retry(), OutboxSync.resultFor(sent, AnalyzeReport(ready = 1, offline = true)))
+        assertEquals(ListenableWorker.Result.retry(), OutboxSync.resultFor(SendReport(0, true), AnalyzeReport(0, true)))
     }
 
     @Test
-    fun `the worker is done when nothing is left to send, refused rows included`() {
-        assertEquals(ListenableWorker.Result.success(), OutboxSync.resultFor(SendReport(sent = 2, offline = false)))
-        assertEquals(ListenableWorker.Result.success(), OutboxSync.resultFor(SendReport(sent = 0, offline = false)))
+    fun `the worker is done when nothing is left, refused rows included`() {
+        assertEquals(ListenableWorker.Result.success(), OutboxSync.resultFor(SendReport(sent = 2, offline = false), AnalyzeReport(ready = 1, offline = false)))
+        assertEquals(ListenableWorker.Result.success(), OutboxSync.resultFor(sent, done))
+    }
+
+    @Test
+    fun `the ready notice is posted only when captures became ready`() {
+        assertEquals(true, CaptureNotifications.shouldNotify(AnalyzeReport(ready = 2, offline = true)))
+        assertEquals(false, CaptureNotifications.shouldNotify(AnalyzeReport(ready = 0, offline = false)))
     }
 
     @Test

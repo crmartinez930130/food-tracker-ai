@@ -103,4 +103,25 @@ class AppStateTest {
         assertEquals(Screen.Main(MainTab.SUMMARY), state.screen)
         assertEquals(view, state.summaryView)
     }
+
+    @Test
+    fun `review opened from a kept capture carries it until leaving`() {
+        val analysis = MealAnalysis(items = emptyList(), totalCalories = 0.0, totalProteinGrams = 0.0, totalFatGrams = 0.0, totalCarbsGrams = 0.0)
+        val capture = ReviewCapture(id = 3, capturedAt = "2026-03-05T16:05:00Z", clientId = "c3")
+        val state = AppState().apply { openReview(analysis, capture) }
+
+        assertEquals(capture, state.pendingCapture)
+
+        state.openMain()
+
+        assertEquals(null, state.pendingCapture)
+        assertEquals(null, state.pendingAnalysis)
+    }
+
+    @Test
+    fun `review opened from Capture has no capture`() {
+        val analysis = MealAnalysis(items = emptyList(), totalCalories = 0.0, totalProteinGrams = 0.0, totalFatGrams = 0.0, totalCarbsGrams = 0.0)
+
+        assertEquals(null, AppState().apply { openReview(analysis) }.pendingCapture)
+    }
 }
