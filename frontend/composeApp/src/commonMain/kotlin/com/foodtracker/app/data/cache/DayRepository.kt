@@ -32,12 +32,20 @@ sealed interface RefreshResult {
 }
 
 @OptIn(ExperimentalTime::class)
-private fun epochMillisNow(): Long = Clock.System.now().toEpochMilliseconds()
+internal fun epochMillisNow(): Long = Clock.System.now().toEpochMilliseconds()
 
-private val cacheJson = Json {
+internal val cacheJson = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
 }
+
+/** [value] decoded, or null when it no longer matches the type (SerializationException is one). */
+internal inline fun <reified T> decodeOrNull(value: String): T? =
+    try {
+        cacheJson.decodeFromString<T>(value)
+    } catch (_: IllegalArgumentException) {
+        null
+    }
 
 /**
  * The days Home and the day detail show: the cached copy first ([observe]), then the backend's
@@ -55,19 +63,14 @@ class DayRepository(
         combine(store.observeDay(date), store.observeGoal()) { day, goal ->
             val url = serverUrl()
             if (day == null || goal == null || day.serverUrl != url || goal.serverUrl != url) return@combine null
-            try {
-                CachedDay(
-                    meals = cacheJson.decodeFromString(day.mealsJson),
-                    water = cacheJson.decodeFromString(day.waterJson),
-                    goal = cacheJson.decodeFromString(goal.goalJson),
-                    refreshedAt = minOf(day.refreshedAt, goal.refreshedAt),
-                )
-            } catch (_: IllegalArgumentException) {
-                // SerializationException is one: a row written in another shape is treated as missing.
-                store.deleteDay(date)
-                store.deleteGoal()
-                null
-            }
+            // Decoded apart, so a row written in another shape only takes itself out of the cache.
+            val goalValue = decodeOrNull<DailyGoal>(goal.goalJson)
+            val meals = decodeOrNull<List<MealEntry>>(day.mealsJson)
+            val water = decodeOrNull<WaterDay>(day.waterJson)
+            if (goalValue == null) store.deleteGoal()
+            if (meals == null || water == null) store.deleteDay(date)
+            if (goalValue == null || meals == null || water == null) return@combine null
+            CachedDay(meals, water, goalValue, refreshedAt = minOf(day.refreshedAt, goal.refreshedAt))
         }
 
     /** Fetches [date]'s meals and water and the goal, and caches them; never throws for a failed call. */
@@ -95,5 +98,6 @@ class DayRepository(
         }
     }
 
-    suspend fun clear() = store.clear()
+    /** Drops every cached row of a server other than [currentUrl]; called when the server changes. */
+    suspend fun deleteOtherServers(currentUrl: String) = store.deleteOtherServers(currentUrl)
 }

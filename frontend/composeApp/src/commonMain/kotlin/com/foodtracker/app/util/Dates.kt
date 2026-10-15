@@ -9,6 +9,7 @@ import kotlinx.datetime.todayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalTime::class)
 fun todayDateString(): String = Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
@@ -19,6 +20,13 @@ fun currentLocalHour(): Int = currentLocalDateTime().hour
 
 /** True when this `YYYY-MM-DD` date is strictly before [other] - e.g. whether "next day" is allowed. */
 fun String.isBeforeDay(other: String): Boolean = LocalDate.parse(this) < LocalDate.parse(other)
+
+/**
+ * The current instant as an ISO-8601 UTC timestamp, e.g. for the time a meal was logged. Whole
+ * milliseconds, like the backend's own timestamps, so they all sort and compare alike.
+ */
+@OptIn(ExperimentalTime::class)
+fun currentInstantIso(): String = Instant.fromEpochMilliseconds(Clock.System.now().toEpochMilliseconds()).toString()
 
 @OptIn(ExperimentalTime::class)
 fun currentLocalDateTime(): LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())

@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +52,10 @@ import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.data.cache.CachedDay
 import com.foodtracker.app.data.cache.DayRepository
+import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.data.cache.OutboxRow
 import com.foodtracker.app.data.cache.RefreshResult
+import com.foodtracker.app.data.cache.SaveOutcome
 import com.foodtracker.app.ui.LoadingAware
 import com.foodtracker.app.ui.MealTypeIcon
 import com.foodtracker.app.ui.components.BadgeShape
@@ -69,6 +73,7 @@ import com.foodtracker.app.ui.displayLabelOrOther
 import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.loadingPresentation
 import com.foodtracker.app.ui.shortDate
+import com.foodtracker.app.util.currentInstantIso
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_delete
 import food_tracker_frontend.composeapp.generated.resources.add_to_favorites
@@ -93,11 +98,16 @@ import food_tracker_frontend.composeapp.generated.resources.macro_fat
 import food_tracker_frontend.composeapp.generated.resources.macro_progress_grams
 import food_tracker_frontend.composeapp.generated.resources.macro_protein
 import food_tracker_frontend.composeapp.generated.resources.macros_short
+import food_tracker_frontend.composeapp.generated.resources.meal_pending
 import food_tracker_frontend.composeapp.generated.resources.no_items
 import food_tracker_frontend.composeapp.generated.resources.offline_notice_other_day
 import food_tracker_frontend.composeapp.generated.resources.offline_notice_today
+import food_tracker_frontend.composeapp.generated.resources.outbox_discard
+import food_tracker_frontend.composeapp.generated.resources.outbox_rejected
+import food_tracker_frontend.composeapp.generated.resources.outbox_retry
 import food_tracker_frontend.composeapp.generated.resources.remove_from_favorites
 import food_tracker_frontend.composeapp.generated.resources.unit_kcal
+import food_tracker_frontend.composeapp.generated.resources.unit_ml
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -131,6 +141,30 @@ private fun offlineNotice(refreshedAt: Long, today: LocalDate): String {
     }
 }
 
+/** A queued meal or glass the backend refused, with its error and what the user can do about it. */
+@Composable
+private fun RejectedEntryCard(entry: RejectedEntry, onRetry: () -> Unit, onDiscard: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val what = entry.meal?.items?.joinToString(", ") { it.name }?.ifBlank { null }
+        ?: entry.meal?.let { stringResource(Res.string.no_items) }
+        ?: stringResource(Res.string.unit_ml, entry.water?.amountMl ?: 0)
+    val reason = produceErrorText(Res.string.outbox_rejected, entry.error).orEmpty()
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = colors.errorContainer, contentColor = colors.onErrorContainer),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(what, style = MaterialTheme.typography.titleSmall)
+            Text(reason, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDiscard) { Text(stringResource(Res.string.outbox_discard)) }
+                TextButton(onClick = onRetry) { Text(stringResource(Res.string.outbox_retry)) }
+            }
+        }
+    }
+}
+
 /** Summed from the same meals the list shows, so the totals and the list can never disagree. */
 private fun List<MealEntry>.dayTotals() = DayTotals(
     calories = sumOf { it.totalCalories },
@@ -150,6 +184,7 @@ private fun List<MealEntry>.dayTotals() = DayTotals(
 fun DayContent(
     apiClient: FoodTrackerApiClient,
     dayRepository: DayRepository,
+    outbox: OutboxRepository,
     date: String,
     today: String,
     onEditGoal: () -> Unit,
@@ -166,6 +201,8 @@ fun DayContent(
     var actionError by remember(date) { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var waterError by remember { mutableStateOf<String?>(null) }
+    // The day's queued entries (offline-queue), shown as pending or rejected on top of the cached day.
+    var outboxRows by remember(date) { mutableStateOf<List<OutboxRow>>(emptyList()) }
     // Serializes water taps, so each refresh reflects every earlier log/undo (taps can be rapid).
     val waterMutex = remember { Mutex() }
     val scope = rememberCoroutineScope()
@@ -182,6 +219,10 @@ fun DayContent(
                 shownDate = null
             }
         }
+    }
+
+    LaunchedEffect(date) {
+        outbox.observeDay(date).collect { outboxRows = it }
     }
 
     LaunchedEffect(date, reloadKey) {
@@ -239,6 +280,17 @@ fun DayContent(
         }
     }
 
+    fun retryRejected(id: Long) {
+        scope.launch {
+            outbox.retry(id)
+            reloadKey++
+        }
+    }
+
+    fun discardRejected(id: Long) {
+        scope.launch { outbox.discard(id) }
+    }
+
     val problem = refreshProblem
     val loadError = when (problem) {
         is RefreshResult.Failed -> produceErrorText(Res.string.error_load_day, problem.error)
@@ -258,8 +310,10 @@ fun DayContent(
         // Dims the previous day while a day that isn't cached loads, instead of showing it unmarked.
         else -> LoadingAware(loadingPresentation(isLoading = shownDate != date, hasContent = cachedDay != null), modifier) {
             if (cachedDay != null) {
-                val meals = cachedDay.meals
-                val water = cachedDay.water
+                // The previous day (still dimmed) shows without this day's queue.
+                val shownDay = mergePending(cachedDay.meals, cachedDay.water, if (shownDate == date) outboxRows else emptyList())
+                val meals = shownDay.meals
+                val water = shownDay.water
                 val currentGoal = cachedDay.goal
                 val notice = when {
                     shownDate != date -> null
@@ -299,13 +353,19 @@ fun DayContent(
                                     glassMl = currentGoal.waterGlassMl,
                                     onAddGlass = {
                                         changeWater { day ->
-                                            apiClient.logWater(LogWaterRequest(currentGoal.waterGlassMl, loggedAtFor(day, today)))
+                                            // Today's glass carries the tap's time, so a queued one keeps it.
+                                            val loggedAt = loggedAtFor(day, today) ?: currentInstantIso()
+                                            val outcome = outbox.logWater(LogWaterRequest(currentGoal.waterGlassMl, loggedAt), day)
+                                            if (outcome is SaveOutcome.Rejected) throw outcome.error
                                         }
                                     },
                                     onUndo = {
-                                        // Picked under the lock from fresh data, so rapid undos each remove a different entry.
+                                        // A queued glass goes first, on the phone. Otherwise the newest stored one, picked
+                                        // under the lock from fresh data, so rapid undos each remove a different entry.
                                         changeWater { day ->
-                                            apiClient.getWater(day).entries.lastOrNull()?.let { apiClient.deleteWater(it.id) }
+                                            if (!outbox.undoPendingWater(day)) {
+                                                apiClient.getWater(day).entries.lastOrNull()?.let { apiClient.deleteWater(it.id) }
+                                            }
                                         }
                                     },
                                 )
@@ -317,6 +377,15 @@ fun DayContent(
                                         modifier = Modifier.padding(top = 4.dp),
                                     )
                                 }
+                            }
+                        }
+                        for (rejected in shownDay.rejected) {
+                            item(key = "rejected-${rejected.id}") {
+                                RejectedEntryCard(
+                                    entry = rejected,
+                                    onRetry = { retryRejected(rejected.id) },
+                                    onDiscard = { discardRejected(rejected.id) },
+                                )
                             }
                         }
                         if (meals.isEmpty()) {
@@ -339,6 +408,7 @@ fun DayContent(
                                 MealGroupCard(
                                     type = type,
                                     meals = mealsOfType,
+                                    pendingMealIds = shownDay.pendingMealIds,
                                     onToggleFavorite = ::toggleFavorite,
                                     onDelete = { deleteMeal(it.id) },
                                 )
@@ -455,6 +525,7 @@ private fun MacroBar(totals: DayTotals, goal: DailyGoal, modifier: Modifier = Mo
 private fun MealGroupCard(
     type: MealType?,
     meals: List<MealEntry>,
+    pendingMealIds: Set<Int>,
     onToggleFavorite: (MealEntry) -> Unit,
     onDelete: (MealEntry) -> Unit,
     modifier: Modifier = Modifier,
@@ -481,7 +552,12 @@ private fun MealGroupCard(
             }
             meals.forEachIndexed { index, meal ->
                 if (index > 0) HorizontalDivider(color = colors.outlineVariant)
-                MealRow(meal, onToggleFavorite = { onToggleFavorite(meal) }, onDelete = { onDelete(meal) })
+                MealRow(
+                    meal,
+                    isPending = meal.id in pendingMealIds,
+                    onToggleFavorite = { onToggleFavorite(meal) },
+                    onDelete = { onDelete(meal) },
+                )
             }
         }
     }
@@ -490,6 +566,7 @@ private fun MealGroupCard(
 @Composable
 private fun MealRow(
     meal: MealEntry,
+    isPending: Boolean,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -511,6 +588,16 @@ private fun MealRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        // Not stored yet: nothing to favorite or delete on the backend (offline-queue).
+        if (isPending) {
+            Text(
+                stringResource(Res.string.meal_pending),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+            return@Row
         }
         IconButton(onClick = onToggleFavorite) {
             Icon(

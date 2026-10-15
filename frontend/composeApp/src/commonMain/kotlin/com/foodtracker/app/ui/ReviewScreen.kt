@@ -51,16 +51,18 @@ import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.MealItem
 import com.foodtracker.app.data.MealType
 import com.foodtracker.app.data.SaveMealRequest
+import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.data.cache.SaveOutcome
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
 import com.foodtracker.app.ui.components.SegmentedBar
 import com.foodtracker.app.ui.components.pressBounce
+import com.foodtracker.app.util.currentInstantIso
 import com.foodtracker.app.util.currentLocalHour
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_cancel
@@ -133,7 +135,7 @@ private class EditableItemState(item: MealItem) {
 @Composable
 fun ReviewScreen(
     initialAnalysis: MealAnalysis,
-    apiClient: FoodTrackerApiClient,
+    outbox: OutboxRepository,
     onSaved: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -155,16 +157,19 @@ fun ReviewScreen(
         errorMessage = null
         scope.launch {
             try {
-                apiClient.saveMeal(
+                // Stamped with this tap: sent now, or queued with it when the backend can't be reached.
+                val outcome = outbox.saveMeal(
                     SaveMealRequest(
                         items = items.map { it.toMealItem() },
                         notes = notes.ifBlank { null },
+                        occurredAt = currentInstantIso(),
                         mealType = mealType,
                     ),
                 )
-                onSaved()
-            } catch (e: Exception) {
-                errorMessage = errorText(Res.string.error_save_meal, e)
+                when (outcome) {
+                    is SaveOutcome.Saved, SaveOutcome.Queued -> onSaved()
+                    is SaveOutcome.Rejected -> errorMessage = errorText(Res.string.error_save_meal, outcome.error)
+                }
             } finally {
                 isSaving = false
             }

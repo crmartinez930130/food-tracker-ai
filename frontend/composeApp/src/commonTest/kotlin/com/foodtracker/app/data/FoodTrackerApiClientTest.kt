@@ -491,6 +491,43 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `logWater sends the clientId and reads it back`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            """{"id":5,"amountMl":250,"loggedAt":"2026-03-05T11:00:00.000Z","clientId":"0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f"}""",
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        val entry = api.logWater(LogWaterRequest(amountMl = 250, clientId = "0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f"))
+
+        assertEquals(JsonPrimitive("0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f"), Json.parseToJsonElement(sentBody).jsonObject["clientId"])
+        assertEquals("0b6f1c3e-5d2a-4f8b-9c7e-1a2b3c4d5e6f", entry.clientId)
+    }
+
+    @Test
+    fun `saveMeal sends the clientId and occurredAt, and reads the clientId back`() = runBlocking {
+        var sentBody = ""
+        val api = capturingClient(
+            SAMPLE_MEALS_JSON.trim().removePrefix("[").removeSuffix("]").replace("\"notes\": null,", "\"notes\": null, \"clientId\": \"abc\","),
+            HttpStatusCode.Created,
+        ) { request -> sentBody = runBlocking { request.body.toByteArray().decodeToString() } }
+
+        val entry = api.saveMeal(SaveMealRequest(items = emptyList(), occurredAt = "2026-01-01T08:00:00Z", clientId = "abc"))
+
+        val sent = Json.parseToJsonElement(sentBody).jsonObject
+        assertEquals(JsonPrimitive("abc"), sent["clientId"])
+        assertEquals(JsonPrimitive("2026-01-01T08:00:00Z"), sent["occurredAt"])
+        assertEquals("abc", entry.clientId)
+    }
+
+    @Test
+    fun `entries without a clientId decode with null`() = runBlocking {
+        val meals = mockedApiClient(SAMPLE_MEALS_JSON).listMeals("2026-01-01")
+
+        assertEquals(null, meals.single().clientId)
+    }
+
+    @Test
     fun `deleteWater sends DELETE to the entry path`() = runBlocking {
         var method: HttpMethod? = null
         var path: String? = null

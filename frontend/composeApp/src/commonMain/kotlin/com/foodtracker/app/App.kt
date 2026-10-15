@@ -21,8 +21,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntOffset
 import com.foodtracker.app.data.FoodTrackerApiClient
-import com.foodtracker.app.data.cache.DayCacheStore
+import com.foodtracker.app.data.cache.CacheDatabase
 import com.foodtracker.app.data.cache.DayRepository
+import com.foodtracker.app.data.cache.FavoritesRepository
+import com.foodtracker.app.data.cache.OutboxRepository
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.AppState
 import com.foodtracker.app.ui.CaptureScreen
@@ -46,19 +48,25 @@ import com.foodtracker.app.ui.theme.FoodTrackerTheme
 import com.foodtracker.app.ui.transitionDirection
 
 /**
- * [cacheStore] is the platform's local database for the days already seen (offline-cache).
+ * [database] is the platform's local database: the days already seen (offline-cache) and what waits
+ * to be sent (offline-queue). [requestSync] asks the platform to send the queue in the background.
  * [openCaptureRequests] is bumped by the platform each time a meal reminder is tapped; every new
  * value asks to open Capture (see AppState.openCaptureFromReminder).
  */
 @Composable
 fun App(
-    cacheStore: DayCacheStore,
+    database: CacheDatabase,
+    requestSync: () -> Unit,
     preferences: AppPreferences = AppPreferences(),
     onPreferencesChange: (AppPreferences) -> Unit = {},
     openCaptureRequests: Int = 0,
 ) {
     val apiClient = remember { FoodTrackerApiClient(createHttpClient()) }
-    val dayRepository = remember(cacheStore) { DayRepository(apiClient, cacheStore) }
+    val dayRepository = remember(database) { DayRepository(apiClient, database.dayCacheDao()) }
+    val favoritesRepository = remember(database) { FavoritesRepository(apiClient, database.favoritesCacheDao()) }
+    val outboxRepository = remember(database) {
+        OutboxRepository(apiClient, database.outboxDao(), database.dayCacheDao(), requestSync)
+    }
     // Outside AppEnvironment's language key, so switching language keeps the current screen.
     val appState = remember { AppState() }
     val language = resolveLanguage(preferences.language, deviceLanguage())
@@ -82,6 +90,7 @@ fun App(
                     when (screen) {
                         is Screen.Capture -> CaptureScreen(
                             apiClient = apiClient,
+                            favoritesRepository = favoritesRepository,
                             onAnalyzed = { analysis -> appState.openReview(analysis) },
                             onCancel = { appState.openMain() },
                         )
@@ -93,7 +102,7 @@ fun App(
                             if (analysis != null) {
                                 ReviewScreen(
                                     initialAnalysis = analysis,
-                                    apiClient = apiClient,
+                                    outbox = outboxRepository,
                                     onSaved = { appState.openMain() },
                                     onCancel = { appState.openMain() },
                                 )
@@ -108,6 +117,7 @@ fun App(
                         is Screen.DayDetail -> DayDetailScreen(
                             apiClient = apiClient,
                             dayRepository = dayRepository,
+                            outbox = outboxRepository,
                             date = screen.date,
                             onBack = { appState.closeDayDetail() },
                             onEditGoal = { appState.openGoals() },
@@ -130,6 +140,7 @@ fun App(
                             onTabChange = { appState.selectMainTab(it) },
                             apiClient = apiClient,
                             dayRepository = dayRepository,
+                            outbox = outboxRepository,
                             historyMonth = appState.historyMonth,
                             onHistoryMonthChange = { appState.historyMonth = it },
                             summaryView = appState.summaryView,

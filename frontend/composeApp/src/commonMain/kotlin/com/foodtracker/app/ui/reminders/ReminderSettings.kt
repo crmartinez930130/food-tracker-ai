@@ -86,9 +86,10 @@ fun nextTriggerAt(now: Instant, hour: Int, minute: Int, timeZone: TimeZone): Ins
  * Whether a firing reminder for [meal] should notify. [mealsToday] is null when today's meals
  * couldn't be fetched in time: then remind anyway - a spurious nudge beats a missed one. Untagged
  * meals can't be attributed to breakfast/lunch/dinner, so they never suppress a reminder.
+ * [queuedToday] are the types of today's meals still waiting to be sent (offline-queue): logged too.
  */
-fun shouldShowReminder(meal: MealType, mealsToday: List<MealEntry>?): Boolean =
-    mealsToday == null || mealsToday.none { it.mealType == meal }
+fun shouldShowReminder(meal: MealType, mealsToday: List<MealEntry>?, queuedToday: List<MealType?> = emptyList()): Boolean =
+    meal !in queuedToday && (mealsToday == null || mealsToday.none { it.mealType == meal })
 
 /** The notification's question for [meal], e.g. "¿Ya registraste tu almuerzo?" (only reminder meals). */
 fun reminderTitle(meal: MealType): StringResource = when (meal) {
