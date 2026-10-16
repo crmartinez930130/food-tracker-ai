@@ -11,7 +11,7 @@ Tracked as GitHub issue #76: https://github.com/crmartinez930130/food-tracker-ai
 - **Android 13 and later:** the app's language becomes Android's per-app language (`LocaleManager.setApplicationLocales`), set from the resolved language whenever it changes. Android itself then applies it to every configuration it re-applies, so nothing can reset it.
 - **Changing the language in Options:** the activity handles `locale|layoutDirection` changes itself (manifest `configChanges`), so it isn't recreated and the user stays on Options, as today.
 - **The phone's language:** with Android's per-app language set, `Resources.getSystem()` no longer reports the phone's language. "Phone language" reads `LocaleManager.getSystemLocales()` instead, and the app re-reads it whenever it comes back to the foreground, so changing the phone's language still applies.
-- **Android 8 to 12:** unchanged. The current override stays as it is, so the bug may persist there. It couldn't be reproduced on those versions, because no emulator image for them is installed.
+- **Android 8 to 12:** unchanged. The current override stays as it is, so the bug may persist there. It couldn't be reproduced on those versions, because no emulator image for them is installed. The user accepted this scope on 2026-10-16, in PR #81 (#76's criterion now says Android 13+), and the older versions go to a follow-up issue.
 - iOS is unchanged.
 
 ## Capabilities
