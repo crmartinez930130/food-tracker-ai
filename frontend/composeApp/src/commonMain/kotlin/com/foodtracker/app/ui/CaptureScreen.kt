@@ -64,6 +64,8 @@ import com.foodtracker.app.data.Portion
 import com.foodtracker.app.data.cache.AnalyzeOutcome
 import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.FavoritesRepository
+import com.foodtracker.app.data.cache.FavoritesView
+import com.foodtracker.app.data.cache.favoritesView
 import com.foodtracker.app.data.toReviewAnalysis
 import com.foodtracker.app.ui.components.BigNumber
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
@@ -72,6 +74,7 @@ import com.foodtracker.app.ui.components.ExpressiveLoadingIndicator
 import com.foodtracker.app.ui.components.IllustrationKind
 import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.settings.LocalAppLocale
+import com.foodtracker.app.util.currentLocalDateTime
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.capture_analyze
 import food_tracker_frontend.composeapp.generated.resources.capture_analyzing
@@ -102,6 +105,7 @@ import food_tracker_frontend.composeapp.generated.resources.capture_title
 import food_tracker_frontend.composeapp.generated.resources.error_analyze_photo
 import food_tracker_frontend.composeapp.generated.resources.error_load_favorites
 import food_tracker_frontend.composeapp.generated.resources.error_update_favorite
+import food_tracker_frontend.composeapp.generated.resources.offline_favorites_not_loaded
 import food_tracker_frontend.composeapp.generated.resources.ic_close
 import food_tracker_frontend.composeapp.generated.resources.ic_mic
 import food_tracker_frontend.composeapp.generated.resources.ic_photo_camera
@@ -149,7 +153,7 @@ fun CaptureScreen(
     var description by remember { mutableStateOf("") }
     var portion by remember { mutableStateOf<Portion?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var favorites by remember { mutableStateOf<List<MealEntry>?>(null) }
+    var favorites by remember { mutableStateOf(FavoritesView(null)) }
     var favoritesError by remember { mutableStateOf<String?>(null) }
     var favoritesReloadKey by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
@@ -157,13 +161,11 @@ fun CaptureScreen(
     LaunchedEffect(favoritesReloadKey) {
         favoritesError = null
         // The copy from the last load first, so favorites can be re-logged offline (offline-queue).
-        if (favorites == null) favorites = favoritesRepository.cached()
-        try {
-            favorites = favoritesRepository.load()
-        } catch (e: Exception) {
-            // Non-blocking: the photo options keep working without the list. With a copy shown, no error.
-            if (favorites == null) favoritesError = errorText(Res.string.error_load_favorites, e)
-        }
+        val cached = favoritesRepository.cached()
+        if (favorites.favorites == null && cached != null) favorites = FavoritesView(cached.value)
+        // Non-blocking: the photo options keep working without the list.
+        favorites = favoritesView(cached, favoritesRepository.refresh())
+        favorites.error?.let { favoritesError = errorText(Res.string.error_load_favorites, it) }
     }
 
     fun removeFavorite(meal: MealEntry) {
@@ -401,7 +403,7 @@ fun CaptureScreen(
             if (currentPhoto == null && ingredients.isEmpty() && description.isBlank()) {
                 Spacer(Modifier.height(32.dp))
                 FavoritesSection(
-                    favorites = favorites,
+                    view = favorites,
                     error = favoritesError,
                     // Re-logging skips analysis entirely: the saved foods go straight to review.
                     onRelog = { meal -> onAnalyzed(meal.toReviewAnalysis()) },
@@ -528,17 +530,25 @@ private fun PhotoTile(
 
 @Composable
 private fun FavoritesSection(
-    favorites: List<MealEntry>?,
+    view: FavoritesView,
     error: String?,
     onRelog: (MealEntry) -> Unit,
     onRemove: (MealEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+        val favorites = view.favorites
         Text(stringResource(Res.string.capture_favorites), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(12.dp))
+        view.offlineSince?.let { refreshedAt ->
+            if (error == null) {
+                FavoritesNotice(offlineNotice(refreshedAt, currentLocalDateTime().date))
+                Spacer(Modifier.height(8.dp))
+            }
+        }
         when {
             error != null -> Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            view.notLoaded -> FavoritesNotice(stringResource(Res.string.offline_favorites_not_loaded))
             favorites == null -> ExpressiveLoadingIndicator(size = 32.dp)
             favorites.isEmpty() -> Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 EmptyIllustration(IllustrationKind.STAR)
@@ -557,6 +567,12 @@ private fun FavoritesSection(
             }
         }
     }
+}
+
+/** A line about where the list comes from: informative, not an error. */
+@Composable
+private fun FavoritesNotice(text: String) {
+    Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
