@@ -1,9 +1,12 @@
 package com.foodtracker.app.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -81,6 +85,12 @@ import food_tracker_frontend.composeapp.generated.resources.capture_dictate
 import food_tracker_frontend.composeapp.generated.resources.capture_dictation_prompt
 import food_tracker_frontend.composeapp.generated.resources.capture_favorites
 import food_tracker_frontend.composeapp.generated.resources.capture_favorites_empty
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredient_camera
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredient_gallery
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredient_photo
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredient_remove
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredients_hint
+import food_tracker_frontend.composeapp.generated.resources.capture_ingredients_title
 import food_tracker_frontend.composeapp.generated.resources.capture_or_describe
 import food_tracker_frontend.composeapp.generated.resources.capture_photo_size
 import food_tracker_frontend.composeapp.generated.resources.capture_portion
@@ -130,6 +140,10 @@ fun CaptureScreen(
     // The camera is an in-place mode of this screen, so a captured photo lands in the same state the
     // gallery picker writes to.
     var showCamera by remember { mutableStateOf(false) }
+    // Optional photos of what went into the meal (labels, packages, amounts), sent with the analysis.
+    var ingredients by remember { mutableStateOf<List<ByteArray>>(emptyList()) }
+    // Whether the open camera adds an ingredient instead of taking the meal photo.
+    var cameraForIngredient by remember { mutableStateOf(false) }
     var isAnalyzing by remember { mutableStateOf(false) }
     // Optional context for the analysis (and the only input when logging without a photo).
     var description by remember { mutableStateOf("") }
@@ -163,13 +177,23 @@ fun CaptureScreen(
         }
     }
 
+    // Photos are reduced to what the backend analyzes before anything else, so six of them stay a small upload.
     fun usePhoto(bytes: ByteArray, source: PhotoSource) {
-        photo = bytes
         photoSource = source
         errorMessage = null
+        scope.launch { photo = withContext(Dispatchers.Default) { bytes.downscaledJpeg() } }
+    }
+
+    fun addIngredients(added: List<ByteArray>) {
+        errorMessage = null
+        scope.launch {
+            val reduced = withContext(Dispatchers.Default) { added.map { it.downscaledJpeg() } }
+            ingredients = (ingredients + reduced).take(MAX_INGREDIENT_PHOTOS)
+        }
     }
 
     val pickerLauncher = rememberImagePickerLauncher { bytes -> usePhoto(bytes, PhotoSource.GALLERY) }
+    val ingredientPicker = rememberMultiImagePickerLauncher(MAX_INGREDIENT_PHOTOS - ingredients.size) { addIngredients(it) }
 
     LaunchedEffect(photo) {
         val bytes = photo
@@ -189,13 +213,14 @@ fun CaptureScreen(
     )
 
     fun analyze() {
-        if (!canAnalyze(hasPhoto = photo != null, description = description)) return
+        if (!canAnalyze(hasPhoto = photo != null, description = description, hasIngredients = ingredients.isNotEmpty())) return
         val bytes = photo
+        val ingredientPhotos = ingredients
         isAnalyzing = true
         errorMessage = null
         scope.launch {
             try {
-                when (val outcome = captureRepository.analyzeOrKeep(bytes, description, portion, language)) {
+                when (val outcome = captureRepository.analyzeOrKeep(bytes, description, portion, language, ingredientPhotos)) {
                     is AnalyzeOutcome.Analyzed -> onAnalyzed(outcome.analysis)
                     AnalyzeOutcome.Kept -> onKept()
                     is AnalyzeOutcome.Rejected -> errorMessage = errorText(Res.string.error_analyze_photo, outcome.error)
@@ -209,13 +234,13 @@ fun CaptureScreen(
     if (showCamera) {
         CameraCapture(
             onCaptured = { bytes ->
-                usePhoto(bytes, PhotoSource.CAMERA)
+                if (cameraForIngredient) addIngredients(listOf(bytes)) else usePhoto(bytes, PhotoSource.CAMERA)
                 showCamera = false
             },
             onCancel = { showCamera = false },
             onUseGallery = {
                 showCamera = false
-                pickerLauncher.launch()
+                if (cameraForIngredient) ingredientPicker.launch() else pickerLauncher.launch()
             },
         )
         return
@@ -262,7 +287,10 @@ fun CaptureScreen(
                         label = stringResource(Res.string.capture_take_photo),
                         icon = Res.drawable.ic_photo_camera,
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        onClick = { showCamera = true },
+                        onClick = {
+                            cameraForIngredient = false
+                            showCamera = true
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     PhotoTile(
@@ -291,6 +319,7 @@ fun CaptureScreen(
                         onClick = {
                             if (retake) {
                                 photo = null
+                                cameraForIngredient = false
                                 showCamera = true
                             } else {
                                 pickerLauncher.launch()
@@ -308,6 +337,18 @@ fun CaptureScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
+            IngredientsSection(
+                photos = ingredients,
+                enabled = !isAnalyzing,
+                onAddFromCamera = {
+                    cameraForIngredient = true
+                    showCamera = true
+                },
+                onAddFromGallery = { ingredientPicker.launch() },
+                onRemove = { index -> ingredients = ingredients.filterIndexed { i, _ -> i != index } },
+            )
 
             Spacer(Modifier.height(24.dp))
             if (currentPhoto == null) {
@@ -344,7 +385,7 @@ fun CaptureScreen(
                 val analyzeInteraction = remember { MutableInteractionSource() }
                 Button(
                     onClick = { analyze() },
-                    enabled = canAnalyze(hasPhoto = currentPhoto != null, description = description),
+                    enabled = canAnalyze(hasPhoto = currentPhoto != null, description = description, hasIngredients = ingredients.isNotEmpty()),
                     shape = CircleShape,
                     interactionSource = analyzeInteraction,
                     modifier = Modifier.fillMaxWidth().height(56.dp).pressBounce(analyzeInteraction),
@@ -357,7 +398,7 @@ fun CaptureScreen(
             }
 
             // Favorites are the "nothing chosen yet" shortcut; once a photo or description exists they'd compete.
-            if (currentPhoto == null && description.isBlank()) {
+            if (currentPhoto == null && ingredients.isEmpty() && description.isBlank()) {
                 Spacer(Modifier.height(32.dp))
                 FavoritesSection(
                     favorites = favorites,
@@ -368,6 +409,87 @@ fun CaptureScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Optional photos of the ingredients used (offline-safe like the meal photo): thumbnails that can be
+ * removed, and camera/gallery tiles while there's room for more.
+ */
+@Composable
+private fun IngredientsSection(
+    photos: List<ByteArray>,
+    enabled: Boolean,
+    onAddFromCamera: () -> Unit,
+    onAddFromGallery: () -> Unit,
+    onRemove: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.capture_ingredients_title), style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(Res.string.capture_ingredients_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()),
+        ) {
+            photos.forEachIndexed { index, bytes ->
+                IngredientThumbnail(bytes, index, enabled, onRemove = { onRemove(index) })
+            }
+            if (enabled && photos.size < MAX_INGREDIENT_PHOTOS) {
+                AddIngredientTile(stringResource(Res.string.capture_ingredient_camera), Res.drawable.ic_photo_camera, onAddFromCamera)
+                AddIngredientTile(stringResource(Res.string.capture_ingredient_gallery), Res.drawable.ic_photo_library, onAddFromGallery)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IngredientThumbnail(bytes: ByteArray, index: Int, enabled: Boolean, onRemove: () -> Unit) {
+    val bitmap by produceState<ImageBitmap?>(null, bytes) {
+        value = withContext(Dispatchers.Default) { bytes.decodePreviewBitmap(maxDimension = 240) }
+    }
+    Box(Modifier.size(72.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        bitmap?.let {
+            Image(
+                it,
+                contentDescription = stringResource(Res.string.capture_ingredient_photo, index + 1),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (enabled) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.align(Alignment.TopEnd).size(28.dp).padding(2.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), CircleShape),
+            ) {
+                Icon(
+                    painterResource(Res.drawable.ic_close),
+                    contentDescription = stringResource(Res.string.capture_ingredient_remove),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddIngredientTile(label: String, icon: DrawableResource, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .size(72.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .clickable(onClick = onClick),
+    ) {
+        Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }
 

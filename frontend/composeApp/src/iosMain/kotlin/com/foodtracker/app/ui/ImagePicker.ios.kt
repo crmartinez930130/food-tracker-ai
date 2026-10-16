@@ -13,3 +13,7 @@ actual fun rememberImagePickerLauncher(onImagePicked: (ByteArray) -> Unit): Imag
         }
     }
 }
+
+@Composable
+actual fun rememberMultiImagePickerLauncher(maxItems: Int, onImagesPicked: (List<ByteArray>) -> Unit): ImagePickerLauncher =
+    rememberImagePickerLauncher { bytes -> onImagesPicked(listOf(bytes)) }

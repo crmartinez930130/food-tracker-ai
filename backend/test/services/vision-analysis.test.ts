@@ -108,7 +108,7 @@ describe("analysis language", () => {
     const prompts: string[] = [];
     const client = fakeClient(async (request: unknown) => {
       const content = (request as { messages: { content: { type: string; text?: string }[] }[] }).messages[0].content;
-      prompts.push(content.find((part) => part.type === "text")!.text!);
+      prompts.push(content.filter((part) => part.type === "text").at(-1)!.text!);
       return {
         parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
         usage: { input_tokens: 1, output_tokens: 1 },
@@ -181,17 +181,34 @@ describe("description and portion", () => {
     expect(sent[0][0].text).toBe(analysisPrompt({ language: "en", hasImage: false, description: "an apple", portion: "large" }));
   });
 
-  it("sends the image first and then the prompt when there is a photo", async () => {
+  it("sends the labelled image first and then the prompt when there is a photo", async () => {
     const sent: SentContent[] = [];
 
     await analyzeMeal(recordingClient(sent), { image: sampleImage, description: "sin aceite" }, "claude-opus-5");
 
-    expect(sent[0].map((part) => part.type)).toEqual(["image", "text"]);
-    expect(sent[0][1].text).toContain("<description>sin aceite</description>");
+    expect(sent[0].map((part) => part.type)).toEqual(["text", "image", "text"]);
+    expect(sent[0][0].text).toBe("Photo of the meal:");
+    expect(sent[0][2].text).toContain("<description>sin aceite</description>");
+  });
+
+  it("labels each ingredient photo with its position and asks to use them without double counting", async () => {
+    const sent: SentContent[] = [];
+
+    await analyzeMeal(recordingClient(sent), { image: sampleImage, ingredients: [sampleImage, sampleImage] }, "claude-opus-5");
+
+    expect(sent[0].map((part) => part.type)).toEqual(["text", "image", "text", "image", "text", "image", "text"]);
+    expect(sent[0][2].text).toBe("Photo of an ingredient used to prepare it (1 of 2):");
+    expect(sent[0][4].text).toBe("Photo of an ingredient used to prepare it (2 of 2):");
+    expect(sent[0][6].text).toContain("Never list an ingredient twice");
+  });
+
+  it("only mentions ingredients in the prompt when there are ingredient photos", () => {
+    expect(analysisPrompt({ language: "en", hasImage: true, ingredientCount: 1 })).toContain("nutrition labels");
+    expect(analysisPrompt({ language: "en", hasImage: true })).not.toContain("nutrition labels");
   });
 
   it("refuses to analyze nothing", async () => {
-    await expect(analyzeMeal(recordingClient([]), {}, "claude-opus-5")).rejects.toThrow(/image, a description, or both/);
+    await expect(analyzeMeal(recordingClient([]), {}, "claude-opus-5")).rejects.toThrow(/image, ingredient photos, a description, or a mix/);
   });
 });
 

@@ -22,6 +22,12 @@ class CaptureLogicTest {
     fun `nothing or a blank description can't be analyzed`() {
         assertFalse(canAnalyze(hasPhoto = false, description = ""))
         assertFalse(canAnalyze(hasPhoto = false, description = "   \n"))
+        assertFalse(canAnalyze(hasPhoto = false, description = "", hasIngredients = false))
+    }
+
+    @Test
+    fun `ingredient photos alone are enough to analyze`() {
+        assertTrue(canAnalyze(hasPhoto = false, description = "", hasIngredients = true))
     }
 
     @Test

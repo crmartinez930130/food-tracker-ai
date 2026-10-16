@@ -121,6 +121,17 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `analyzeMeal sends each ingredient photo as an ingredients part`() {
+        val body = analyzeBody {
+            it.analyzeMeal(null, "yogur", null, "es", ingredients = listOf(byteArrayOf(1), byteArrayOf(2), byteArrayOf(3)))
+        }
+
+        assertEquals(3, Regex("name=\"?ingredients\"?").findAll(body).count())
+        assertTrue("ingredient-3.jpg" in body)
+        assertTrue(!body.contains("name=\"photo\"") && !body.contains("name=photo"))
+    }
+
+    @Test
     fun `analyzeMeal without a photo sends only the text fields`() {
         val body = analyzeBody { it.analyzeMeal(null, "una manzana", null, "es") }
 

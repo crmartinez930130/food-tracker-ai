@@ -14,7 +14,11 @@ fun captureBackAction(hasPhotoToConfirm: Boolean, isAnalyzing: Boolean): Capture
 const val MAX_DESCRIPTION_LENGTH = 500
 
 /** Whether there is something to analyze: a photo, a non-blank description, or both. */
-fun canAnalyze(hasPhoto: Boolean, description: String): Boolean = hasPhoto || description.isNotBlank()
+fun canAnalyze(hasPhoto: Boolean, description: String, hasIngredients: Boolean = false): Boolean =
+    hasPhoto || hasIngredients || description.isNotBlank()
+
+/** Most ingredient photos one analysis takes (the backend's limit); each adds to the analysis cost. */
+const val MAX_INGREDIENT_PHOTOS = 5
 
 /** Appends dictated text to what the user already typed, separated by a space, within the limit. */
 fun appendDictation(current: String, dictated: String): String {

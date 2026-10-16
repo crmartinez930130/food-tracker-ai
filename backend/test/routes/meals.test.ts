@@ -21,6 +21,112 @@ const sampleItem = {
   carbsGrams: 0,
 };
 
+describe("POST /api/meals/analyze ingredient photos", () => {
+  type Content = { type: string; text?: string }[];
+  const emptyAnalysis = {
+    parsed_output: { items: [], totalCalories: 0, totalProteinGrams: 0, totalFatGrams: 0, totalCarbsGrams: 0 },
+    usage: { input_tokens: 1, output_tokens: 1 },
+  };
+
+  function appRecording() {
+    const calls: Content[] = [];
+    const { app } = buildTestApp(async (request: unknown) => {
+      calls.push((request as { messages: { content: Content }[] }).messages[0].content);
+      return emptyAnalysis;
+    });
+    return { app, calls };
+  }
+
+  it("sends the meal photo and each ingredient photo, labelled, before the prompt", async () => {
+    const { app, calls } = appRecording();
+    const jpeg = await sampleJpeg();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", jpeg, { filename: "meal.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", jpeg, { filename: "a.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", jpeg, { filename: "b.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    const content = calls[0];
+    expect(content.filter((part) => part.type === "image")).toHaveLength(3);
+    expect(content.filter((part) => part.type === "text").map((part) => part.text)).toEqual([
+      "Photo of the meal:",
+      "Photo of an ingredient used to prepare it (1 of 2):",
+      "Photo of an ingredient used to prepare it (2 of 2):",
+      expect.stringContaining("ingredients used to prepare the meal"),
+    ]);
+  });
+
+  it("analyzes ingredient photos and a description without a meal photo", async () => {
+    const { app, calls } = appRecording();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .field("description", "yogur con granola")
+      .attach("ingredients", await sampleJpeg(), { filename: "label.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    const prompt = calls[0].filter((part) => part.type === "text").at(-1)!.text!;
+    expect(prompt).toContain("From the user's description");
+    expect(prompt).toContain("ingredients used to prepare the meal");
+  });
+
+  it("rejects a sixth ingredient photo without calling the analysis", async () => {
+    const { app, calls } = appRecording();
+    const jpeg = await sampleJpeg();
+    let req = request(app).post("/api/meals/analyze");
+    for (let i = 0; i < 6; i++) req = req.attach("ingredients", jpeg, { filename: `i${i}.jpg`, contentType: "image/jpeg" });
+
+    const res = await req;
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Too many ingredient photos; the limit is 5");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects an ingredient file that isn't an image, without calling the analysis", async () => {
+    const { app, calls } = appRecording();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", Buffer.from("%PDF-1.7 not a photo"), { filename: "label.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Unsupported image format; only JPEG and PNG are accepted");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("answers 413 naming the ingredient photo when one is over the size limit", async () => {
+    const { app, calls } = appRecording();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", Buffer.alloc(16 * 1024 * 1024, 0xff), { filename: "big.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toBe("Ingredient photo too large; the limit is 15 MB");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects photos over 40 MB together, without calling the analysis", async () => {
+    const { app, calls } = appRecording();
+    const big = Buffer.alloc(14 * 1024 * 1024, 0xff);
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", big, { filename: "meal.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", big, { filename: "a.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", big, { filename: "b.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Photos too large together; the limit is 40 MB");
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe("POST /api/meals/analyze", () => {
   it("returns a structured analysis for a valid JPEG without persisting a meal", async () => {
     const parsedAnalysis = {
@@ -523,7 +629,7 @@ describe("POST /api/meals/analyze language", () => {
     let prompt = "";
     const { app } = buildTestApp(async (request: unknown) => {
       const content = (request as { messages: { content: { type: string; text?: string }[] }[] }).messages[0].content;
-      prompt = content.find((part) => part.type === "text")!.text!;
+      prompt = content.filter((part) => part.type === "text").at(-1)!.text!;
       return emptyAnalysis;
     });
     let req = request(app).post("/api/meals/analyze");
@@ -567,7 +673,7 @@ describe("POST /api/meals/analyze description and portion", () => {
     for (const [name, value] of Object.entries(fields)) req = req.field(name, value);
     if (withPhoto) req = req.attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" });
     const res = await req;
-    const prompt = calls[0]?.find((part) => part.type === "text")?.text ?? "";
+    const prompt = calls[0]?.filter((part) => part.type === "text").at(-1)?.text ?? "";
     return { res, calls, prompt, types: calls[0]?.map((part) => part.type) ?? [] };
   }
 
@@ -575,7 +681,7 @@ describe("POST /api/meals/analyze description and portion", () => {
     const { res, types, prompt } = await analyze({}, true);
 
     expect(res.status).toBe(200);
-    expect(types).toEqual(["image", "text"]);
+    expect(types).toEqual(["text", "image", "text"]);
     expect(prompt).not.toContain("<description>");
   });
 
@@ -604,7 +710,7 @@ describe("POST /api/meals/analyze description and portion", () => {
     const { res, calls } = await analyze(fields, false);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Provide a photo, a description, or both");
+    expect(res.body.error).toBe("Provide a photo, ingredient photos, a description, or a mix");
     expect(calls).toHaveLength(0);
   });
 

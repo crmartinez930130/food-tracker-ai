@@ -66,6 +66,8 @@ class FoodTrackerApiClient(
         description: String?,
         portion: Portion?,
         language: String,
+        /** Photos of ingredients used to prepare the meal (labels, packages, raw amounts); at most 5. */
+        ingredients: List<ByteArray> = emptyList(),
         filename: String = "meal.jpg",
     ): MealAnalysis {
         return httpClient
@@ -82,6 +84,16 @@ class FoodTrackerApiClient(
                             Headers.build {
                                 append(HttpHeaders.ContentType, "image/jpeg")
                                 append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                            },
+                        )
+                    }
+                    ingredients.forEachIndexed { index, bytes ->
+                        append(
+                            "ingredients",
+                            bytes,
+                            Headers.build {
+                                append(HttpHeaders.ContentType, "image/jpeg")
+                                append(HttpHeaders.ContentDisposition, "filename=\"ingredient-${index + 1}.jpg\"")
                             },
                         )
                     }
