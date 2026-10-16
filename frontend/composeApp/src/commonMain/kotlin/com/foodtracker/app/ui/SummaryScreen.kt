@@ -28,10 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.DailyTotals
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.LogWeightRequest
 import com.foodtracker.app.data.WeightEntry
+import com.foodtracker.app.data.cache.Refreshed
+import com.foodtracker.app.data.cache.SnapshotRepository
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.ConnectedButtonGroup
 import com.foodtracker.app.ui.components.SegmentedBar
@@ -71,6 +74,7 @@ import food_tracker_frontend.composeapp.generated.resources.summary_week
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -89,9 +93,18 @@ private val SummaryPeriod.nextLabel: StringResource
  * Trends over a week or a month. The single-day view lives on Home; tapping a chart bar opens
  * that day's detail through [onOpenDay]. [view] lives in AppState so it survives that round trip.
  */
+/** What Summary keeps of a period's calories (offline-cache): each day's totals and the goal's calories. */
+@Serializable
+data class SummaryCopy(val days: List<DailyTotals>, val goalCalories: Double)
+
+/** What Summary keeps of a period's weight (offline-cache): its entries and the latest weight known then. */
+@Serializable
+data class WeightCopy(val entries: List<WeightEntry>, val lastKnownWeight: Double?)
+
 @Composable
 fun SummaryScreen(
     apiClient: FoodTrackerApiClient,
+    snapshots: SnapshotRepository,
     view: SummaryView,
     onViewChange: (SummaryView) -> Unit,
     onOpenDay: (String) -> Unit,
@@ -114,6 +127,9 @@ fun SummaryScreen(
     // An empty list is a valid result, so "has content" means "loaded at least once".
     var weightLoadedOnce by remember { mutableStateOf(false) }
     var weightReloadKey by remember { mutableIntStateOf(0) }
+    // Offline-cache: what the calorie and the weight copies shown say about themselves.
+    var notice by remember { mutableStateOf<SnapshotNotice?>(null) }
+    var weightNotice by remember { mutableStateOf<SnapshotNotice?>(null) }
     val scope = rememberCoroutineScope()
     val periodDays = (0 until period.days).map { startDate.plusDays(it) }
 
@@ -122,40 +138,81 @@ fun SummaryScreen(
         onViewChange(view.copy(endDate = date.takeIf { it.isBeforeDay(today) }))
     }
 
-    LaunchedEffect(startDate, endDate) {
+    // Back in the foreground (e.g. home again): refresh what's shown. The first resume is the opening itself.
+    var reloadKey by remember { mutableIntStateOf(0) }
+    var resumedBefore by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        if (resumedBefore) reloadKey++ else resumedBefore = true
+        onPauseOrDispose {}
+    }
+
+    LaunchedEffect(startDate, endDate, reloadKey) {
         isLoading = true
         errorMessage = null
-        try {
-            days = apiClient.rangeSummary(startDate, endDate)
-            goalCalories = apiClient.getGoals().targetCalories
-        } catch (e: Exception) {
-            errorMessage = errorText(Res.string.error_load_summary, e)
-        } finally {
+        notice = null
+        val key = "summary:$startDate:$endDate"
+        val cached = snapshots.cached(key, SummaryCopy.serializer())
+        if (cached != null) {
+            days = cached.value.days
+            goalCalories = cached.value.goalCalories
             isLoading = false
         }
+        val refreshed = snapshots.refresh(key, SummaryCopy.serializer()) {
+            SummaryCopy(apiClient.rangeSummary(startDate, endDate), apiClient.getGoals().targetCalories)
+        }
+        when (refreshed) {
+            is Refreshed.Fresh -> {
+                days = refreshed.value.days
+                goalCalories = refreshed.value.goalCalories
+            }
+            is Refreshed.Offline -> notice = if (cached != null) SnapshotNotice.Offline(cached.refreshedAt) else SnapshotNotice.NotLoaded
+            is Refreshed.Failed -> {
+                val text = errorText(Res.string.error_load_summary, refreshed.error)
+                if (cached != null) notice = SnapshotNotice.Error(text) else errorMessage = text
+            }
+        }
+        isLoading = false
     }
 
     // Weight reloads on its own key, so logging or deleting doesn't refetch the calorie chart.
-    LaunchedEffect(startDate, endDate, weightReloadKey) {
+    LaunchedEffect(startDate, endDate, weightReloadKey, reloadKey) {
         weightError = null
+        weightNotice = null
         isWeightLoading = true
-        try {
-            val entries = apiClient.listWeight(startDate, endDate)
-            weightEntries = entries
+        val key = "weight:$startDate:$endDate"
+        val cached = snapshots.cached(key, WeightCopy.serializer())
+        if (cached != null) {
+            weightEntries = cached.value.entries
             weightDays = periodDays
+            lastKnownWeight = cached.value.lastKnownWeight
+            weightLoadedOnce = true
+            isWeightLoading = false
+        }
+        val refreshed = snapshots.refresh(key, WeightCopy.serializer()) {
+            val entries = apiClient.listWeight(startDate, endDate)
             // For the log dialog's pre-fill: the latest entry overall. When the period ends today and
             // has entries, its last one already is (there are no future entries), so skip the lookup.
-            lastKnownWeight = if (endDate == today && entries.isNotEmpty()) {
+            val lastKnown = if (endDate == today && entries.isNotEmpty()) {
                 entries.last().weightKg
             } else {
                 apiClient.listWeight(today.plusDays(-365), today).lastOrNull()?.weightKg
             }
-            weightLoadedOnce = true
-        } catch (e: Exception) {
-            weightError = errorText(Res.string.error_load_weight, e)
-        } finally {
-            isWeightLoading = false
+            WeightCopy(entries, lastKnown)
         }
+        when (refreshed) {
+            is Refreshed.Fresh -> {
+                weightEntries = refreshed.value.entries
+                weightDays = periodDays
+                lastKnownWeight = refreshed.value.lastKnownWeight
+                weightLoadedOnce = true
+            }
+            is Refreshed.Offline -> weightNotice = if (cached != null) SnapshotNotice.Offline(cached.refreshedAt) else SnapshotNotice.NotLoaded
+            is Refreshed.Failed -> {
+                val text = errorText(Res.string.error_load_weight, refreshed.error)
+                if (cached != null) weightNotice = SnapshotNotice.Error(text) else weightError = text
+            }
+        }
+        isWeightLoading = false
     }
 
     fun changeWeight(action: suspend () -> Unit) {
@@ -203,11 +260,15 @@ fun SummaryScreen(
             }
         }
 
+        val todayDate = LocalDate.parse(today)
+        val shownNotice = notice
         when {
             errorMessage != null -> Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
+            shownNotice == SnapshotNotice.NotLoaded -> SnapshotNoticeText(shownNotice, todayDate)
             // Dims the previous period while the new one loads, instead of showing it unmarked.
             else -> LoadingAware(loadingPresentation(isLoading, hasContent = days.isNotEmpty())) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    shownNotice?.let { SnapshotNoticeText(it, todayDate) }
                     StatCards(periodStats(days, goalCalories))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -226,7 +287,10 @@ fun SummaryScreen(
         }
 
         weightError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        LoadingAware(loadingPresentation(isWeightLoading, hasContent = weightLoadedOnce)) {
+        // Said once: the weight section repeats only what the calorie part above doesn't (an error, or
+        // a notice while the calories are current).
+        weightNotice?.takeIf { it is SnapshotNotice.Error || shownNotice == null }?.let { SnapshotNoticeText(it, todayDate) }
+        if (weightNotice != SnapshotNotice.NotLoaded) LoadingAware(loadingPresentation(isWeightLoading, hasContent = weightLoadedOnce)) {
             WeightSection(
                 periodDays = weightDays,
                 entries = weightEntries,

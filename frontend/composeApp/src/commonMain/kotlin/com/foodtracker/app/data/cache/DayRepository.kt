@@ -2,6 +2,7 @@ package com.foodtracker.app.data.cache
 
 import com.foodtracker.app.data.ApiException
 import com.foodtracker.app.data.BackendConfig
+import com.foodtracker.app.data.DEFAULT_GOAL
 import com.foodtracker.app.data.DailyGoal
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.MealEntry
@@ -9,16 +10,20 @@ import com.foodtracker.app.data.WaterDay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-/** A day as last returned by the backend; [refreshedAt] (epoch ms) is when its oldest part was fetched. */
+/**
+ * A day as last returned by the backend; [refreshedAt] (epoch ms) is when its oldest part was fetched,
+ * or null for [DayRepository.offlinePlaceholder], which never came from the backend.
+ */
 data class CachedDay(
     val meals: List<MealEntry>,
     val water: WaterDay,
     val goal: DailyGoal,
-    val refreshedAt: Long,
+    val refreshedAt: Long?,
 )
 
 /** How a refresh went: the backend answered ([Success], [Failed]) or couldn't be reached ([Offline]). */
@@ -72,6 +77,17 @@ class DayRepository(
             if (goalValue == null || meals == null || water == null) return@combine null
             CachedDay(meals, water, goalValue, refreshedAt = minOf(day.refreshedAt, goal.refreshedAt))
         }
+
+    /**
+     * What to show for a day without a cached copy while the backend can't be reached: no meals, no
+     * water, and the cached goal (or the backend's default). Never written to the cache.
+     */
+    suspend fun offlinePlaceholder(date: String): CachedDay {
+        val goal = store.observeGoal().first()
+            ?.takeIf { it.serverUrl == serverUrl() }
+            ?.let { decodeOrNull<DailyGoal>(it.goalJson) }
+        return CachedDay(meals = emptyList(), water = WaterDay(date, 0, emptyList()), goal = goal ?: DEFAULT_GOAL, refreshedAt = null)
+    }
 
     /** Fetches [date]'s meals and water and the goal, and caches them; never throws for a failed call. */
     suspend fun refresh(date: String): RefreshResult {

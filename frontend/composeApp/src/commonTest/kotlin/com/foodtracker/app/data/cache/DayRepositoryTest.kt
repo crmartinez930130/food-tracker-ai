@@ -1,6 +1,8 @@
 package com.foodtracker.app.data.cache
 
+import com.foodtracker.app.data.DEFAULT_GOAL
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.WaterDay
 import com.foodtracker.app.data.createHttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -161,5 +163,30 @@ class DayRepositoryTest {
 
         assertEquals(setOf("2026-03-06"), f.store.days.value.keys)
         assertEquals("http://other.local:3000", f.store.goal.value?.serverUrl)
+    }
+
+    @Test
+    fun `the offline placeholder has no meals or water, and the cached goal`() = runBlocking<Unit> {
+        val f = Fixture()
+        f.repository.refresh(DAY)
+        f.store.days.value = emptyMap()
+
+        val placeholder = f.repository.offlinePlaceholder("2026-03-06")
+
+        assertEquals(emptyList(), placeholder.meals)
+        assertEquals(WaterDay("2026-03-06", 0, emptyList()), placeholder.water)
+        assertEquals(2000.0, placeholder.goal.targetCalories)
+        assertEquals(false, placeholder.goal.isDefault)
+        assertNull(placeholder.refreshedAt)
+        assertEquals(emptyMap(), f.store.days.value)
+    }
+
+    @Test
+    fun `the offline placeholder uses the default goal without a cached one for this server`() = runBlocking<Unit> {
+        val f = Fixture()
+        f.repository.refresh(DAY)
+        f.server = "http://other.local:3000"
+
+        assertEquals(DEFAULT_GOAL, f.repository.offlinePlaceholder(DAY).goal)
     }
 }

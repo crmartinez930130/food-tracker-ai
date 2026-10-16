@@ -20,6 +20,7 @@ import com.foodtracker.app.data.MealAnalysis
 import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.data.cache.SnapshotRepository
 import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.components.LocalReduceMotion
 import com.foodtracker.app.ui.components.pressBounce
@@ -48,6 +49,7 @@ fun MainScreen(
     outbox: OutboxRepository,
     captureRepository: CaptureQueueRepository,
     onReviewCapture: (MealAnalysis, ReviewCapture) -> Unit,
+    snapshots: SnapshotRepository,
     historyMonth: LocalDate,
     onHistoryMonthChange: (LocalDate) -> Unit,
     summaryView: SummaryView,
@@ -112,12 +114,14 @@ fun MainScreen(
                     )
                     MainTab.HISTORY -> HistoryScreen(
                         apiClient = apiClient,
+                        snapshots = snapshots,
                         month = historyMonth,
                         onMonthChange = onHistoryMonthChange,
                         onOpenDay = onOpenDay,
                     )
                     MainTab.SUMMARY -> SummaryScreen(
                         apiClient = apiClient,
+                        snapshots = snapshots,
                         view = summaryView,
                         onViewChange = onSummaryViewChange,
                         onOpenDay = onOpenDay,

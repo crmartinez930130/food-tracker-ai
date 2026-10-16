@@ -95,6 +95,7 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch {
                             cacheStore.deleteOtherServers(serverUrl)
                             database.favoritesCacheDao().deleteOtherServers(serverUrl)
+                            database.snapshotDao().deleteOtherServers(serverUrl)
                         }
                     }
                     BackendConfig.baseUrl = effectiveServerUrl(updated)

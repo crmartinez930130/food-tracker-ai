@@ -28,6 +28,7 @@ import com.foodtracker.app.data.cache.CaptureQueueRepository
 import com.foodtracker.app.data.cache.DayRepository
 import com.foodtracker.app.data.cache.FavoritesRepository
 import com.foodtracker.app.data.cache.OutboxRepository
+import com.foodtracker.app.data.cache.SnapshotRepository
 import com.foodtracker.app.data.createHttpClient
 import com.foodtracker.app.ui.AppState
 import com.foodtracker.app.ui.CaptureScreen
@@ -73,6 +74,7 @@ fun App(
     val captureRepository = remember(database) {
         CaptureQueueRepository(apiClient, database.captureDao(), capturePhotos, requestSync)
     }
+    val snapshotRepository = remember(database) { SnapshotRepository(database.snapshotDao()) }
     val favoritesRepository = remember(database) { FavoritesRepository(apiClient, database.favoritesCacheDao()) }
     val outboxRepository = remember(database) {
         OutboxRepository(apiClient, database.outboxDao(), database.dayCacheDao(), requestSync)
@@ -166,6 +168,7 @@ fun App(
                             outbox = outboxRepository,
                             captureRepository = captureRepository,
                             onReviewCapture = { analysis, capture -> appState.openReview(analysis, capture) },
+                            snapshots = snapshotRepository,
                             historyMonth = appState.historyMonth,
                             onHistoryMonthChange = { appState.historyMonth = it },
                             summaryView = appState.summaryView,
