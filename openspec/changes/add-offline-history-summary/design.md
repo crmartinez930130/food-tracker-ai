@@ -42,6 +42,7 @@
    - on the key's change, show the cached value at once if any; otherwise keep today's loading presentation;
    - then refresh: `Fresh` replaces the value and clears the notice; `Offline` keeps the value with the notice "No connection · data from <time>", or, without a value, shows "No connection: this period hasn't been loaded yet" (in place of the content, not as an error); `Failed` shows the error text above the value, or alone without one;
    - logging or deleting weight stays online-only and, on success, refreshes the weight key.
+   - like Home, both refresh again when the app returns to the foreground, so coming back home updates them without changing period (added after the PR review).
 
    The notice composable moves from `DayContent` to a shared `ui/OfflineNotice.kt`. On Summary, the weight section repeats a notice only when it says something the calorie part doesn't (an error, or a notice while the calories are current), so a period never loaded shows the not-loaded-yet line once.
 

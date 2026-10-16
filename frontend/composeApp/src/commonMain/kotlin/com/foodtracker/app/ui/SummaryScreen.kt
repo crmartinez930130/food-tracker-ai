@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.foodtracker.app.data.DailyTotals
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.LogWeightRequest
@@ -137,7 +138,15 @@ fun SummaryScreen(
         onViewChange(view.copy(endDate = date.takeIf { it.isBeforeDay(today) }))
     }
 
-    LaunchedEffect(startDate, endDate) {
+    // Back in the foreground (e.g. home again): refresh what's shown. The first resume is the opening itself.
+    var reloadKey by remember { mutableIntStateOf(0) }
+    var resumedBefore by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        if (resumedBefore) reloadKey++ else resumedBefore = true
+        onPauseOrDispose {}
+    }
+
+    LaunchedEffect(startDate, endDate, reloadKey) {
         isLoading = true
         errorMessage = null
         notice = null
@@ -166,7 +175,7 @@ fun SummaryScreen(
     }
 
     // Weight reloads on its own key, so logging or deleting doesn't refetch the calorie chart.
-    LaunchedEffect(startDate, endDate, weightReloadKey) {
+    LaunchedEffect(startDate, endDate, weightReloadKey, reloadKey) {
         weightError = null
         weightNotice = null
         isWeightLoading = true
