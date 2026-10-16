@@ -98,6 +98,19 @@ describe("POST /api/meals/analyze ingredient photos", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("answers 413 naming the ingredient photo when one is over the size limit", async () => {
+    const { app, calls } = appRecording();
+
+    const res = await request(app)
+      .post("/api/meals/analyze")
+      .attach("photo", await sampleJpeg(), { filename: "meal.jpg", contentType: "image/jpeg" })
+      .attach("ingredients", Buffer.alloc(16 * 1024 * 1024, 0xff), { filename: "big.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toBe("Ingredient photo too large; the limit is 15 MB");
+    expect(calls).toHaveLength(0);
+  });
+
   it("rejects photos over 40 MB together, without calling the analysis", async () => {
     const { app, calls } = appRecording();
     const big = Buffer.alloc(14 * 1024 * 1024, 0xff);

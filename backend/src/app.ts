@@ -44,10 +44,11 @@ export function createApp(deps: AppDeps): Express {
       res.status(404).json({ error: err.message });
       return;
     }
-    // Upload problems found by multer: a photo over the size limit, or a malformed upload.
+    // Upload problems found by multer: a photo (meal or ingredient) over the size limit, or a malformed upload.
     if (err instanceof MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
-        res.status(413).json({ error: "Photo too large; the limit is 15 MB" });
+        const which = err.field === "ingredients" ? "Ingredient photo" : "Photo";
+        res.status(413).json({ error: `${which} too large; the limit is 15 MB` });
       } else if (err.code === "LIMIT_UNEXPECTED_FILE" && err.field === "ingredients") {
         res.status(400).json({ error: "Too many ingredient photos; the limit is 5" });
       } else {
