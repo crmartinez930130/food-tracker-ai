@@ -44,6 +44,12 @@ const upload = multer({
 /** Longest free-text meal description the analysis accepts. */
 const MAX_DESCRIPTION_LENGTH = 500;
 
+/** Most ingredient photos one analysis accepts; each adds input tokens to the call. */
+export const MAX_INGREDIENT_PHOTOS = 5;
+
+/** Most bytes all photos of one analysis may add up to (each is also capped at 15 MB). */
+export const MAX_TOTAL_UPLOAD_BYTES = 40 * 1024 * 1024;
+
 function parseId(raw: string): number {
   const id = Number(raw);
   if (!Number.isInteger(id)) {
@@ -59,25 +65,37 @@ export function createMealsRouter({ db, anthropicClient, model, analyzeLimiter }
     "/analyze",
     // Before multer: a rejected call never buffers its upload.
     rateLimit(analyzeLimiter),
-    upload.single("photo"),
+    upload.fields([
+      { name: "photo", maxCount: 1 },
+      { name: "ingredients", maxCount: MAX_INGREDIENT_PHOTOS },
+    ]),
     asyncHandler(async (req, res) => {
-      // Multer puts the form's text fields in req.body (the photo itself is optional).
+      // Multer puts the form's text fields in req.body; every photo is optional.
+      const files = (req.files ?? {}) as Record<string, Express.Multer.File[] | undefined>;
+      const photo = files.photo?.[0];
+      const ingredientFiles = files.ingredients ?? [];
       const rawDescription = req.body?.description;
       const description = typeof rawDescription === "string" ? rawDescription.trim() : "";
       if (description.length > MAX_DESCRIPTION_LENGTH) {
         throw new ValidationError(`description: must be at most ${MAX_DESCRIPTION_LENGTH} characters`);
       }
-      if (!req.file && !description) {
-        throw new ValidationError("Provide a photo, a description, or both");
+      if (!photo && ingredientFiles.length === 0 && !description) {
+        throw new ValidationError("Provide a photo, ingredient photos, a description, or a mix");
       }
-      if (req.file && !detectImageType(req.file.buffer)) {
+      const uploads = [...(photo ? [photo] : []), ...ingredientFiles];
+      if (uploads.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_UPLOAD_BYTES) {
+        throw new ValidationError("Photos too large together; the limit is 40 MB");
+      }
+      if (uploads.some((file) => !detectImageType(file.buffer))) {
         throw new ValidationError("Unsupported image format; only JPEG and PNG are accepted");
       }
-      const image = req.file ? await preprocessImage(req.file.buffer) : undefined;
+      const image = photo ? await preprocessImage(photo.buffer) : undefined;
+      const ingredients = await Promise.all(ingredientFiles.map((file) => preprocessImage(file.buffer)));
       const result = await analyzeMeal(
         anthropicClient,
         {
           image,
+          ingredients,
           description: description || undefined,
           portion: parseAnalysisPortion(req.body?.portion),
           language: parseAnalysisLanguage(req.body?.language),

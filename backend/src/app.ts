@@ -48,6 +48,8 @@ export function createApp(deps: AppDeps): Express {
     if (err instanceof MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
         res.status(413).json({ error: "Photo too large; the limit is 15 MB" });
+      } else if (err.code === "LIMIT_UNEXPECTED_FILE" && err.field === "ingredients") {
+        res.status(400).json({ error: "Too many ingredient photos; the limit is 5" });
       } else {
         res.status(400).json({ error: `Invalid upload: ${err.message}` });
       }

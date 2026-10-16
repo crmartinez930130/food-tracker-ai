@@ -62,18 +62,24 @@ class CaptureQueueRepository(
     private val timeZone: () -> TimeZone = { TimeZone.currentSystemDefault() },
 ) {
     /** Analyzes the capture now, or keeps it when the backend gives no answer (or a retryable one). */
-    suspend fun analyzeOrKeep(photo: ByteArray?, description: String?, portion: Portion?, language: String): AnalyzeOutcome {
+    suspend fun analyzeOrKeep(
+        photo: ByteArray?,
+        description: String?,
+        portion: Portion?,
+        language: String,
+        ingredients: List<ByteArray> = emptyList(),
+    ): AnalyzeOutcome {
         val url = serverUrl()
         val at = capturedAt()
         return try {
-            AnalyzeOutcome.Analyzed(api.analyzeMeal(photo, description, portion, language))
+            AnalyzeOutcome.Analyzed(api.analyzeMeal(photo, description, portion, language, ingredients = ingredients))
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiException) {
             if (!isRetryable(e.status)) return AnalyzeOutcome.Rejected(e)
-            keep(photo, description, portion, language, at, url)
+            keep(photo, ingredients, description, portion, language, at, url)
         } catch (_: Exception) {
-            keep(photo, description, portion, language, at, url)
+            keep(photo, ingredients, description, portion, language, at, url)
         }
     }
 
@@ -91,15 +97,21 @@ class CaptureQueueRepository(
             val rows = store.waiting(url)
             if (rows.isEmpty()) return AnalyzeReport(ready, offline = false)
             for (row in rows) {
-                val photo = row.photoFile?.let { name ->
-                    photos.read(name) ?: run {
-                        store.markFailed(row.id, MISSING_PHOTO_ERROR, null)
-                        null
-                    }
+                val photo = row.photoFile?.let { photos.read(it) }
+                val ingredients = ingredientFilesOf(row).map { photos.read(it) }
+                // A file gone missing (cleared storage) can't be analyzed: the user sees why and decides.
+                if ((row.photoFile != null && photo == null) || ingredients.any { it == null }) {
+                    store.markFailed(row.id, MISSING_PHOTO_ERROR, null)
+                    continue
                 }
-                if (row.photoFile != null && photo == null) continue
                 try {
-                    val analysis = api.analyzeMeal(photo, row.description, row.portion?.let(::portionOf), row.language)
+                    val analysis = api.analyzeMeal(
+                        photo,
+                        row.description,
+                        row.portion?.let(::portionOf),
+                        row.language,
+                        ingredients = ingredients.filterNotNull(),
+                    )
                     store.markReady(row.id, cacheJson.encodeToString(analysis))
                     ready++
                 } catch (e: CancellationException) {
@@ -129,11 +141,16 @@ class CaptureQueueRepository(
     /** A ready capture's analysis, or null when it has none (or it no longer decodes). */
     fun analysisOf(row: CaptureRow): MealAnalysis? = row.analysisJson?.let { decodeOrNull<MealAnalysis>(it) }
 
+    /** The names of a capture's ingredient photos in [CapturePhotoStore], in order. */
+    fun ingredientFilesOf(row: CaptureRow): List<String> =
+        row.ingredientFiles?.let { decodeOrNull<List<String>>(it) }.orEmpty()
+
     /** A capture's photo, for its thumbnail; null without one or when the file is gone. */
     suspend fun photoOf(row: CaptureRow): ByteArray? = row.photoFile?.let { photos.read(it) }
 
     private suspend fun keep(
         photo: ByteArray?,
+        ingredients: List<ByteArray>,
         description: String?,
         portion: Portion?,
         language: String,
@@ -142,6 +159,9 @@ class CaptureQueueRepository(
     ): AnalyzeOutcome.Kept {
         val clientId = newClientId()
         val photoFile = photo?.let { "$clientId.jpg".also { name -> photos.write(name, it) } }
+        val ingredientFiles = ingredients.mapIndexed { index, bytes ->
+            "$clientId-ingredient-${index + 1}.jpg".also { name -> photos.write(name, bytes) }
+        }
         store.insert(
             CaptureRow(
                 clientId = clientId,
@@ -152,6 +172,7 @@ class CaptureQueueRepository(
                 portion = portion?.apiValue,
                 language = language,
                 photoFile = photoFile,
+                ingredientFiles = ingredientFiles.takeIf { it.isNotEmpty() }?.let { cacheJson.encodeToString(it) },
                 createdAt = now(),
             ),
         )
@@ -162,6 +183,7 @@ class CaptureQueueRepository(
     private suspend fun remove(id: Long) {
         val row = store.get(id) ?: return
         row.photoFile?.let { photos.delete(it) }
+        ingredientFilesOf(row).forEach { photos.delete(it) }
         store.delete(id)
     }
 

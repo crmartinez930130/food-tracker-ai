@@ -36,3 +36,27 @@ actual fun rememberImagePickerLauncher(onImagePicked: (ByteArray) -> Unit): Imag
         }
     }
 }
+
+@Composable
+actual fun rememberMultiImagePickerLauncher(maxItems: Int, onImagesPicked: (List<ByteArray>) -> Unit): ImagePickerLauncher {
+    // The multiple-selection contract needs room for at least two; one slot left uses the single picker.
+    if (maxItems < 2) return rememberImagePickerLauncher { bytes -> onImagesPicked(listOf(bytes)) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val pickMedia = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(maxItems)) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        scope.launch {
+            val images = withContext(Dispatchers.IO) {
+                uris.take(maxItems).mapNotNull { uri -> context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
+            }
+            if (images.isNotEmpty()) onImagesPicked(images)
+        }
+    }
+    return remember(pickMedia) {
+        object : ImagePickerLauncher {
+            override fun launch() {
+                pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+        }
+    }
+}

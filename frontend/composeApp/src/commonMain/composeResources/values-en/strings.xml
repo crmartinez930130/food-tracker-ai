@@ -85,6 +85,12 @@
     <string name="capture_retake">Retake</string>
     <string name="capture_choose_again">Choose again</string>
     <string name="capture_analyze">Analyze</string>
+    <string name="capture_ingredients_title">Ingredients (optional)</string>
+    <string name="capture_ingredients_hint">Photos of packages, nutrition labels or amounts help the estimate.</string>
+    <string name="capture_ingredient_camera">Camera</string>
+    <string name="capture_ingredient_gallery">Gallery</string>
+    <string name="capture_ingredient_photo">Ingredient photo %1$d</string>
+    <string name="capture_ingredient_remove">Remove ingredient</string>
     <string name="capture_favorites">Favorites</string>
     <string name="capture_favorites_empty">Star a meal on Home to log it again here in one tap.</string>
     <string name="capture_relog">Log this meal again</string>

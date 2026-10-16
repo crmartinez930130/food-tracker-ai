@@ -14,8 +14,8 @@ enum class CaptureStatus { WAITING, READY, FAILED }
 
 /**
  * A meal captured while the backend couldn't be reached (offline-queue): what the analysis takes, kept
- * until it can be analyzed and then reviewed. [photoFile] names the photo in [CapturePhotoStore], if
- * there's one; [capturedAt] is the tap's time (ISO), which the saved meal keeps; [day] is its local day.
+ * until it can be analyzed and then reviewed. [photoFile] names the meal photo in [CapturePhotoStore],
+ * if there's one, and [ingredientFiles] the ingredient photos; [capturedAt] is the tap's time (ISO), which the saved meal keeps; [day] is its local day.
  */
 @Entity(tableName = "capture_queue", indices = [Index(value = ["client_id"], unique = true)])
 data class CaptureRow(
@@ -28,6 +28,8 @@ data class CaptureRow(
     val portion: String? = null,
     val language: String,
     @ColumnInfo(name = "photo_file") val photoFile: String? = null,
+    /** The ingredient photos' names in [CapturePhotoStore], as a JSON list; null when there are none. */
+    @ColumnInfo(name = "ingredient_files") val ingredientFiles: String? = null,
     val status: CaptureStatus = CaptureStatus.WAITING,
     @ColumnInfo(name = "analysis_json") val analysisJson: String? = null,
     val error: String? = null,

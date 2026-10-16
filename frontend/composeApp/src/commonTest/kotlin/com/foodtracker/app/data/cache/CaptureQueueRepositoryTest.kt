@@ -226,6 +226,37 @@ class CaptureQueueRepositoryTest {
     }
 
     @Test
+    fun `a kept capture keeps its ingredient photos, sends them, and deletes them all`() = runBlocking<Unit> {
+        val f = CaptureFixture().apply { replies = listOf(Reply.None) }
+        f.repository.analyzeOrKeep(byteArrayOf(1), null, null, "es", ingredients = listOf(byteArrayOf(2), byteArrayOf(3)))
+        val row = f.store.rows.value.single()
+
+        assertEquals(listOf("capture-1-ingredient-1.jpg", "capture-1-ingredient-2.jpg"), f.repository.ingredientFilesOf(row))
+        assertEquals(setOf("capture-1.jpg", "capture-1-ingredient-1.jpg", "capture-1-ingredient-2.jpg"), f.photos.files.keys)
+
+        f.replies = listOf(Reply.Analysis)
+        f.repository.analyzeWaiting()
+        assertEquals(2, Regex("name=\"?ingredients\"?").findAll(f.received.last()).count())
+
+        f.repository.complete(row.id)
+        assertTrue(f.photos.files.isEmpty())
+    }
+
+    @Test
+    fun `a missing ingredient photo fails the capture`() = runBlocking<Unit> {
+        val f = CaptureFixture().apply { replies = listOf(Reply.None) }
+        f.repository.analyzeOrKeep(null, "yogur", null, "es", ingredients = listOf(byteArrayOf(2)))
+        f.photos.files.clear()
+        f.replies = listOf(Reply.Analysis)
+
+        f.repository.analyzeWaiting()
+
+        val row = f.store.rows.value.single()
+        assertEquals(CaptureStatus.FAILED, row.status)
+        assertEquals(MISSING_PHOTO_ERROR, row.error)
+    }
+
+    @Test
     fun `the background run analyzes with the stored server and token, and the capture's language`() = runBlocking<Unit> {
         val store = FakeCaptureStore()
         val photos = FakePhotoStore()

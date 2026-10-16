@@ -85,6 +85,12 @@
     <string name="capture_retake">Sacar otra</string>
     <string name="capture_choose_again">Elegir otra</string>
     <string name="capture_analyze">Analizar</string>
+    <string name="capture_ingredients_title">Ingredientes (opcional)</string>
+    <string name="capture_ingredients_hint">Fotos de paquetes, etiquetas nutricionales o cantidades: ayudan a estimar mejor.</string>
+    <string name="capture_ingredient_camera">Cámara</string>
+    <string name="capture_ingredient_gallery">Galería</string>
+    <string name="capture_ingredient_photo">Foto de ingrediente %1$d</string>
+    <string name="capture_ingredient_remove">Quitar ingrediente</string>
     <string name="capture_favorites">Favoritos</string>
     <string name="capture_favorites_empty">Marcá una comida con la estrella en Inicio para registrarla de nuevo acá con un toque.</string>
     <string name="capture_relog">Registrar esta comida de nuevo</string>
