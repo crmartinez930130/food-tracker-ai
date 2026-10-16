@@ -16,7 +16,8 @@ expect object LocalAppLocale {
     infix fun provides(tag: String): ProvidedValue<*>
 }
 
-/** The phone's own language (e.g. "en"), unaffected by the app's override. */
+/** The phone's own language (e.g. "en"), unaffected by the app's override; re-read when the app resumes. */
+@Composable
 expect fun deviceLanguage(): String
 
 /** Renders [content] in [language]; switching re-creates the content so every string re-resolves. */

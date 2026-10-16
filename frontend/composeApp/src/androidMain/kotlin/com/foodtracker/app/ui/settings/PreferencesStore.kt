@@ -20,6 +20,6 @@ object PreferencesStore {
  * language: Compose resources' getString reads Locale.getDefault() on Android.
  */
 fun applyAppLocale(context: Context) {
-    val language = resolveLanguage(PreferencesStore.load(context).language, deviceLanguage())
+    val language = resolveLanguage(PreferencesStore.load(context).language, deviceLanguage(context))
     java.util.Locale.setDefault(java.util.Locale.forLanguageTag(language.tag))
 }
