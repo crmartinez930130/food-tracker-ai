@@ -25,9 +25,11 @@
         android:fullBackupContent="@xml/backup_rules"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.FoodTracker">
+        <!-- locale: the app sets its own per-app language (see AppLocale.android.kt); Compose
+             re-resolves strings itself, so a recreate would only lose the current screen. -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="uiMode"
+            android:configChanges="uiMode|locale|layoutDirection"
             android:exported="true"
             android:theme="@style/Theme.FoodTracker">
             <intent-filter>

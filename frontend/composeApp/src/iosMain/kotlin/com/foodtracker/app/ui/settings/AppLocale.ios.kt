@@ -18,4 +18,5 @@ actual object LocalAppLocale {
     actual infix fun provides(tag: String): ProvidedValue<*> = LocalIosAppLocale.provides(tag)
 }
 
+@Composable
 actual fun deviceLanguage(): String = NSLocale.currentLocale.languageCode
