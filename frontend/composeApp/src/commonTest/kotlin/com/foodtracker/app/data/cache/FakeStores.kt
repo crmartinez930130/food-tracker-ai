@@ -137,3 +137,21 @@ class FakePhotoStore : CapturePhotoStore {
         files -= name
     }
 }
+
+class FakeSnapshotStore : SnapshotStore {
+    val rows = mutableMapOf<String, SnapshotRow>()
+
+    override suspend fun get(key: String) = rows[key]
+
+    override suspend fun save(row: SnapshotRow) {
+        rows[row.key] = row
+    }
+
+    override suspend fun delete(key: String) {
+        rows -= key
+    }
+
+    override suspend fun deleteOtherServers(url: String) {
+        rows.values.removeAll { it.serverUrl != url }
+    }
+}

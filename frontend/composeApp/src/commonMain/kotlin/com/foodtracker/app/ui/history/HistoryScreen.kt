@@ -40,7 +40,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.foodtracker.app.data.DailyTotals
 import com.foodtracker.app.data.FoodTrackerApiClient
+import com.foodtracker.app.data.cache.Refreshed
+import com.foodtracker.app.data.cache.SnapshotRepository
 import com.foodtracker.app.ui.LoadingAware
+import com.foodtracker.app.ui.SnapshotNotice
+import com.foodtracker.app.ui.SnapshotNoticeText
 import com.foodtracker.app.ui.components.BarSegment
 import com.foodtracker.app.ui.components.SegmentedBar
 import com.foodtracker.app.ui.errorText
@@ -78,6 +82,7 @@ import kotlin.math.roundToInt
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
+import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -105,9 +110,14 @@ private fun DayStatus.colors(): StatusColors {
  * Earlier days: the month starting on [month] as a calendar colored by calorie status, plus the
  * month's days with records. Tapping a day (up to today) calls [onOpenDay] with its ISO date.
  */
+/** What History keeps of a month (offline-cache): each day's totals and the goal's calories. */
+@Serializable
+data class HistoryMonth(val days: List<DailyTotals>, val targetCalories: Double)
+
 @Composable
 fun HistoryScreen(
     apiClient: FoodTrackerApiClient,
+    snapshots: SnapshotRepository,
     month: LocalDate,
     onMonthChange: (LocalDate) -> Unit,
     onOpenDay: (String) -> Unit,
@@ -119,18 +129,35 @@ fun HistoryScreen(
     var targetCalories by remember { mutableStateOf<Double?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Offline-cache: the shown month's copy can be older than the backend's, or missing altogether.
+    var notice by remember { mutableStateOf<SnapshotNotice?>(null) }
 
     LaunchedEffect(month) {
         isLoading = true
         errorMessage = null
-        try {
-            days = apiClient.rangeSummary(month.toString(), lastOfMonth(month).toString())
-            targetCalories = apiClient.getGoals().targetCalories
-        } catch (e: Exception) {
-            errorMessage = errorText(Res.string.error_load_history, e)
-        } finally {
+        notice = null
+        val key = "history:$month"
+        val cached = snapshots.cached(key, HistoryMonth.serializer())
+        if (cached != null) {
+            days = cached.value.days
+            targetCalories = cached.value.targetCalories
             isLoading = false
         }
+        val refreshed = snapshots.refresh(key, HistoryMonth.serializer()) {
+            HistoryMonth(apiClient.rangeSummary(month.toString(), lastOfMonth(month).toString()), apiClient.getGoals().targetCalories)
+        }
+        when (refreshed) {
+            is Refreshed.Fresh -> {
+                days = refreshed.value.days
+                targetCalories = refreshed.value.targetCalories
+            }
+            is Refreshed.Offline -> notice = if (cached != null) SnapshotNotice.Offline(cached.refreshedAt) else SnapshotNotice.NotLoaded
+            is Refreshed.Failed -> {
+                val text = errorText(Res.string.error_load_history, refreshed.error)
+                if (cached != null) notice = SnapshotNotice.Error(text) else errorMessage = text
+            }
+        }
+        isLoading = false
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -141,15 +168,18 @@ fun HistoryScreen(
             onNext = { onMonthChange(shiftMonth(month, 1)) },
         )
         val target = targetCalories
+        val shownNotice = notice
         when {
             errorMessage != null -> Text(
                 errorMessage.orEmpty(),
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
+            shownNotice == SnapshotNotice.NotLoaded -> SnapshotNoticeText(shownNotice, today)
             // Dims the previous month while the new one loads.
             else -> LoadingAware(loadingPresentation(isLoading, hasContent = target != null), Modifier.weight(1f)) {
-                if (target != null) {
+                if (target != null) Column {
+                    shownNotice?.let { SnapshotNoticeText(it, today) }
                     val byDate = days.associateBy { it.date }
                     val listed = daysWithRecords(days)
                     LazyColumn(

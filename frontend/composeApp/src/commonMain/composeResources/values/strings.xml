@@ -54,6 +54,8 @@
     <string name="error_load_day">No se pudo cargar este día: %1$s</string>
     <string name="offline_notice_today">Sin conexión · datos de las %1$s</string>
     <string name="offline_notice_other_day">Sin conexión · datos del %1$s a las %2$s</string>
+    <string name="offline_notice">Sin conexión</string>
+    <string name="offline_not_loaded">Sin conexión: este período todavía no se cargó.</string>
     <string name="meal_pending">Pendiente</string>
     <string name="outbox_rejected">No se pudo enviar: %1$s</string>
     <string name="outbox_retry">Reintentar</string>

@@ -125,6 +125,17 @@ data class DailyGoal(
     val isDefault: Boolean,
 )
 
+/** The backend's built-in goal (backend/src/domain/goals.ts), for a day shown before any goal was loaded. */
+val DEFAULT_GOAL = DailyGoal(
+    targetCalories = 2000.0,
+    targetProteinGrams = 125.0,
+    targetFatGrams = 67.0,
+    targetCarbsGrams = 225.0,
+    targetWaterMl = 2000,
+    waterGlassMl = 250,
+    isDefault = true,
+)
+
 @Serializable
 data class UpdateGoalsRequest(
     val targetCalories: Double,

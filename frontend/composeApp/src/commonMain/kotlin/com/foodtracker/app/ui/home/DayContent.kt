@@ -76,7 +76,7 @@ import com.foodtracker.app.ui.components.pressBounce
 import com.foodtracker.app.ui.displayLabelOrOther
 import com.foodtracker.app.ui.errorText
 import com.foodtracker.app.ui.loadingPresentation
-import com.foodtracker.app.ui.shortDate
+import com.foodtracker.app.ui.offlineNotice
 import com.foodtracker.app.util.currentInstantIso
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.action_delete
@@ -104,8 +104,6 @@ import food_tracker_frontend.composeapp.generated.resources.macro_protein
 import food_tracker_frontend.composeapp.generated.resources.macros_short
 import food_tracker_frontend.composeapp.generated.resources.meal_pending
 import food_tracker_frontend.composeapp.generated.resources.no_items
-import food_tracker_frontend.composeapp.generated.resources.offline_notice_other_day
-import food_tracker_frontend.composeapp.generated.resources.offline_notice_today
 import food_tracker_frontend.composeapp.generated.resources.outbox_discard
 import food_tracker_frontend.composeapp.generated.resources.outbox_rejected
 import food_tracker_frontend.composeapp.generated.resources.outbox_retry
@@ -132,17 +130,6 @@ private data class DayTotals(val calories: Double, val protein: Double, val fat:
 private fun produceErrorText(message: StringResource, error: Exception): String? {
     val text by produceState<String?>(null, message, error) { value = errorText(message, error) }
     return text
-}
-
-/** "No connection · data from 14:32", with the date too when the copy isn't from [today]. */
-@Composable
-private fun offlineNotice(refreshedAt: Long, today: LocalDate): String {
-    val age = cacheAge(refreshedAt, today)
-    return if (age.date == null) {
-        stringResource(Res.string.offline_notice_today, age.time)
-    } else {
-        stringResource(Res.string.offline_notice_other_day, shortDate(age.date), age.time)
-    }
 }
 
 /** A queued meal or glass the backend refused, with its error and what the user can do about it. */
@@ -201,6 +188,8 @@ fun DayContent(
     var shownDate by remember { mutableStateOf<String?>(null) }
     // Whether [date]'s cached copy has been read yet (a few milliseconds), so the spinner doesn't flash first.
     var cacheRead by remember(date) { mutableStateOf(false) }
+    // Showing DayRepository.offlinePlaceholder: [date] has no copy and the backend can't be reached.
+    var showingPlaceholder by remember(date) { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(true) }
     // The last refresh's outcome for [date]; null while one runs or after a success.
     var refreshProblem by remember(date) { mutableStateOf<RefreshResult?>(null) }
@@ -221,7 +210,8 @@ fun DayContent(
             if (cached != null) {
                 shown = cached
                 shownDate = date
-            } else if (shownDate == date) {
+                showingPlaceholder = false
+            } else if (shownDate == date && !showingPlaceholder) {
                 // Dropped from the cache (e.g. it no longer decodes): load it again.
                 shown = null
                 shownDate = null
@@ -240,6 +230,12 @@ fun DayContent(
     LaunchedEffect(date, reloadKey) {
         isRefreshing = true
         val result = dayRepository.refresh(date)
+        // No copy and no connection: the day empty against the goal, so what's queued for it still shows.
+        if (result is RefreshResult.Offline && shownDate != date) {
+            shown = dayRepository.offlinePlaceholder(date)
+            shownDate = date
+            showingPlaceholder = true
+        }
         refreshProblem = result.takeUnless { it == RefreshResult.Success }
         isRefreshing = false
     }
