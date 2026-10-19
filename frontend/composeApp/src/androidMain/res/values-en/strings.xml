@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_today_label">Today\'s calories</string>
+    <string name="widget_today_description">Today\'s calories, macros and water against your goal</string>
+    <string name="widget_actions_label">Quick actions</string>
+    <string name="widget_actions_description">Add a glass of water or log a meal</string>
+</resources>

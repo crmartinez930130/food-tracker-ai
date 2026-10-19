@@ -55,6 +55,11 @@
     <string name="offline_notice_today">No connection · data from %1$s</string>
     <string name="offline_notice_other_day">No connection · data from %1$s at %2$s</string>
     <string name="offline_notice">No connection</string>
+    <string name="widget_water_progress">%1$d / %2$d ml</string>
+    <string name="widget_data_from">Data from %1$s</string>
+    <string name="widget_data_from_other_day">Data from %1$s at %2$s</string>
+    <string name="widget_no_data">No data for today yet</string>
+    <string name="widget_log_meal">Log a meal</string>
     <string name="offline_not_loaded">No connection: this period hasn't been loaded yet.</string>
     <string name="offline_favorites_not_loaded">No connection: your favorites haven't been loaded yet.</string>
     <string name="meal_pending">Pending</string>

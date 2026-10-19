@@ -1,6 +1,7 @@
 package com.foodtracker.app.ui.settings
 
 import android.content.Context
+import com.foodtracker.app.widget.WidgetUpdates
 
 /** Options choices live only on the device, as JSON in SharedPreferences (like reminder settings). */
 object PreferencesStore {
@@ -12,6 +13,8 @@ object PreferencesStore {
 
     fun save(context: Context, preferences: AppPreferences) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encodeAppPreferences(preferences)).apply()
+        // The widgets show the chosen language and the chosen server's data.
+        WidgetUpdates.requestUpdate(context)
     }
 }
 
