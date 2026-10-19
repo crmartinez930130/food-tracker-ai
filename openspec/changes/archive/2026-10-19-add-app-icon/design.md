@@ -7,7 +7,7 @@ The chosen drawing, on the 108-unit canvas:
 - a stem and a leaf reaching y ≈ 29;
 - a four-point sparkle centered at (57, 59) with radius 8.
 
-Every point stays within radius ≈ 27 of the center.
+Every point stays within radius ≈ 29.4 of the center; the farthest is the leaf tip at (71, 30).
 
 ## Goals / Non-Goals
 
@@ -45,5 +45,5 @@ On Android 12+, the system launch screen shows the launcher icon by default, ove
 
 ## Risks / Trade-offs
 
-- **[A launcher with an unusual mask cuts the leaf]** → The whole drawing stays within radius ≈ 27, below the guaranteed 33.
+- **[A launcher with an unusual mask cuts the leaf]** → The whole drawing stays within radius ≈ 29.4, below the guaranteed 33.
 - **[The sparkle hole is too small at small sizes]** → At 48dp the sparkle measures about 7dp across, as it did in the proposal's 48 px preview, where it read clearly. Checked on the phone.

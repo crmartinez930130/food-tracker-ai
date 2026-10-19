@@ -8,4 +8,4 @@
   - the launcher icon is whole with the default mask;
   - with themed icons on, it's tinted and the sparkle shows;
   - Recents and the launch screen show it, in light and dark.
-- [ ] 2.2 On the phone (Samsung squircle), with the user's OK to install: the same checks.
+- [x] 2.2 On the phone (Samsung squircle), with the user's OK to install: the same checks.
