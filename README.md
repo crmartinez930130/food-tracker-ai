@@ -1,20 +1,89 @@
-# food-tracker-ai
+<p align="center">
+  <img src="docs/images/icon.png" width="112" alt="Food Tracker icon: a green apple with a sparkle">
+</p>
 
-Personal meal-tracking app: take a photo of a meal, get an AI-estimated breakdown of foods, calories, and macros (protein/fat/carbs), review and correct it, and track daily/weekly totals.
+<h1 align="center">Food Tracker</h1>
 
-Single-user, runs entirely on your own machine/home network. No cloud deployment, no accounts.
+<p align="center">
+  Snap a photo of your meal and get an AI estimate of its foods, calories and macros.<br>
+  Review it, save it, and follow your days against your goals.
+</p>
 
-## Architecture
+<p align="center">
+  <a href="https://github.com/crmartinez930130/food-tracker-ai/actions/workflows/ci.yml"><img src="https://github.com/crmartinez930130/food-tracker-ai/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2C6A45" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 8.0+">
+  <img src="https://img.shields.io/badge/Kotlin_Multiplatform-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin Multiplatform">
+  <img src="https://img.shields.io/badge/Compose_Multiplatform-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose Multiplatform">
+  <img src="https://img.shields.io/badge/Node.js-5FA04E?logo=nodedotjs&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/Claude_API-D97757?logo=claude&logoColor=white" alt="Claude API">
+</p>
 
+Personal and single-user: the app talks to a small backend that runs on your own computer, on your home network. No cloud deployment, no accounts.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/home.png" width="240" alt="Home: today's calories, macros, water and meals"><br><sub><b>Today</b> · calories, macros and water</sub></td>
+    <td align="center"><img src="docs/screenshots/capture.png" width="240" alt="Log a meal: photo, gallery, ingredients, description and portion"><br><sub><b>Log a meal</b> · photo, text or both</sub></td>
+    <td align="center"><img src="docs/screenshots/history.png" width="240" alt="History: month calendar colored by goal and daily totals"><br><sub><b>History</b> · each day against the goal</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/summary.png" width="240" alt="Summary: weekly average, macros and daily calories chart"><br><sub><b>Summary</b> · weekly and monthly trends</sub></td>
+    <td align="center"><img src="docs/screenshots/home_dark.png" width="240" alt="Home in dark mode"><br><sub><b>Dark mode</b> · Today</sub></td>
+    <td align="center"><img src="docs/screenshots/history_dark.png" width="240" alt="History in dark mode"><br><sub><b>Dark mode</b> · History</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots use made-up sample data.</sub>
+
+## Features
+
+- 📸 **Photo analysis** — Claude's vision model breaks a meal photo down into foods with estimated grams, calories, protein, fat and carbs. Add photos of packages or labels, a typed or dictated description, or a portion size to sharpen the estimate.
+- ✏️ **Review before saving** — nothing goes into your history until you check it. Edit any item, and correct saved meals later.
+- 🎯 **Goals** — daily targets for calories, macros and water; Home shows how today is going.
+- 📅 **History** — a month calendar colored by how each day went, with a detail screen for any day.
+- 📊 **Summaries** — weekly and monthly averages, macros and a daily calories chart.
+- 💧 **Water** and ⚖️ **weight** — one-tap water logging and a weight trend next to what you eat.
+- ⭐ **Favorites** — log a meal you repeat without analyzing it again.
+- 🔔 **Reminders** — optional, quiet daily reminders for breakfast, lunch and dinner.
+- 📴 **Works offline** — recent days stay on the phone, and meals and water logged without a connection are sent once the backend is back.
+- 📤 **CSV export** — take your meal history to a spreadsheet.
+- 🌗 **Light and dark**, 🌐 **English and Spanish**.
+
+## How it works
+
+```mermaid
+flowchart LR
+    app["📱 Android app<br/>Kotlin Multiplatform + Compose"]
+    cache[("Offline cache and queue<br/>Room")]
+    api["🖥️ Backend<br/>Node.js + TypeScript + Express"]
+    db[("SQLite")]
+    claude["🤖 Claude API<br/>vision"]
+
+    app <-->|"REST / JSON<br/>bearer token"| api
+    app --- cache
+    api --- db
+    api -->|"photo + description"| claude
 ```
-KMP + Compose app (Android/iOS)  <-- REST/JSON -->  backend/ (Node.js + TypeScript)  <-->  Claude API (vision)
-                                                              |
-                                                        SQLite (local file)
-```
 
-The app never talks to Claude directly — all vision analysis is proxied through the backend, which is the only place holding your Anthropic API key.
+The app never talks to Claude directly: every analysis goes through the backend, the only place that holds your Anthropic API key. The backend stores your history in a single SQLite file on your machine.
+
+## Tech stack
+
+| | |
+| --- | --- |
+| **App** | Kotlin Multiplatform, Compose Multiplatform (Material 3 Expressive), Ktor client, Room, CameraX, kotlinx.serialization |
+| **Backend** | Node.js, TypeScript, Express, Drizzle ORM, better-sqlite3, sharp, Zod |
+| **AI** | Claude vision through the Anthropic SDK, with structured output |
+| **Quality** | Vitest, kotlin.test, GitHub Actions CI, an automated Claude PR reviewer, OpenSpec |
 
 ## Backend
+
+The app needs the backend running first. You need **Node.js 20 or newer** and an [Anthropic API key](https://console.anthropic.com/).
 
 ### Setup
 
@@ -55,33 +124,11 @@ npm test
 
 The server binds to `0.0.0.0` by default, so it's reachable from other devices on your home network — not just `localhost`. Find your machine's LAN IP (e.g. `hostname -I` on Linux, or check your network settings) and enter `http://<that-ip>:3000` in the app's Options → Server, together with your access token. An Android emulator on the same machine reaches it at `http://10.0.2.2:3000` (the emulator's alias for the host's `localhost`); a phone on the same Wi-Fi needs the actual LAN IP.
 
-### Security
-
-The backend is meant for **your home network** and a single user.
-
-What protects it:
-- **Access token:** every `/api` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
-- **Analysis limit:** at most `ANALYZE_RATE_LIMIT_PER_MINUTE` analyses per minute (20 by default), since each one is a paid API call.
-- **Upload checks:** only real JPEG/PNG photos up to 15 MB reach the image decoder.
-- **App data stays on the phone:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers.
-
-What it does **not** do:
-- **No HTTPS.** The app talks to the backend over `http://`, so meals, weight and water travel **unencrypted** over the network. That's acceptable on your home Wi-Fi; on public or shared networks, anyone on that network could read them. The app shows a note in Options → Server for `http://` addresses.
-- **One shared token.** Anyone with your `.env` or your phone's app data has full access.
-
-Do:
-- Keep the server on your home network. **Never forward port 3000 on your router** or expose it to the internet.
-- To use the app away from home, connect through a VPN to your home network (e.g. Tailscale) instead of opening the port.
-- If the token may have leaked, generate a new one, put it in `backend/.env`, restart the server and enter it in the app.
-- Set a monthly spending limit for your key in the Anthropic console.
-
-To report a vulnerability, see [SECURITY.md](SECURITY.md).
-
 ### Backing up your data
 
 There is no automatic backup. The entire history lives in `backend/data/food-tracker.sqlite`. To back it up, just copy that file somewhere safe while the server is stopped (or use SQLite's `.backup` command if you want to do it while running).
 
-## Frontend
+## Android app
 
 The Kotlin Multiplatform + Compose Multiplatform app lives in `frontend/`, in the `composeApp` module. Android is the supported target: the iOS targets are declared in the Gradle build, but there is no Xcode project yet and they aren't built or tested.
 
@@ -126,6 +173,28 @@ Start the backend first (see [Backend](#backend)). Then, in the app, open **Opti
 - **Access token:** the value of `API_TOKEN` in `backend/.env`.
 
 Tap **Test connection** to check both, then **Save**. If the server rejects the token, the app tells you to check it in Options → Server.
+
+## Security
+
+The backend is meant for **your home network** and a single user.
+
+What protects it:
+- **Access token:** every `/api` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
+- **Analysis limit:** at most `ANALYZE_RATE_LIMIT_PER_MINUTE` analyses per minute (20 by default), since each one is a paid API call.
+- **Upload checks:** only real JPEG/PNG photos up to 15 MB reach the image decoder.
+- **App data stays on the phone:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers.
+
+What it does **not** do:
+- **No HTTPS.** The app talks to the backend over `http://`, so meals, weight and water travel **unencrypted** over the network. That's acceptable on your home Wi-Fi; on public or shared networks, anyone on that network could read them. The app shows a note in Options → Server for `http://` addresses.
+- **One shared token.** Anyone with your `.env` or your phone's app data has full access.
+
+Do:
+- Keep the server on your home network. **Never forward port 3000 on your router** or expose it to the internet.
+- To use the app away from home, connect through a VPN to your home network (e.g. Tailscale) instead of opening the port.
+- If the token may have leaked, generate a new one, put it in `backend/.env`, restart the server and enter it in the app.
+- Set a monthly spending limit for your key in the Anthropic console.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Workflow
 
