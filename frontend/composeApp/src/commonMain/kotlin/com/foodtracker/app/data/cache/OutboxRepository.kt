@@ -203,13 +203,15 @@ fun storedSettingsOutbox(
     outbox: OutboxStore,
     dayCache: DayCacheStore,
     engine: HttpClientEngine = platformHttpClientEngine(),
+    /** Asks for a background send when something is queued; the sender itself needs none. */
+    requestSync: () -> Unit = {},
 ): Pair<OutboxRepository, HttpClient> {
     val httpClient = createHttpClient(engine, tokenProvider = { accessToken })
     val repository = OutboxRepository(
         api = FoodTrackerApiClient(httpClient) { serverUrl },
         outbox = outbox,
         dayCache = dayCache,
-        requestSync = {},
+        requestSync = requestSync,
         serverUrl = { serverUrl },
     )
     return repository to httpClient

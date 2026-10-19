@@ -49,6 +49,9 @@ kotlin {
             implementation(libs.androidx.core)
             // Sends the offline queue in the background (offline-queue).
             implementation(libs.androidx.work.runtime)
+            // Home-screen widgets (home-widgets).
+            implementation(libs.androidx.glance.appwidget)
+            implementation(libs.androidx.glance.material3)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

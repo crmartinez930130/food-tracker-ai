@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Platform strings the system shows itself, in the phone's language (the widget picker). The app's own
+     texts live in commonMain/composeResources. -->
+<resources>
+    <string name="widget_today_label">Calorías de hoy</string>
+    <string name="widget_today_description">Calorías, macros y agua de hoy contra tu meta</string>
+    <string name="widget_actions_label">Acciones rápidas</string>
+    <string name="widget_actions_description">Sumá un vaso de agua o registrá una comida</string>
+</resources>
