@@ -54,11 +54,11 @@ The widgets SHALL be redrawn whenever the phone's copy of today, the goal or the
 - **THEN** no background refresh runs for widgets
 
 ### Requirement: Widget look and language
-The widgets SHALL use the app's color scheme, following the system's light or dark mode, SHALL show their texts in the language chosen in the app, and SHALL offer a preview in the widget picker.
+The widgets SHALL use the app's colors: "Quick actions" follows the system's light or dark mode, and "Today's calories" uses the dark scheme's background with white text in both modes (see the widget background transparency). They SHALL show their texts in the language chosen in the app, and SHALL offer a preview in the widget picker.
 
 #### Scenario: Dark mode
 - **WHEN** the system is in dark mode
-- **THEN** the widgets use the app's dark colors
+- **THEN** "Quick actions" uses the app's dark colors, and "Today's calories" looks as it does in light mode
 
 #### Scenario: Language
 - **WHEN** the user chose English in the app on a phone set to Spanish

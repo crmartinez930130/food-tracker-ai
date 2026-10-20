@@ -2,6 +2,7 @@
 <!-- "Today's calories" (home-widgets): 4x2 by default, resizable down to 2x2. Updates come from the app
      (data changes, the 30-minute refresh worker, midnight), so the system's own period is off. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.foodtracker.app.widget.WidgetConfigActivity"
     android:description="@string/widget_today_description"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewImage="@drawable/widget_today_preview"
@@ -13,4 +14,5 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

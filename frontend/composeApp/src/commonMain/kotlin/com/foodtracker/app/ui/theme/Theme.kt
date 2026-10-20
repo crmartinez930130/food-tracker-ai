@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
 /**
  * The app's single theme entry point: the Greenwave palette, Google Sans Flex and the rounder
@@ -20,6 +21,8 @@ import androidx.compose.ui.Modifier
 @Composable
 fun FoodTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    /** Leaves the root surface clear, e.g. for a screen drawn over the wallpaper (the widget settings). */
+    transparentBackground: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val family = googleSansFlex()
@@ -31,7 +34,10 @@ fun FoodTrackerTheme(
         shapes = AppShapes,
     ) {
         CompositionLocalProvider(LocalTypeTokens provides tokens) {
-            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = if (transparentBackground) Color.Transparent else MaterialTheme.colorScheme.background,
+            ) {
                 content()
             }
         }

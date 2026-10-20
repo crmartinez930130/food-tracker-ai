@@ -60,6 +60,9 @@
     <string name="widget_data_from_other_day">Datos del %1$s a las %2$s</string>
     <string name="widget_no_data">Todavía sin datos de hoy</string>
     <string name="widget_log_meal">Registrar comida</string>
+    <string name="widget_config_title">Fondo del widget</string>
+    <string name="widget_config_transparency">Transparencia del fondo</string>
+    <string name="widget_config_done">Listo</string>
     <string name="offline_not_loaded">Sin conexión: este período todavía no se cargó.</string>
     <string name="offline_favorites_not_loaded">Sin conexión: los favoritos todavía no se cargaron.</string>
     <string name="meal_pending">Pendiente</string>

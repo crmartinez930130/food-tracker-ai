@@ -60,6 +60,9 @@
     <string name="widget_data_from_other_day">Data from %1$s at %2$s</string>
     <string name="widget_no_data">No data for today yet</string>
     <string name="widget_log_meal">Log a meal</string>
+    <string name="widget_config_title">Widget background</string>
+    <string name="widget_config_transparency">Background transparency</string>
+    <string name="widget_config_done">Done</string>
     <string name="offline_not_loaded">No connection: this period hasn't been loaded yet.</string>
     <string name="offline_favorites_not_loaded">No connection: your favorites haven't been loaded yet.</string>
     <string name="meal_pending">Pending</string>

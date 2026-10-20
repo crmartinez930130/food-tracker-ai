@@ -77,6 +77,19 @@
                 android:resource="@xml/widget_actions_info" />
         </receiver>
 
+        <!-- A widget's settings (background transparency). Exported: the launcher opens it for a placed
+             widget; it accepts only this app's own widget ids. -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.FoodTracker.WidgetConfig">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Switches the widgets to the new day: the midnight alarm, and clock or time-zone changes. -->
         <receiver
             android:name=".widget.MidnightReceiver"
