@@ -1,7 +1,17 @@
 package com.foodtracker.app.widget
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.glance.GlanceTheme
+import androidx.glance.LocalContext
+import androidx.glance.color.ColorProvider as dayNightColorProvider
+import androidx.glance.color.DayNightColorProvider
+import androidx.glance.currentState
 import androidx.glance.material3.ColorProviders
+import androidx.glance.unit.ColorProvider
 import com.foodtracker.app.data.LogWaterRequest
 import com.foodtracker.app.data.cache.OutboxSync
 import com.foodtracker.app.data.cache.SaveOutcome
@@ -24,7 +34,6 @@ import food_tracker_frontend.composeapp.generated.resources.calorie_ring_over
 import food_tracker_frontend.composeapp.generated.resources.home_calories_title
 import food_tracker_frontend.composeapp.generated.resources.macro_carbs
 import food_tracker_frontend.composeapp.generated.resources.macro_fat
-import food_tracker_frontend.composeapp.generated.resources.macro_progress_grams
 import food_tracker_frontend.composeapp.generated.resources.macro_protein
 import food_tracker_frontend.composeapp.generated.resources.month_short_names
 import food_tracker_frontend.composeapp.generated.resources.water_add_glass
@@ -111,9 +120,8 @@ internal data class TodayTexts(
 internal suspend fun todayTexts(context: Context, state: TodayWidgetState): TodayTexts {
     applyAppLocale(context)
     val progress = state.calorieProgress
-    val macro: suspend (label: String, grams: Int, target: Int) -> String = { label, grams, target ->
-        "$label ${getString(Res.string.macro_progress_grams, grams, target)}"
-    }
+    // Tighter than Home's "76 / 130 g": the three macros have to fit one line of the widget's larger type.
+    val macro: (label: String, grams: Int, target: Int) -> String = { label, grams, target -> "$label $grams/$target g" }
     return TodayTexts(
         title = getString(Res.string.home_calories_title),
         target = getString(Res.string.calorie_ring_of_target, state.targetCalories),
@@ -154,4 +162,47 @@ internal data class ActionTexts(val glass: String, val logMeal: String)
 internal suspend fun actionTexts(context: Context, glassMl: Int): ActionTexts {
     applyAppLocale(context)
     return ActionTexts(glass = getString(Res.string.water_add_glass, glassMl), logMeal = getString(Res.string.widget_log_meal))
+}
+
+/** Each widget's background transparency (0..100) in its Glance state; missing means opaque. */
+internal val BackgroundTransparencyKey = intPreferencesKey("background_transparency")
+
+/**
+ * [provider] with [alpha] applied to both its light and dark colors, so a transparent background still
+ * follows the system's mode. glance-material3's colors are day/night providers; anything else is resolved
+ * for [context] (a fallback that wouldn't switch with the mode).
+ */
+internal fun transparentBackground(provider: ColorProvider, alpha: Float, context: Context): ColorProvider =
+    if (provider is DayNightColorProvider) {
+        dayNightColorProvider(day = provider.day.copy(alpha = alpha), night = provider.night.copy(alpha = alpha))
+    } else {
+        ColorProvider(provider.getColor(context).copy(alpha = alpha))
+    }
+
+/**
+ * The widget's background as stored in its Glance state, ready to draw: the theme's, or [fixed] (the same in
+ * light and dark) when given.
+ */
+@Composable
+internal fun widgetBackground(fixed: Color? = null): ColorProvider {
+    val alpha = backgroundAlpha(clampTransparency(currentState<Preferences>()[BackgroundTransparencyKey] ?: 0))
+    return if (fixed != null) {
+        ColorProvider(fixed.copy(alpha = alpha))
+    } else {
+        transparentBackground(GlanceTheme.colors.widgetBackground, alpha, LocalContext.current)
+    }
+}
+
+/**
+ * "Today's calories" always draws on the dark scheme's widget background with white text, in light and dark
+ * mode alike: the text then reads at any transparency, also over a wallpaper with no background left.
+ */
+internal object TodayWidgetLook {
+    val background: Color = (WidgetColors.widgetBackground as? DayNightColorProvider)?.night ?: DarkColors.surfaceContainer
+    val text = Color.White
+    val secondaryText = Color.White.copy(alpha = 0.85f)
+    val progress = DarkColors.primary
+    val over = DarkColors.error
+    val track = Color.White.copy(alpha = 0.25f)
+    val water = DarkColors.tertiary
 }

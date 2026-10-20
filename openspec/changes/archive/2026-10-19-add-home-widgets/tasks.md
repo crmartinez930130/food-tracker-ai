@@ -45,4 +45,4 @@
   - removing the last widget cancels the worker.
 
   Restore the emulator afterwards.
-- [ ] 4.4 On the phone, with the user's OK to install: the same main checks.
+- [x] 4.4 On the phone, with the user's OK to install: the same main checks.

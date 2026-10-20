@@ -77,7 +77,7 @@ private fun ActionsContent(texts: ActionTexts, logGlass: Action, openCapture: Ac
         .fillMaxSize()
         .appWidgetBackground()
         .cornerRadius(24.dp)
-        .background(colors.widgetBackground)
+        .background(widgetBackground())
         .padding(12.dp)
     if (wide) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically) {

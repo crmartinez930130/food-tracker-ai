@@ -5,4 +5,12 @@
     <style name="Theme.FoodTracker" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#FFF6FBF3</item>
     </style>
+
+    <!-- The widget settings screen (home-widgets): drawn over the live wallpaper, so the preview shows
+         the chosen transparency against the user's own background. -->
+    <style name="Theme.FoodTracker.WidgetConfig" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">false</item>
+    </style>
 </resources>

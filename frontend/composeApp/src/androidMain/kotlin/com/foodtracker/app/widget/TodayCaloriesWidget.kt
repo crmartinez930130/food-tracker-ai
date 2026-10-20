@@ -36,6 +36,7 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.foodtracker.app.MainActivity
 import com.foodtracker.app.R
 import kotlinx.coroutines.flow.first
@@ -68,51 +69,53 @@ class TodayCaloriesWidget : GlanceAppWidget() {
 
 @Composable
 private fun TodayContent(state: TodayWidgetState, texts: TodayTexts) {
-    val colors = GlanceTheme.colors
+    val look = TodayWidgetLook
     val wide = LocalSize.current.width >= TodayCaloriesWidget.WIDE.width
     val over = state.calorieProgress.isOver
+    val main = ColorProvider(look.text)
+    val secondary = ColorProvider(look.secondaryText)
     Column(
         GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
             .cornerRadius(24.dp)
-            .background(colors.widgetBackground)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .background(widgetBackground(fixed = look.background))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Image(
                 ImageProvider(R.drawable.ic_widget_apple),
                 contentDescription = null,
-                modifier = GlanceModifier.size(16.dp),
-                // The brand green alone is too dark on the dark scheme's background.
-                colorFilter = ColorFilter.tint(colors.primary),
+                modifier = GlanceModifier.size(18.dp),
+                colorFilter = ColorFilter.tint(main),
             )
             Spacer(GlanceModifier.width(6.dp))
             Text(
                 texts.title,
-                style = TextStyle(color = colors.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                style = TextStyle(color = main, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 modifier = GlanceModifier.defaultWeight(),
             )
             if (wide && texts.note != null) Note(texts.note)
         }
-        Spacer(GlanceModifier.height(4.dp))
+        Spacer(GlanceModifier.height(2.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 "${state.calories}",
-                style = TextStyle(color = colors.onSurface, fontSize = 30.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = main, fontSize = 36.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
             )
             Spacer(GlanceModifier.width(4.dp))
             Text(
                 "kcal",
-                style = TextStyle(color = colors.onSurfaceVariant, fontSize = 13.sp),
-                modifier = GlanceModifier.padding(bottom = 5.dp),
+                style = TextStyle(color = secondary, fontSize = 15.sp, fontWeight = FontWeight.Medium),
+                modifier = GlanceModifier.padding(bottom = 6.dp),
             )
         }
-        val leftStyle = TextStyle(color = if (over) colors.error else colors.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        val targetStyle = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp)
+        // Over the goal the excess stays red (the dark scheme's light one), still bold.
+        val leftStyle = TextStyle(color = if (over) ColorProvider(look.over) else main, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        val targetStyle = TextStyle(color = secondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         if (wide) {
             Row {
                 Text("${texts.target} · ", style = targetStyle, maxLines = 1)
@@ -126,25 +129,25 @@ private fun TodayContent(state: TodayWidgetState, texts: TodayTexts) {
         LinearProgressIndicator(
             progress = state.calorieProgress.fraction,
             modifier = GlanceModifier.fillMaxWidth().height(8.dp),
-            color = if (over) colors.error else colors.primary,
-            backgroundColor = colors.secondaryContainer,
+            color = ColorProvider(if (over) look.over else look.progress),
+            backgroundColor = ColorProvider(look.track),
         )
         if (wide) {
             Spacer(GlanceModifier.height(8.dp))
-            Text(texts.macros, style = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp), maxLines = 1)
+            Text(texts.macros, style = TextStyle(color = secondary, fontSize = 12.5.sp, fontWeight = FontWeight.Medium), maxLines = 1)
             Spacer(GlanceModifier.height(6.dp))
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "${texts.waterTitle} ${texts.water}",
-                    style = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp),
+                    style = TextStyle(color = secondary, fontSize = 13.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
                 )
                 Spacer(GlanceModifier.width(8.dp))
                 LinearProgressIndicator(
                     progress = state.waterFraction,
                     modifier = GlanceModifier.defaultWeight().height(6.dp),
-                    color = colors.tertiary,
-                    backgroundColor = colors.tertiaryContainer,
+                    color = ColorProvider(look.water),
+                    backgroundColor = ColorProvider(look.track),
                 )
             }
         } else if (texts.note != null) {
@@ -156,7 +159,7 @@ private fun TodayContent(state: TodayWidgetState, texts: TodayTexts) {
 
 @Composable
 private fun Note(text: String) {
-    Text(text, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp), maxLines = 2)
+    Text(text, style = TextStyle(color = ColorProvider(TodayWidgetLook.secondaryText), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 2)
 }
 
 class TodayCaloriesWidgetReceiver : GlanceAppWidgetReceiver() {
