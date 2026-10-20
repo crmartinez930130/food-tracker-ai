@@ -7,11 +7,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
-import androidx.glance.color.ColorProvider
+import androidx.glance.color.ColorProvider as dayNightColorProvider
 import androidx.glance.color.DayNightColorProvider
 import androidx.glance.currentState
-import androidx.glance.unit.ColorProvider
 import androidx.glance.material3.ColorProviders
+import androidx.glance.unit.ColorProvider
 import com.foodtracker.app.data.LogWaterRequest
 import com.foodtracker.app.data.cache.OutboxSync
 import com.foodtracker.app.data.cache.SaveOutcome
@@ -174,7 +174,7 @@ internal val BackgroundTransparencyKey = intPreferencesKey("background_transpare
  */
 internal fun transparentBackground(provider: ColorProvider, alpha: Float, context: Context): ColorProvider =
     if (provider is DayNightColorProvider) {
-        ColorProvider(day = provider.day.copy(alpha = alpha), night = provider.night.copy(alpha = alpha))
+        dayNightColorProvider(day = provider.day.copy(alpha = alpha), night = provider.night.copy(alpha = alpha))
     } else {
         ColorProvider(provider.getColor(context).copy(alpha = alpha))
     }
