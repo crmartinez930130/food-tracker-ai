@@ -23,10 +23,11 @@ import org.jetbrains.compose.resources.stringResource
 fun offlineNotice(refreshedAt: Long?, today: LocalDate): String {
     if (refreshedAt == null) return stringResource(Res.string.offline_notice)
     val age = cacheAge(refreshedAt, today)
-    return if (age.date == null) {
+    val date = age.date
+    return if (date == null) {
         stringResource(Res.string.offline_notice_today, age.time)
     } else {
-        stringResource(Res.string.offline_notice_other_day, shortDate(age.date), age.time)
+        stringResource(Res.string.offline_notice_other_day, shortDate(date), age.time)
     }
 }
 

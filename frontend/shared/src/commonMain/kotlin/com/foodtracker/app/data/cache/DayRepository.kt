@@ -41,15 +41,15 @@ sealed interface RefreshResult {
 }
 
 @OptIn(ExperimentalTime::class)
-internal fun epochMillisNow(): Long = Clock.System.now().toEpochMilliseconds()
+fun epochMillisNow(): Long = Clock.System.now().toEpochMilliseconds()
 
-internal val cacheJson = Json {
+val cacheJson = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
 }
 
 /** [value] decoded, or null when it no longer matches the type (SerializationException is one). */
-internal inline fun <reified T> decodeOrNull(value: String): T? =
+inline fun <reified T> decodeOrNull(value: String): T? =
     try {
         cacheJson.decodeFromString<T>(value)
     } catch (_: IllegalArgumentException) {
