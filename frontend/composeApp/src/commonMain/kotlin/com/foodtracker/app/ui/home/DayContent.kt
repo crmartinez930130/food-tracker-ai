@@ -231,10 +231,13 @@ fun DayContent(
         isRefreshing = true
         val result = dayRepository.refresh(date)
         // No copy and no connection: the day empty against the goal, so what's queued for it still shows.
-        if (result is RefreshResult.Offline && shownDate != date) {
-            shown = dayRepository.offlinePlaceholder(date)
-            shownDate = date
-            showingPlaceholder = true
+        // Checked again once it's built: the copy may arrive meanwhile (on a cold start), and it wins.
+        if (result is RefreshResult.Offline) {
+            placeholderIfStillMissing(isShown = { shownDate == date }) { dayRepository.offlinePlaceholder(date) }?.let {
+                shown = it
+                shownDate = date
+                showingPlaceholder = true
+            }
         }
         refreshProblem = result.takeUnless { it == RefreshResult.Success }
         isRefreshing = false
