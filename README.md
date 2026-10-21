@@ -130,7 +130,7 @@ There is no automatic backup. The entire history lives in `backend/data/food-tra
 
 ## Android app
 
-The Kotlin Multiplatform + Compose Multiplatform app lives in `frontend/`, in the `composeApp` module. Android is the supported target: the iOS targets are declared in the Gradle build, but there is no Xcode project yet and they aren't built or tested.
+The Kotlin Multiplatform + Compose Multiplatform app lives in `frontend/`: the `composeApp` module has the screens, widgets and Android integration, and the `shared` module the logic without UI (models, API client, local cache and offline queue, the day's calculations). Android is the supported target: the iOS targets are declared in the Gradle build, but there is no Xcode project yet and they aren't built or tested.
 
 ### Requirements
 
@@ -160,7 +160,7 @@ The app shows up as **Food Tracker** in the launcher.
 ### Test
 
 ```bash
-./gradlew :composeApp:testDebugUnitTest
+./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest
 ```
 
 ### Connecting to the backend
