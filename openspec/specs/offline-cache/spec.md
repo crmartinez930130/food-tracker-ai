@@ -55,6 +55,10 @@ When the shown day's refresh fails because the backend can't be reached (no netw
 - **WHEN** a later refresh succeeds
 - **THEN** the notice disappears and the data is up to date
 
+#### Scenario: Opened from closed without a connection
+- **WHEN** the app starts from closed with no connection and today's copy is on the phone
+- **THEN** Home shows that copy with the "No connection · data from …" notice, never the empty day
+
 ### Requirement: Unreachable backend detected quickly
 The app SHALL give up connecting to the backend after at most 10 seconds, so an unreachable backend is reported without a long wait. The time a connected request may take, such as a meal analysis, SHALL NOT be limited by this.
 
