@@ -14,6 +14,7 @@
     <string name="data_from_other_day">Sin conexión · datos del %1$s a las %2$s</string>
     <string name="no_data">Todavía sin datos de hoy</string>
     <string name="not_configured">Abrí Food Tracker en el teléfono</string>
+    <string name="add_glass">+ %1$d ml</string>
     <string name="tile_label">Hoy</string>
     <string name="tile_description">Calorías y agua de hoy</string>
 </resources>

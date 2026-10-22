@@ -8,6 +8,7 @@ import com.google.android.gms.wearable.DataItem
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 
 /** Receives the backend settings the phone app publishes at [WatchSettings.PATH] (wear-app). */
@@ -45,6 +46,8 @@ suspend fun loadPublishedSettings(context: Context) {
         } finally {
             items.release()
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: Exception) {
         // No Play services or no paired phone yet: the listener gets them when they arrive.
     }

@@ -12,6 +12,7 @@
     <string name="data_from_other_day">No connection · data from %1$s at %2$s</string>
     <string name="no_data">No data for today yet</string>
     <string name="not_configured">Open Food Tracker on your phone</string>
+    <string name="add_glass">+ %1$d ml</string>
     <string name="tile_label">Today</string>
     <string name="tile_description">Today\'s calories and water</string>
 </resources>

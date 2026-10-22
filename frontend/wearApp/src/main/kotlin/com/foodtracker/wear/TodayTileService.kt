@@ -14,26 +14,42 @@ import androidx.wear.protolayout.material3.circularProgressIndicator
 import androidx.wear.protolayout.material3.materialScope
 import androidx.wear.protolayout.material3.primaryLayout
 import androidx.wear.protolayout.material3.text
+import androidx.wear.protolayout.material3.textEdgeButton
+import androidx.wear.protolayout.modifiers.clickable
+import androidx.wear.protolayout.modifiers.loadAction
 import androidx.wear.protolayout.types.layoutString
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
+import com.foodtracker.app.widget.TodayWidgetState
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 
-/** The "Today" tile (wear-app): a calories ring with the calories, what's left and the water. */
+/**
+ * The "Today" tile (wear-app): a calories ring with the calories and what's left, the water, and a "+ glass"
+ * edge button that logs a glass without opening the app, in Food Tracker's colors.
+ */
 class TodayTileService : TileService() {
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> =
         SuspendToFutureAdapter.launchFuture(Dispatchers.IO) {
-            WatchRefresh.requestIfDue(this@TodayTileService)
-            val context = this@TodayTileService.localized()
-            val settings = WatchSettingsStore.load(this@TodayTileService)
-            val texts = settings?.let { todayStates(this@TodayTileService, it).first() }?.let { it to watchTexts(context, it) }
+            val service = this@TodayTileService
+            // A tap on "+ glass" reloads the tile carrying its id: log the glass first, then draw the new total.
+            val clicked = requestParams.currentState.lastClickableId
+            if (isNewTileClick(clicked, TileClicks.lastHandled(service))) {
+                TileClicks.handled(service, clicked)
+                logWatchGlass(service)
+            } else {
+                WatchRefresh.requestIfDue(service)
+            }
+            val context = service.localized()
+            val content = WatchSettingsStore.load(service)
+                ?.let { todayStates(service, it).first() }
+                ?.let { it to watchTexts(context, it) }
             TileBuilders.Tile.Builder()
                 .setResourcesVersion(RESOURCES_VERSION)
                 .setFreshnessIntervalMillis(FRESHNESS_MILLIS)
-                .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(tileLayout(context, requestParams.deviceConfiguration, texts)))
+                .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(tileLayout(context, requestParams.deviceConfiguration, content)))
                 .build()
         }
 
@@ -45,29 +61,38 @@ class TodayTileService : TileService() {
     private fun tileLayout(
         context: Context,
         device: DeviceParameters,
-        content: Pair<com.foodtracker.app.widget.TodayWidgetState, WatchTexts>?,
-    ): LayoutElementBuilders.LayoutElement = materialScope(context, device) {
-        primaryLayout(
-            titleSlot = { text((content?.second?.title ?: context.getString(R.string.today_title)).layoutString) },
-            mainSlot = {
-                if (content == null) {
-                    text(context.getString(R.string.not_configured).layoutString, maxLines = 3)
-                } else {
-                    caloriesRing(content.first.calorieProgress.fraction, "${content.first.calories}", content.second.leftOrOver)
-                }
-            },
-            bottomSlot = content?.let { (_, texts) -> { text((texts.note ?: texts.water).layoutString, maxLines = 2, typography = Typography.BODY_SMALL) } },
-            onClick = openApp(context),
-        )
-    }
+        content: Pair<TodayWidgetState, WatchTexts>?,
+    ): LayoutElementBuilders.LayoutElement =
+        materialScope(context, device, allowDynamicTheme = false, defaultColorScheme = WatchColors.tile) {
+            primaryLayout(
+                titleSlot = { text((content?.second?.title ?: context.getString(R.string.today_title)).layoutString) },
+                mainSlot = {
+                    if (content == null) {
+                        text(context.getString(R.string.not_configured).layoutString, maxLines = 3)
+                    } else {
+                        caloriesRing(content.first, content.second)
+                    }
+                },
+                bottomSlot = content?.let { (state, _) ->
+                    {
+                        textEdgeButton(onClick = clickable(id = glassClickId(System.currentTimeMillis()), action = loadAction())) {
+                            text(context.getString(R.string.add_glass, state.glassMl).layoutString)
+                        }
+                    }
+                },
+                onClick = openApp(context),
+            )
+        }
 
-    private fun MaterialScope.caloriesRing(fraction: Float, calories: String, left: String): LayoutElementBuilders.LayoutElement =
+    /** The ring with the calories and what's left inside, and the water (or how old the data is) below. */
+    private fun MaterialScope.caloriesRing(state: TodayWidgetState, texts: WatchTexts): LayoutElementBuilders.LayoutElement =
         LayoutElementBuilders.Box.Builder()
-            .addContent(circularProgressIndicator(staticProgress = fraction))
+            .addContent(circularProgressIndicator(staticProgress = state.calorieProgress.fraction))
             .addContent(
                 LayoutElementBuilders.Column.Builder()
-                    .addContent(text(calories.layoutString, typography = Typography.NUMERAL_MEDIUM))
-                    .addContent(text(left.layoutString, typography = Typography.LABEL_SMALL))
+                    .addContent(text("${state.calories}".layoutString, typography = Typography.NUMERAL_MEDIUM))
+                    .addContent(text(texts.leftOrOver.layoutString, typography = Typography.LABEL_SMALL))
+                    .addContent(text((texts.note ?: texts.water).layoutString, typography = Typography.BODY_EXTRA_SMALL, maxLines = 2))
                     .build(),
             )
             .build()
@@ -90,5 +115,17 @@ class TodayTileService : TileService() {
     private companion object {
         const val RESOURCES_VERSION = "1"
         const val FRESHNESS_MILLIS = 30 * 60 * 1000L
+    }
+}
+
+/** The id of the last "+ glass" tap the tile handled (see [isNewTileClick]). */
+private object TileClicks {
+    private const val PREFS = "watch_tile"
+    private const val KEY = "last_glass_tap_id"
+
+    fun lastHandled(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+
+    fun handled(context: Context, id: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, id).commit()
     }
 }
