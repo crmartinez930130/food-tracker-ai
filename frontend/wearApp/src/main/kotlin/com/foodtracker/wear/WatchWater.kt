@@ -85,12 +85,16 @@ class WatchOutboxWorker(context: Context, params: WorkerParameters) : CoroutineW
     }
 }
 
-/** The tile's "+ glass" button id: a tap reloads the tile with it as the last clickable id. */
+/** The prefix of the tile's "+ glass" button id; each drawn tile gives its button a fresh id (see [glassClickId]). */
 const val ADD_GLASS_CLICK = "add_glass"
 
+/** A new id for the tile's "+ glass" button, unique per drawn tile: a tap then names exactly one drawing. */
+fun glassClickId(now: Long): String = "$ADD_GLASS_CLICK:$now"
+
 /**
- * Whether a tile request is a new tap on [ADD_GLASS_CLICK]: only the request a tap causes should carry its id,
- * but a second one within [windowMillis] of the last handled tap is taken as the same tap, never a second glass.
+ * Whether a tile request is a tap on "+ glass" that wasn't handled yet. Each drawn tile gives its button a fresh
+ * id, so a request that carries an id already handled (were the system ever to repeat it, e.g. on a later
+ * refresh) never logs a second glass.
  */
-fun isNewTileClick(lastClickableId: String, lastHandledAt: Long, now: Long, windowMillis: Long = 2_000L): Boolean =
-    lastClickableId == ADD_GLASS_CLICK && (lastHandledAt <= 0L || now - lastHandledAt >= windowMillis || now < lastHandledAt)
+fun isNewTileClick(lastClickableId: String, lastHandledId: String?): Boolean =
+    lastClickableId.startsWith("$ADD_GLASS_CLICK:") && lastClickableId != lastHandledId

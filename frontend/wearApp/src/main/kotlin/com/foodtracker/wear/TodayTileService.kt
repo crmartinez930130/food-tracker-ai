@@ -35,9 +35,9 @@ class TodayTileService : TileService() {
         SuspendToFutureAdapter.launchFuture(Dispatchers.IO) {
             val service = this@TodayTileService
             // A tap on "+ glass" reloads the tile carrying its id: log the glass first, then draw the new total.
-            val now = System.currentTimeMillis()
-            if (isNewTileClick(requestParams.currentState.lastClickableId, TileClicks.lastHandled(service), now)) {
-                TileClicks.handled(service, now)
+            val clicked = requestParams.currentState.lastClickableId
+            if (isNewTileClick(clicked, TileClicks.lastHandled(service))) {
+                TileClicks.handled(service, clicked)
                 logWatchGlass(service)
             } else {
                 WatchRefresh.requestIfDue(service)
@@ -75,7 +75,7 @@ class TodayTileService : TileService() {
                 },
                 bottomSlot = content?.let { (state, _) ->
                     {
-                        textEdgeButton(onClick = clickable(id = ADD_GLASS_CLICK, action = loadAction())) {
+                        textEdgeButton(onClick = clickable(id = glassClickId(System.currentTimeMillis()), action = loadAction())) {
                             text(context.getString(R.string.add_glass, state.glassMl).layoutString)
                         }
                     }
@@ -118,14 +118,14 @@ class TodayTileService : TileService() {
     }
 }
 
-/** When the tile last handled a "+ glass" tap (see [isNewTileClick]). */
+/** The id of the last "+ glass" tap the tile handled (see [isNewTileClick]). */
 private object TileClicks {
     private const val PREFS = "watch_tile"
-    private const val KEY = "last_glass_tap"
+    private const val KEY = "last_glass_tap_id"
 
-    fun lastHandled(context: Context): Long = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY, 0L)
+    fun lastHandled(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
 
-    fun handled(context: Context, at: Long) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong(KEY, at).commit()
+    fun handled(context: Context, id: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, id).commit()
     }
 }

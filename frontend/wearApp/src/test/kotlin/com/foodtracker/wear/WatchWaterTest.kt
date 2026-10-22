@@ -17,23 +17,23 @@ class WatchWaterTest {
 
     @Test
     fun `a tap on the glass button logs a glass`() {
-        assertTrue(isNewTileClick(ADD_GLASS_CLICK, lastHandledAt = 0L, now = 10_000L))
+        assertTrue(isNewTileClick(glassClickId(1_000L), lastHandledId = null))
     }
 
     @Test
     fun `other requests don't`() {
-        assertFalse(isNewTileClick("", lastHandledAt = 0L, now = 10_000L))
-        assertFalse(isNewTileClick("open_app", lastHandledAt = 0L, now = 10_000L))
+        assertFalse(isNewTileClick("", lastHandledId = null))
+        assertFalse(isNewTileClick("open_app", lastHandledId = null))
     }
 
     @Test
-    fun `a repeated request right after a handled tap isn't a second glass`() {
-        assertFalse(isNewTileClick(ADD_GLASS_CLICK, lastHandledAt = 10_000L, now = 11_000L))
-        assertTrue(isNewTileClick(ADD_GLASS_CLICK, lastHandledAt = 10_000L, now = 12_000L))
+    fun `a request repeating a handled tap's id never logs a second glass, however late`() {
+        val tap = glassClickId(1_000L)
+        assertFalse(isNewTileClick(tap, lastHandledId = tap))
     }
 
     @Test
-    fun `a clock set back doesn't block taps`() {
-        assertTrue(isNewTileClick(ADD_GLASS_CLICK, lastHandledAt = 50_000L, now = 1_000L))
+    fun `a tap on a newer drawing of the tile is a new glass`() {
+        assertTrue(isNewTileClick(glassClickId(2_000L), lastHandledId = glassClickId(1_000L)))
     }
 }

@@ -70,7 +70,7 @@ A glass rejected at once (4xx) is dropped silently, as on the phone widget. Home
 - **The button:** the bottom slot holds an edge button labeled "+ 250 ml", with `clickable(id = "add_glass", action = loadAction())`.
 - **Water:** the water line moves next to the ring.
 - **The click:** `onTileRequest` logs the glass first when `requestParams.currentState.lastClickableId == "add_glass"`, then builds the layout from the updated state.
-- **No double glass:** only a request caused by the tap carries that id, which is checked on the emulator. To be safe, a second request with the same id within 2 seconds is ignored (`isNewTileClick`, tested).
+- **No double glass:** each drawn tile gives its button a fresh id (`add_glass:<time>`), and a tap is handled only if its id differs from the last one handled (`isNewTileClick`, tested). Were the system ever to repeat a tap's id on a later request, such as a freshness refresh, it would never log a second glass (reviewer's suggestion on PR #107). Verified on the emulator: each tap adds exactly one glass.
 
 ## Risks / Trade-offs
 
