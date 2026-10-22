@@ -32,7 +32,7 @@ The Data Layer only connects apps with the same package name and signing key, pe
 
 Its dependencies:
 - `:shared`;
-- `androidx.wear.compose` material3 1.7.1;
+- `androidx.wear.compose` material3 1.6.2 (1.7.1 requires compileSdk 37 and AGP 9.1, which the project doesn't use yet);
 - `activity-compose`;
 - `androidx.wear.tiles` 1.6.2 with `protolayout` and `protolayout-material3`;
 - `play-services-wearable` 20.0.1;
