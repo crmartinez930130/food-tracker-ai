@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app icon's apple, on the adaptive icon's 108dp canvas (everything within the 66dp safe zone).
+     The sparkle is a hole (evenOdd) through which the background shows, so this single-color drawable
+     also works as the monochrome layer for themed icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Body, with the sparkle cut out. -->
+    <path
+        android:fillColor="#2C6A45"
+        android:fillType="evenOdd"
+        android:pathData="M54,44C47,38 33,39 33,55C33,68 42,79 49.5,77.6C52,77.1 56,77.1 58.5,77.6C66,79 75,68 75,55C75,39 61,38 54,44Z M57,51Q59.24,56.76 65,59Q59.24,61.24 57,67Q54.76,61.24 49,59Q54.76,56.76 57,51Z" />
+    <!-- Stem. -->
+    <path
+        android:pathData="M54,44Q54.5,38 57,34"
+        android:strokeWidth="2.6"
+        android:strokeColor="#2C6A45"
+        android:strokeLineCap="round" />
+    <!-- Leaf. -->
+    <path
+        android:fillColor="#2C6A45"
+        android:pathData="M58,37C60,30 67,29 71,30C69,35 64,38 58,37Z" />
+</vector>

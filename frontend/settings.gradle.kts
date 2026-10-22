@@ -19,3 +19,5 @@ include(":composeApp")
 // The app's logic without UI (API client, local cache, offline queue, day calculations), shared with
 // other apps such as a future Wear OS one.
 include(":shared")
+// The Wear OS app for the watch (wear-app), on top of :shared.
+include(":wearApp")

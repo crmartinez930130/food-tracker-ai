@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="today_title">Today</string>
+    <string name="kcal_of_goal">of %1$d kcal</string>
+    <string name="kcal_left">%1$d left</string>
+    <string name="kcal_over">%1$d over</string>
+    <string name="macro_protein">Protein %1$d/%2$d g</string>
+    <string name="macro_fat">Fat %1$d/%2$d g</string>
+    <string name="macro_carbs">Carbs %1$d/%2$d g</string>
+    <string name="water_progress">Water %1$d/%2$d ml</string>
+    <string name="data_from">No connection · data from %1$s</string>
+    <string name="data_from_other_day">No connection · data from %1$s at %2$s</string>
+    <string name="no_data">No data for today yet</string>
+    <string name="not_configured">Open Food Tracker on your phone</string>
+    <string name="tile_label">Today</string>
+    <string name="tile_description">Today\'s calories and water</string>
+</resources>

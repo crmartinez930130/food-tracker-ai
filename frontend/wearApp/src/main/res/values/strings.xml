@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The watch app's texts (wear-app). Spanish is the default, as in the phone app. -->
+<resources>
+    <string name="app_name">Food Tracker</string>
+    <string name="today_title">Hoy</string>
+    <string name="kcal_of_goal">de %1$d kcal</string>
+    <string name="kcal_left">quedan %1$d</string>
+    <string name="kcal_over">%1$d de más</string>
+    <string name="macro_protein">Proteína %1$d/%2$d g</string>
+    <string name="macro_fat">Grasa %1$d/%2$d g</string>
+    <string name="macro_carbs">Carbohidratos %1$d/%2$d g</string>
+    <string name="water_progress">Agua %1$d/%2$d ml</string>
+    <string name="data_from">Sin conexión · datos de las %1$s</string>
+    <string name="data_from_other_day">Sin conexión · datos del %1$s a las %2$s</string>
+    <string name="no_data">Todavía sin datos de hoy</string>
+    <string name="not_configured">Abrí Food Tracker en el teléfono</string>
+    <string name="tile_label">Hoy</string>
+    <string name="tile_description">Calorías y agua de hoy</string>
+</resources>

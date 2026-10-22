@@ -160,7 +160,7 @@ The app shows up as **Food Tracker** in the launcher.
 ### Test
 
 ```bash
-./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest
+./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest :wearApp:testDebugUnitTest
 ```
 
 ### Connecting to the backend
@@ -174,6 +174,37 @@ Start the backend first (see [Backend](#backend)). Then, in the app, open **Opti
 
 Tap **Test connection** to check both, then **Save**. If the server rejects the token, the app tells you to check it in Options → Server.
 
+## Wear OS app
+
+The `wearApp` module is a companion app for a Wear OS watch (Wear OS 3+, e.g. a Galaxy Watch 4 or later): a **Today** screen with calories, macros and water, and a **Today** tile with a calories ring. It needs the phone app: the phone sends it the server address, access token and language over the Wear OS Data Layer, so there's nothing to type on the watch.
+
+### Build and install
+
+```bash
+cd frontend
+./gradlew :wearApp:assembleDebug
+```
+
+Watches install over Wi-Fi debugging:
+
+1. On the watch, enable **Developer options** (Settings → About watch → Software → tap *Software version* 7 times), then **ADB debugging** and **Wireless debugging**.
+2. In *Wireless debugging*, tap **Pair new device** and pair from your computer with the code and port shown on the watch:
+
+   ```bash
+   adb pair <watch-ip>:<pairing-port>
+   adb connect <watch-ip>:<port>
+   ```
+
+3. Install the APK:
+
+   ```bash
+   adb -s <watch-ip>:<port> install -r wearApp/build/outputs/apk/debug/wearApp-debug.apk
+   ```
+
+The phone and watch apps must be **built on the same computer** (same debug signing key): the Data Layer only connects apps with the same package name and signature. Then open Food Tracker on the phone once; the watch shows today's data. Add the tile from the watch's tile list.
+
+When the watch is connected to the phone by Bluetooth, its network traffic goes through the phone; on its own, it uses Wi-Fi. Both reach the backend's LAN address: checked on a Galaxy Watch6 (Wear OS 6) with its Wi-Fi off, where the watch still picked up a glass of water just logged on the phone.
+
 ## Security
 
 The backend is meant for **your home network** and a single user.
@@ -182,10 +213,10 @@ What protects it:
 - **Access token:** every `/api` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
 - **Analysis limit:** at most `ANALYZE_RATE_LIMIT_PER_MINUTE` analyses per minute (20 by default), since each one is a paid API call.
 - **Upload checks:** only real JPEG/PNG photos up to 15 MB reach the image decoder.
-- **App data stays on the phone:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers.
+- **App data stays on the device:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers, on the phone and on the watch. The phone sends them to the watch only over the Wear OS Data Layer, which connects nothing but this same app (same package and signature).
 
 What it does **not** do:
-- **No HTTPS.** The app talks to the backend over `http://`, so meals, weight and water travel **unencrypted** over the network. That's acceptable on your home Wi-Fi; on public or shared networks, anyone on that network could read them. The app shows a note in Options → Server for `http://` addresses.
+- **No HTTPS.** The app (and the watch app) talk to the backend over `http://`, so meals, weight and water travel **unencrypted** over the network. That's acceptable on your home Wi-Fi; on public or shared networks, anyone on that network could read them. The app shows a note in Options → Server for `http://` addresses.
 - **One shared token.** Anyone with your `.env` or your phone's app data has full access.
 
 Do:
