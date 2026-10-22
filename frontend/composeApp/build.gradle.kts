@@ -50,6 +50,9 @@ kotlin {
             // Home-screen widgets (home-widgets).
             implementation(libs.androidx.glance.appwidget)
             implementation(libs.androidx.glance.material3)
+            // Sends the backend settings to the Wear OS app (wear-app).
+            implementation(libs.play.services.wearable)
+            implementation(libs.kotlinx.coroutines.play.services)
         }
         commonMain.dependencies {
             // Models, API client, local cache and offline queue, and the day's calculations.

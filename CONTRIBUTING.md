@@ -25,7 +25,7 @@ Issue #N → sesión dev → implementa + tests + verificación en emulador → 
 Corre en cada PR hacia `master` y en cada push a `master`:
 
 - **Backend:** `npm ci`, `npm run typecheck`, `npm test` (no necesita secrets: los tests usan un cliente de Anthropic falso).
-- **Frontend:** `./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest :composeApp:assembleDebug`.
+- **Frontend:** `./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest :wearApp:testDebugUnitTest :composeApp:assembleDebug :wearApp:assembleDebug`.
 
 ## Review automático (`.github/workflows/claude-review.yml`)
 

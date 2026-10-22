@@ -30,6 +30,7 @@ import com.foodtracker.app.ui.settings.PreferencesStore
 import com.foodtracker.app.ui.settings.applyAppLocale
 import com.foodtracker.app.ui.settings.effectiveServerUrl
 import com.foodtracker.app.ui.settings.resolveDarkTheme
+import com.foodtracker.app.wear.WearSettingsSync
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -51,6 +52,8 @@ class MainActivity : ComponentActivity() {
         PreferencesStore.load(this).let { stored ->
             BackendConfig.baseUrl = effectiveServerUrl(stored)
             BackendConfig.accessToken = stored.accessToken
+            // The watch app gets the same backend (wear-app); re-sent on every launch in case it missed one.
+            WearSettingsSync.push(this, stored)
         }
         val database = cacheDatabase(this)
         val cacheStore = database.dayCacheDao()
@@ -100,6 +103,7 @@ class MainActivity : ComponentActivity() {
                     }
                     BackendConfig.baseUrl = effectiveServerUrl(updated)
                     BackendConfig.accessToken = updated.accessToken
+                    WearSettingsSync.push(this, updated)
                     // Keeps the channel name (shown in system settings) in the chosen language.
                     syncNotificationChannel()
                 },
