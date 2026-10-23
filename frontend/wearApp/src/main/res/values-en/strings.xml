@@ -13,6 +13,8 @@
     <string name="no_data">No data for today yet</string>
     <string name="not_configured">Open Food Tracker on your phone</string>
     <string name="add_glass">+ %1$d ml</string>
+    <string name="tile_kcal">kcal</string>
+    <string name="tile_water_add">ml +</string>
     <string name="tile_label">Today</string>
     <string name="tile_description">Today\'s calories and water</string>
 </resources>

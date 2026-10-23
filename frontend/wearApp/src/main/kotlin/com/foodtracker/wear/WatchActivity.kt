@@ -52,6 +52,7 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import com.foodtracker.app.data.DEFAULT_GOAL
 import com.foodtracker.app.widget.TodayWidgetState
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -100,7 +101,7 @@ private fun TodayScreen() {
                     },
                     enabled = settings != null,
                 ) {
-                    Text(context.getString(R.string.add_glass, today?.glassMl ?: 250))
+                    Text(context.getString(R.string.add_glass, today?.glassMl ?: DEFAULT_GOAL.waterGlassMl))
                 }
             },
         ) { contentPadding ->

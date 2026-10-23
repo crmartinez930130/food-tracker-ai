@@ -15,6 +15,8 @@
     <string name="no_data">Todavía sin datos de hoy</string>
     <string name="not_configured">Abrí Food Tracker en el teléfono</string>
     <string name="add_glass">+ %1$d ml</string>
+    <string name="tile_kcal">kcal</string>
+    <string name="tile_water_add">ml +</string>
     <string name="tile_label">Hoy</string>
     <string name="tile_description">Calorías y agua de hoy</string>
 </resources>
