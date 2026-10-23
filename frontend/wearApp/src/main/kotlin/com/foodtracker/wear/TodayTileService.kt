@@ -30,15 +30,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 
 /**
- * The "Today" tile (wear-app), in the style of Samsung's own tiles: a title and a rounded panel with four circles
- * (calories ring, water ring, protein, "+ glass"), in Food Tracker's colors. The "+ glass" circle logs a glass
- * without opening the app; a tap elsewhere on the panel opens it.
+ * The "Today" tile (wear-app), in the style of Samsung's own tiles: a title and a rounded panel with two circles
+ * (calories ring, water ring), in Food Tracker's colors. A tap on the water circle logs a glass without opening
+ * the app; a tap elsewhere on the panel opens it.
  */
 class TodayTileService : TileService() {
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> =
         SuspendToFutureAdapter.launchFuture(Dispatchers.IO) {
             val service = this@TodayTileService
-            // A tap on "+ glass" reloads the tile carrying its id: log the glass first, then draw the new total.
+            // A tap on the water circle reloads the tile carrying its id: log the glass first, then draw the new total.
             val clicked = requestParams.currentState.lastClickableId
             if (isNewTileClick(clicked, TileClicks.lastHandled(service))) {
                 TileClicks.handled(service, clicked)
@@ -119,7 +119,7 @@ class TodayTileService : TileService() {
             track = WatchColors.PRIMARY_CONTAINER,
             onClick = null,
             value = text("${state.calories}".layoutString, typography = Typography.LABEL_LARGE),
-            label = text("kcal".layoutString, typography = Typography.BODY_EXTRA_SMALL),
+            label = text(context.getString(R.string.tile_kcal).layoutString, typography = Typography.BODY_EXTRA_SMALL),
         )
         val water = ringCircle(
             size = cell,
@@ -131,7 +131,7 @@ class TodayTileService : TileService() {
             // "+ (drop)": the tap adds a glass of the goal's size.
             label = LayoutElementBuilders.Row.Builder()
                 .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
-                .addContent(text("ml +".layoutString, typography = Typography.BODY_EXTRA_SMALL))
+                .addContent(text(context.getString(R.string.tile_water_add).layoutString, typography = Typography.BODY_EXTRA_SMALL))
                 .addContent(waterIcon(cell * 0.16f, WatchColors.TERTIARY))
                 .build(),
         )
