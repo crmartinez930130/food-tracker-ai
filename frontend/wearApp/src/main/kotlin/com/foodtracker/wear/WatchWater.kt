@@ -14,7 +14,6 @@ import com.foodtracker.app.data.DEFAULT_GOAL
 import com.foodtracker.app.data.LogWaterRequest
 import com.foodtracker.app.data.cache.SaveOutcome
 import com.foodtracker.app.data.cache.SendReport
-import com.foodtracker.app.data.cache.storedSettingsDayRepository
 import com.foodtracker.app.data.cache.storedSettingsOutbox
 import com.foodtracker.app.util.currentInstantIso
 import com.foodtracker.app.util.todayDateString
