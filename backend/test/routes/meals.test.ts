@@ -336,6 +336,18 @@ describe("POST /api/meals", () => {
     expect(res.body.mealType).toBe("breakfast");
   });
 
+  it("persists a pre_workout meal and returns it on later reads", async () => {
+    const { app } = buildTestApp();
+    const res = await request(app)
+      .post("/api/meals")
+      .send({ items: [sampleItem], mealType: "pre_workout", occurredAt: "2026-01-10T10:30:00.000Z" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.mealType).toBe("pre_workout");
+    const list = await request(app).get("/api/meals").query({ date: "2026-01-10" });
+    expect(list.body.map((entry: { mealType: string | null }) => entry.mealType)).toEqual(["pre_workout"]);
+  });
+
   it("defaults mealType to null when omitted", async () => {
     const { app } = buildTestApp();
     const res = await request(app).post("/api/meals").send({ items: [sampleItem] });

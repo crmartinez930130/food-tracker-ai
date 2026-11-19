@@ -2,6 +2,7 @@ package com.foodtracker.app.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,8 +24,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.ic_check
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
 private val InnerCorner = CornerSize(8.dp)
@@ -35,8 +38,9 @@ private fun CornerKind.size() = if (this == CornerKind.FULL) FullCorner else Inn
 /**
  * Single-choice buttons joined into one group (M3 Expressive "connected" style): round outer
  * edges, small inner ones, and the selected button a filled pill, with a check when [showCheck].
- * [selectedIndex] -1 means nothing is selected. Our own because material3's ButtonGroup is
- * internal in Compose Multiplatform 1.9.
+ * [selectedIndex] -1 means nothing is selected. With [icons] (one per option) each button shows
+ * its icon above a small label, so more options fit in a phone-width row. Our own because
+ * material3's ButtonGroup is internal in Compose Multiplatform 1.9.
  */
 @Composable
 fun ConnectedButtonGroup(
@@ -46,11 +50,13 @@ fun ConnectedButtonGroup(
     modifier: Modifier = Modifier,
     showCheck: Boolean = true,
     enabled: Boolean = true,
+    icons: List<DrawableResource>? = null,
 ) {
+    require(icons == null || icons.size == options.size) { "One icon per option" }
     val colors = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.fillMaxWidth().height(48.dp).selectableGroup(),
+        modifier = modifier.fillMaxWidth().height(if (icons != null) 56.dp else 48.dp).selectableGroup(),
     ) {
         options.forEachIndexed { index, label ->
             val selected = index == selectedIndex
@@ -75,21 +81,32 @@ fun ConnectedButtonGroup(
                     .pressBounce(interaction)
                     .semantics { role = Role.RadioButton },
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                ) {
-                    if (selected && showCheck) {
-                        Icon(painterResource(Res.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 2.dp))
+                if (icons != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(painterResource(icons[index]), contentDescription = null, modifier = Modifier.size(20.dp))
+                        // No tracking: five labels like "Preentreno" must fit a 360 dp wide phone.
+                        Text(label, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp), maxLines = 1, softWrap = false)
                     }
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier.padding(start = if (selected && showCheck) 6.dp else 0.dp),
-                    )
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    ) {
+                        if (selected && showCheck) {
+                            Icon(painterResource(Res.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 2.dp))
+                        }
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(start = if (selected && showCheck) 6.dp else 0.dp),
+                        )
+                    }
                 }
             }
         }

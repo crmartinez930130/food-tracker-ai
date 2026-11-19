@@ -18,6 +18,10 @@ enum class MealType {
     @SerialName("lunch") LUNCH,
     @SerialName("dinner") DINNER,
     @SerialName("snack") SNACK,
+
+    // Last on purpose: Android reminders use the ordinal as alarm/notification id, so new types
+    // are appended. Screens order types with MEAL_TYPE_DISPLAY_ORDER, never by ordinal.
+    @SerialName("pre_workout") PRE_WORKOUT,
 }
 
 @Serializable

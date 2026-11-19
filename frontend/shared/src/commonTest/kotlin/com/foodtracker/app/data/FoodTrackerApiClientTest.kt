@@ -342,6 +342,14 @@ class FoodTrackerApiClientTest {
     }
 
     @Test
+    fun `pre-workout meal type round-trips as pre_workout`() {
+        val encoded = Json.encodeToString(MealType.serializer(), MealType.PRE_WORKOUT)
+
+        assertEquals("\"pre_workout\"", encoded)
+        assertEquals(MealType.PRE_WORKOUT, Json.decodeFromString(MealType.serializer(), encoded))
+    }
+
+    @Test
     fun `toReviewAnalysis carries items, totals and notes over`() {
         val item = MealItem("Oatmeal", 250.0, Confidence.HIGH, 300.0, 10.0, 6.0, 50.0)
         val entry = MealEntry(

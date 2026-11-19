@@ -103,7 +103,8 @@ import org.jetbrains.compose.resources.stringResource
 private fun localHourOf(isoInstant: String): Int = Instant.parse(isoInstant).toLocalDateTime(TimeZone.currentSystemDefault()).hour
 
 /** UI-only default (see design.md of the add-meal-type change) - the backend never derives a type from a timestamp. */
-private fun suggestedMealType(hourOfDay: Int): MealType = when {
+internal fun suggestedMealType(hourOfDay: Int): MealType = when {
+    hourOfDay in 7..8 -> MealType.PRE_WORKOUT
     hourOfDay < 11 -> MealType.BREAKFAST
     hourOfDay < 15 -> MealType.LUNCH
     hourOfDay < 19 -> MealType.SNACK
@@ -239,9 +240,10 @@ fun ReviewScreen(
             ) {
                 item(key = "type") {
                     ConnectedButtonGroup(
-                        options = MealType.entries.map { it.displayLabel() },
-                        selectedIndex = mealType.ordinal,
-                        onSelect = { mealType = MealType.entries[it] },
+                        options = MEAL_TYPE_DISPLAY_ORDER.map { it.displayLabel() },
+                        icons = MEAL_TYPE_DISPLAY_ORDER.map { it.iconStyle().icon },
+                        selectedIndex = MEAL_TYPE_DISPLAY_ORDER.indexOf(mealType),
+                        onSelect = { mealType = MEAL_TYPE_DISPLAY_ORDER[it] },
                         showCheck = false,
                     )
                 }

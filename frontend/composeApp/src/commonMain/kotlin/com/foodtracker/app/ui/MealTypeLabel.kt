@@ -20,17 +20,23 @@ import food_tracker_frontend.composeapp.generated.resources.confidence_medium
 import food_tracker_frontend.composeapp.generated.resources.ic_bakery_dining
 import food_tracker_frontend.composeapp.generated.resources.ic_cookie
 import food_tracker_frontend.composeapp.generated.resources.ic_dinner_dining
+import food_tracker_frontend.composeapp.generated.resources.ic_fitness_center
 import food_tracker_frontend.composeapp.generated.resources.ic_lunch_dining
 import food_tracker_frontend.composeapp.generated.resources.ic_restaurant
 import food_tracker_frontend.composeapp.generated.resources.meal_type_breakfast
 import food_tracker_frontend.composeapp.generated.resources.meal_type_dinner
 import food_tracker_frontend.composeapp.generated.resources.meal_type_lunch
 import food_tracker_frontend.composeapp.generated.resources.meal_type_other
+import food_tracker_frontend.composeapp.generated.resources.meal_type_pre_workout
 import food_tracker_frontend.composeapp.generated.resources.meal_type_snack
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+
+/** The order meal types are shown in everywhere (selector, Home's groups): the day's order. */
+val MEAL_TYPE_DISPLAY_ORDER: List<MealType> =
+    listOf(MealType.PRE_WORKOUT, MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)
 
 val MealType.labelRes: StringResource
     get() = when (this) {
@@ -38,6 +44,7 @@ val MealType.labelRes: StringResource
         MealType.LUNCH -> Res.string.meal_type_lunch
         MealType.DINNER -> Res.string.meal_type_dinner
         MealType.SNACK -> Res.string.meal_type_snack
+        MealType.PRE_WORKOUT -> Res.string.meal_type_pre_workout
     }
 
 @Composable
@@ -64,6 +71,7 @@ fun MealType?.iconStyle(): MealTypeIconStyle {
         MealType.BREAKFAST -> MealTypeIconStyle(Res.drawable.ic_bakery_dining, colors.tertiaryContainer, colors.onTertiaryContainer)
         MealType.LUNCH -> MealTypeIconStyle(Res.drawable.ic_lunch_dining, colors.primaryContainer, colors.onPrimaryContainer)
         MealType.DINNER -> MealTypeIconStyle(Res.drawable.ic_dinner_dining, colors.secondaryContainer, colors.onSecondaryContainer)
+        MealType.PRE_WORKOUT -> MealTypeIconStyle(Res.drawable.ic_fitness_center, colors.tertiaryContainer, colors.onTertiaryContainer)
         MealType.SNACK -> MealTypeIconStyle(Res.drawable.ic_cookie, colors.surfaceContainerHighest, colors.onSurfaceVariant)
         null -> MealTypeIconStyle(Res.drawable.ic_restaurant, colors.surfaceContainerHighest, colors.onSurfaceVariant)
     }

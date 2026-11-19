@@ -6,6 +6,7 @@ import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_breakfast
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_dinner
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_lunch
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_pre_workout
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -26,11 +27,25 @@ class ReminderSettingsTest {
     private fun Instant.local(zone: TimeZone = madrid): String = toLocalDateTime(zone).toString()
 
     @Test
-    fun `defaults are breakfast, lunch and dinner, all off`() {
+    fun `defaults are pre-workout, breakfast, lunch and dinner, all off`() {
         val defaults = ReminderSettings.DEFAULT.reminders
-        assertEquals(listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER), defaults.map { it.meal })
-        assertEquals(listOf("08:30", "13:00", "20:00"), defaults.map { timeLabel(it.hour, it.minute) })
+        assertEquals(listOf(MealType.PRE_WORKOUT, MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER), defaults.map { it.meal })
+        assertEquals(listOf("07:15", "08:30", "13:00", "20:00"), defaults.map { timeLabel(it.hour, it.minute) })
         assertFalse(defaults.any { it.enabled })
+    }
+
+    @Test
+    fun `settings stored before pre-workout keep their values and add pre-workout off`() {
+        val stored = """{"reminders":[
+            {"meal":"breakfast","hour":8,"minute":30,"enabled":false},
+            {"meal":"lunch","hour":12,"minute":45,"enabled":true},
+            {"meal":"dinner","hour":20,"minute":0,"enabled":false}
+        ]}"""
+
+        val settings = decodeReminderSettings(stored)
+
+        assertEquals(MealReminder(MealType.LUNCH, 12, 45, enabled = true), settings.reminderFor(MealType.LUNCH))
+        assertEquals(MealReminder(MealType.PRE_WORKOUT, 7, 15, enabled = false), settings.reminderFor(MealType.PRE_WORKOUT))
     }
 
     @Test
@@ -100,6 +115,7 @@ class ReminderSettingsTest {
         assertEquals(Res.string.reminder_title_lunch, reminderTitle(MealType.LUNCH))
         assertEquals(Res.string.reminder_title_breakfast, reminderTitle(MealType.BREAKFAST))
         assertEquals(Res.string.reminder_title_dinner, reminderTitle(MealType.DINNER))
+        assertEquals(Res.string.reminder_title_pre_workout, reminderTitle(MealType.PRE_WORKOUT))
         assertEquals("07:05", timeLabel(7, 5))
     }
 
@@ -126,6 +142,12 @@ class ReminderSettingsTest {
     @Test
     fun `a reminder is skipped when that meal is already logged`() {
         assertFalse(shouldShowReminder(MealType.LUNCH, listOf(meal(MealType.BREAKFAST), meal(MealType.LUNCH))))
+    }
+
+    @Test
+    fun `breakfast doesn't count as pre-workout`() {
+        assertTrue(shouldShowReminder(MealType.PRE_WORKOUT, listOf(meal(MealType.BREAKFAST))))
+        assertFalse(shouldShowReminder(MealType.PRE_WORKOUT, listOf(meal(MealType.BREAKFAST), meal(MealType.PRE_WORKOUT))))
     }
 
     @Test

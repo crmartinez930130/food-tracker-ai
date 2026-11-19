@@ -1,7 +1,7 @@
 import { sqliteTable, integer, real, text, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
-export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack", "pre_workout"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 export const meals = sqliteTable(
