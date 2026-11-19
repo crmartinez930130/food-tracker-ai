@@ -7,7 +7,7 @@ Offers optional, quiet daily reminders to log breakfast, lunch or dinner, which 
 ## Requirements
 
 ### Requirement: Reminders are opt-in
-The app SHALL offer daily reminders for breakfast, lunch and dinner. Each SHALL have its own on/off setting and time of day, with default times of 08:30, 13:00 and 20:00. All reminders SHALL be off until the user turns them on. No notification SHALL be scheduled or shown for a reminder that is off.
+The app SHALL offer daily reminders for pre-workout, breakfast, lunch and dinner. Each SHALL have its own on/off setting and time of day, with default times of 07:15, 08:30, 13:00 and 20:00. All reminders SHALL be off until the user turns them on. No notification SHALL be scheduled or shown for a reminder that is off. Settings stored before the pre-workout reminder existed SHALL keep their values, with the pre-workout reminder off at its default time.
 
 #### Scenario: Fresh install
 - **WHEN** the user installs and opens the app without visiting the reminders screen
@@ -16,6 +16,10 @@ The app SHALL offer daily reminders for breakfast, lunch and dinner. Each SHALL 
 #### Scenario: Unreadable stored settings
 - **WHEN** the stored reminder settings are missing or cannot be read
 - **THEN** the app treats every reminder as off with its default time, without crashing
+
+#### Scenario: Update from a version without pre-workout
+- **WHEN** the lunch reminder was on at 12:45 and the app is updated to a version with the pre-workout reminder
+- **THEN** lunch is still on at 12:45, still fires as lunch, and the pre-workout reminder is off at 07:15
 
 ### Requirement: Configure reminders in the app
 The app SHALL provide a reminders screen, reachable from the Options screen. On it the user SHALL be able to turn each meal's reminder on or off and change its time. Changes SHALL take effect immediately and SHALL persist on the device across app restarts. The screen SHALL offer a back action that returns to Options.
@@ -56,9 +60,17 @@ Each enabled reminder SHALL show a notification once a day, at its configured lo
 - **WHEN** the lunch reminder is on at 13:00, no lunch is logged today, and the device's local time reaches 13:00
 - **THEN** a "Did you log your lunch?" notification appears shortly after
 
+#### Scenario: Pre-workout reminder fires
+- **WHEN** the pre-workout reminder is on at 07:15, no pre-workout is logged today, and the device's local time reaches 07:15
+- **THEN** a "¿Ya registraste tu preentreno?" notification appears shortly after when the app language is Spanish
+
 #### Scenario: Meal already logged
 - **WHEN** the lunch reminder fires and a meal tagged as lunch is already logged today
 - **THEN** no notification is shown, and the reminder still fires again tomorrow
+
+#### Scenario: Breakfast does not count as pre-workout
+- **WHEN** the pre-workout reminder fires and today only has a meal tagged as breakfast
+- **THEN** the pre-workout notification is shown
 
 #### Scenario: Backend unreachable
 - **WHEN** the lunch reminder fires and today's meals can't be retrieved within a few seconds

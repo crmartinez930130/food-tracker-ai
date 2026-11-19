@@ -71,11 +71,15 @@ The system SHALL allow the client to modify or remove a previously saved meal en
 - **THEN** the entry is removed and no longer appears in date listings or summary calculations
 
 ### Requirement: Categorize a meal entry by type
-The system SHALL allow a meal entry to optionally carry a meal type (`breakfast`, `lunch`, `dinner`, or `snack`) that is persisted and returned alongside the entry's other fields.
+The system SHALL allow a meal entry to optionally carry a meal type (`breakfast`, `pre_workout`, `lunch`, `dinner`, or `snack`) that is persisted and returned alongside the entry's other fields.
 
 #### Scenario: Save a meal with a type
 - **WHEN** the client confirms a meal and specifies a meal type
 - **THEN** the system persists that type with the entry and returns it in the created entry
+
+#### Scenario: Save a pre-workout meal
+- **WHEN** the client confirms a meal with meal type `pre_workout`
+- **THEN** the system persists it and returns `pre_workout` in the created entry and in later reads
 
 #### Scenario: Save a meal without a type
 - **WHEN** the client confirms a meal without specifying a meal type
@@ -84,6 +88,10 @@ The system SHALL allow a meal entry to optionally carry a meal type (`breakfast`
 #### Scenario: Edit a meal's type
 - **WHEN** the client updates an existing meal entry's type
 - **THEN** the system persists the new type and subsequent reads of that entry reflect it
+
+#### Scenario: Unknown meal type
+- **WHEN** the client saves or edits a meal with a meal type outside the allowed values
+- **THEN** the system rejects the request with a validation error and persists nothing
 
 #### Scenario: Entries saved before meal types existed remain valid
 - **WHEN** the client retrieves a meal entry that was saved before this capability existed
