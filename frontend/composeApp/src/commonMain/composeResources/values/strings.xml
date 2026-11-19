@@ -246,6 +246,13 @@
     <string name="settings_server_connected">Conectado.</string>
     <string name="settings_server_timeout">El servidor no respondió a tiempo.</string>
     <string name="settings_server_failed">No se pudo conectar: %1$s</string>
+    <string name="settings_version">Versión</string>
+    <string name="settings_version_app">Versión %1$s (%2$d)</string>
+    <string name="settings_version_app_debug">Versión %1$s (%2$d) · %3$s</string>
+    <string name="settings_version_server">Servidor %1$s</string>
+    <string name="settings_version_server_loading">Servidor: consultando…</string>
+    <string name="settings_version_server_older">Servidor: anterior a 0.2.0</string>
+    <string name="settings_version_server_unavailable">Servidor: no disponible</string>
     <string name="capture_description_label">Descripción (opcional)</string>
     <string name="capture_description_placeholder">Ej.: pollo al horno con puré, sin aceite</string>
     <string name="capture_description_counter">%1$d/%2$d</string>

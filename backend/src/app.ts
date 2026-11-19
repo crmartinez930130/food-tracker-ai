@@ -7,6 +7,7 @@ import { createSummaryRouter } from "./routes/summary.js";
 import { createGoalsRouter } from "./routes/goals.js";
 import { createWaterRouter } from "./routes/water.js";
 import { createWeightRouter } from "./routes/weight.js";
+import { createVersionRouter } from "./routes/version.js";
 import { AnalysisError, NotFoundError, ValidationError } from "./errors.js";
 import { logger } from "./logger.js";
 import { requireAccessToken } from "./http/access-token.js";
@@ -34,6 +35,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/api/goals", createGoalsRouter(deps));
   app.use("/api/weight", createWeightRouter(deps));
   app.use("/api/water", createWaterRouter(deps));
+  app.use("/api/version", createVersionRouter());
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof ValidationError) {

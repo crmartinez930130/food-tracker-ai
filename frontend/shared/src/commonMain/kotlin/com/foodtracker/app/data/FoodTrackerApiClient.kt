@@ -28,6 +28,9 @@ class ApiException(message: String, val status: Int) : Exception(message)
 @Serializable
 private data class ApiErrorBody(val error: String)
 
+@Serializable
+private data class ServerVersionBody(val version: String)
+
 /**
  * Talks to the food-tracker backend over the REST contract defined in
  * openspec/changes/setup-project-foundation/design.md. The backend base URL
@@ -144,6 +147,14 @@ class FoodTrackerApiClient(
         return httpClient
             .get("$baseUrl/api/summary/weekly") { url { parameters.append("startDate", startDate) } }
             .parseOrThrow()
+    }
+
+    /**
+     * The backend's version (MAJOR.MINOR.PATCH). Servers older than 0.2.0 have no such endpoint and
+     * answer with [ApiException] status 404.
+     */
+    suspend fun getVersion(): String {
+        return httpClient.get("$baseUrl/api/version").parseOrThrow<ServerVersionBody>().version
     }
 
     suspend fun getGoals(): DailyGoal {
