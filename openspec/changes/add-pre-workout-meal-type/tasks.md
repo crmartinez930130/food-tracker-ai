@@ -15,7 +15,7 @@
 ## 3. Review screen
 
 - [x] 3.1 Make `suggestedMealType(hour)` internal, add the 07:00–08:59 → `PRE_WORKOUT` branch, and unit-test the boundaries in `MealTypeOrderTest`
-- [ ] 3.2 Drive the selector from `MEAL_TYPE_DISPLAY_ORDER` (index ↔ type mapping, not `ordinal`), and add optional per-option icons to `ConnectedButtonGroup` (icon above `labelSmall`, 56 dp tall) used by the review selector; existing callers unchanged; the project has no Compose UI test setup, so the icon variant is covered by `MealTypeOrderTest` (order ↔ index mapping) and the 3.3 emulator check
+- [x] 3.2 Drive the selector from `MEAL_TYPE_DISPLAY_ORDER` (index ↔ type mapping, not `ordinal`), and add optional per-option icons to `ConnectedButtonGroup` (icon above `labelSmall` without letter spacing, so "Preentreno" fits at 360 dp; 56 dp tall) used by the review selector; existing callers unchanged; the project has no Compose UI test setup, so the icon variant is covered by `MealTypeOrderTest` (order ↔ index mapping) and the 3.3 emulator check
 - [x] 3.3 Emulator check (Pixel 9 and a 360 dp wide AVD, Spanish): five options with full labels; a meal captured at 07:30 preselects Preentreno; choosing Desayuno and saving stores breakfast. Verified with screenshots on the emulator (described in the PR)
 
 ## 4. Reminders
