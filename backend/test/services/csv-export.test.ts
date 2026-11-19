@@ -65,6 +65,10 @@ describe("toCsv", () => {
     expect(body(toCsv([row()]))).toEqual([["2026-03-05", "13:15", "lunch", "Rice", "152", "200", "4", "0.5", "44.3", ""]]);
   });
 
+  it("writes pre_workout as the meal type", () => {
+    expect(body(toCsv([row({ mealType: "pre_workout" })]))[0][2]).toBe("pre_workout");
+  });
+
   it("leaves the item columns empty for a meal without items and the type empty when unset", () => {
     expect(body(toCsv([row({ item: null, mealType: null, notes: "skipped photo" })]))).toEqual([
       ["2026-03-05", "13:15", "", "", "", "", "", "", "", "skipped photo"],

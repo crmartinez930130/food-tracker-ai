@@ -49,7 +49,7 @@ Personal and single-user: the app talks to a small backend that runs on your own
 - 📊 **Summaries** — weekly and monthly averages, macros and a daily calories chart.
 - 💧 **Water** and ⚖️ **weight** — one-tap water logging and a weight trend next to what you eat.
 - ⭐ **Favorites** — log a meal you repeat without analyzing it again.
-- 🔔 **Reminders** — optional, quiet daily reminders for breakfast, lunch and dinner.
+- 🔔 **Reminders** — optional, quiet daily reminders for pre-workout, breakfast, lunch and dinner.
 - 📴 **Works offline** — recent days stay on the phone, and meals and water logged without a connection are sent once the backend is back.
 - 📤 **CSV export** — take your meal history to a spreadsheet.
 - 🌗 **Light and dark**, 🌐 **English and Spanish**.

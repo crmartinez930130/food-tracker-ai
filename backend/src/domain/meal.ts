@@ -1,5 +1,5 @@
 export type Confidence = "low" | "medium" | "high";
-export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack" | "pre_workout";
 
 export interface MealItemInput {
   name: string;

@@ -50,6 +50,7 @@ import food_tracker_frontend.composeapp.generated.resources.reminders_open_setti
 import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_breakfast
 import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_dinner
 import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_lunch
+import food_tracker_frontend.composeapp.generated.resources.reminders_time_dialog_pre_workout
 import food_tracker_frontend.composeapp.generated.resources.reminders_title
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -152,6 +153,7 @@ fun RemindersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         ReminderTimeDialog(
             title = stringResource(
                 when (meal) {
+                    MealType.PRE_WORKOUT -> Res.string.reminders_time_dialog_pre_workout
                     MealType.BREAKFAST -> Res.string.reminders_time_dialog_breakfast
                     MealType.DINNER -> Res.string.reminders_time_dialog_dinner
                     else -> Res.string.reminders_time_dialog_lunch

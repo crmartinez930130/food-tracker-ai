@@ -11,6 +11,7 @@
     <string name="no_items">(sin alimentos)</string>
     <string name="unit_kcal">%1$d kcal</string>
     <string name="macros_short">%1$d kcal · P %2$dg · G %3$dg · C %4$dg</string>
+    <string name="meal_type_pre_workout">Preentreno</string>
     <string name="meal_type_breakfast">Desayuno</string>
     <string name="meal_type_lunch">Almuerzo</string>
     <string name="meal_type_dinner">Cena</string>
@@ -196,9 +197,11 @@
     <string name="reminders_intro">Recordatorios diarios opcionales para registrar una comida. Están apagados hasta que los actives.</string>
     <string name="reminders_blocked">Las notificaciones están bloqueadas para Food Tracker. Permitilas en los ajustes del sistema para recibir recordatorios.</string>
     <string name="reminders_open_settings">Abrir ajustes</string>
+    <string name="reminders_time_dialog_pre_workout">Recordatorio del preentreno</string>
     <string name="reminders_time_dialog_breakfast">Recordatorio del desayuno</string>
     <string name="reminders_time_dialog_lunch">Recordatorio del almuerzo</string>
     <string name="reminders_time_dialog_dinner">Recordatorio de la cena</string>
+    <string name="reminder_title_pre_workout">¿Ya registraste tu preentreno?</string>
     <string name="reminder_title_breakfast">¿Ya registraste tu desayuno?</string>
     <string name="reminder_title_lunch">¿Ya registraste tu almuerzo?</string>
     <string name="reminder_title_dinner">¿Ya registraste tu cena?</string>

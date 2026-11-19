@@ -11,6 +11,7 @@
     <string name="no_items">(no items)</string>
     <string name="unit_kcal">%1$d kcal</string>
     <string name="macros_short">%1$d kcal · P %2$dg · F %3$dg · C %4$dg</string>
+    <string name="meal_type_pre_workout">Pre-workout</string>
     <string name="meal_type_breakfast">Breakfast</string>
     <string name="meal_type_lunch">Lunch</string>
     <string name="meal_type_dinner">Dinner</string>
@@ -196,9 +197,11 @@
     <string name="reminders_intro">Optional daily nudges to log a meal. They're off until you turn them on.</string>
     <string name="reminders_blocked">Notifications are blocked for Food Tracker. Allow them in system settings to get reminders.</string>
     <string name="reminders_open_settings">Open settings</string>
+    <string name="reminders_time_dialog_pre_workout">Pre-workout reminder</string>
     <string name="reminders_time_dialog_breakfast">Breakfast reminder</string>
     <string name="reminders_time_dialog_lunch">Lunch reminder</string>
     <string name="reminders_time_dialog_dinner">Dinner reminder</string>
+    <string name="reminder_title_pre_workout">Did you log your pre-workout?</string>
     <string name="reminder_title_breakfast">Did you log your breakfast?</string>
     <string name="reminder_title_lunch">Did you log your lunch?</string>
     <string name="reminder_title_dinner">Did you log your dinner?</string>

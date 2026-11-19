@@ -17,7 +17,7 @@ const sampleItem = {
 
 describe("SaveMealRequestSchema mealType", () => {
   it("accepts each of the four valid meal types", () => {
-    for (const mealType of ["breakfast", "lunch", "dinner", "snack"] as const) {
+    for (const mealType of ["breakfast", "lunch", "dinner", "snack", "pre_workout"] as const) {
       const result = SaveMealRequestSchema.safeParse({ items: [sampleItem], mealType });
       expect(result.success).toBe(true);
     }
@@ -42,6 +42,11 @@ describe("SaveMealRequestSchema mealType", () => {
 describe("UpdateMealRequestSchema mealType", () => {
   it("accepts a valid mealType", () => {
     const result = UpdateMealRequestSchema.safeParse({ mealType: "dinner" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts pre_workout", () => {
+    const result = UpdateMealRequestSchema.safeParse({ mealType: "pre_workout" });
     expect(result.success).toBe(true);
   });
 

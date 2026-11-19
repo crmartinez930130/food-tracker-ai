@@ -60,6 +60,7 @@ import com.foodtracker.app.data.cache.OutboxRow
 import com.foodtracker.app.data.cache.RefreshResult
 import com.foodtracker.app.data.cache.SaveOutcome
 import com.foodtracker.app.ui.LoadingAware
+import com.foodtracker.app.ui.MEAL_TYPE_DISPLAY_ORDER
 import com.foodtracker.app.ui.MealTypeIcon
 import com.foodtracker.app.ui.ReviewCapture
 import com.foodtracker.app.ui.components.BadgeShape
@@ -119,9 +120,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Breakfast/lunch/dinner/snack first, in that order; untagged entries ("Other") last. */
-private val MEAL_TYPE_SECTION_ORDER: List<MealType?> =
-    listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK, null)
+/** Typed groups in [MEAL_TYPE_DISPLAY_ORDER]; untagged entries ("Other") last. */
+internal val MEAL_TYPE_SECTION_ORDER: List<MealType?> = MEAL_TYPE_DISPLAY_ORDER + null
 
 private data class DayTotals(val calories: Double, val protein: Double, val fat: Double, val carbs: Double)
 

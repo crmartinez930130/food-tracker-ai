@@ -6,6 +6,7 @@ import food_tracker_frontend.composeapp.generated.resources.Res
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_breakfast
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_dinner
 import food_tracker_frontend.composeapp.generated.resources.reminder_title_lunch
+import food_tracker_frontend.composeapp.generated.resources.reminder_title_pre_workout
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -39,6 +40,7 @@ data class ReminderSettings(val reminders: List<MealReminder>) {
         /** Opt-in: every reminder starts off (see the add-meal-reminders design). */
         val DEFAULT = ReminderSettings(
             listOf(
+                MealReminder(MealType.PRE_WORKOUT, 7, 15),
                 MealReminder(MealType.BREAKFAST, 8, 30),
                 MealReminder(MealType.LUNCH, 13, 0),
                 MealReminder(MealType.DINNER, 20, 0),
@@ -96,6 +98,7 @@ fun reminderTitle(meal: MealType): StringResource = when (meal) {
     MealType.BREAKFAST -> Res.string.reminder_title_breakfast
     MealType.LUNCH -> Res.string.reminder_title_lunch
     MealType.DINNER -> Res.string.reminder_title_dinner
+    MealType.PRE_WORKOUT -> Res.string.reminder_title_pre_workout
     MealType.SNACK -> error("Snacks have no reminder")
 }
 
