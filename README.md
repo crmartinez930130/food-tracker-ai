@@ -231,6 +231,20 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 Every issue is delivered as a Pull Request, checked by CI and reviewed by an automated Claude reviewer before a manual merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Versions
+
+The phone app, the watch app and the backend share one version, `MAJOR.MINOR.PATCH`, kept in [version.properties](version.properties). Options shows the app's version and the version of the server it talks to.
+
+- **Bumping:** a pull request that adds functionality raises MINOR (and resets PATCH); one that only fixes behavior raises PATCH; one that makes the apps and the backend incompatible with older versions of each other raises MAJOR. Pull requests that change neither the apps' nor the backend's behavior (docs, specs, CI) don't bump it. MINOR and PATCH go from 0 to 99.
+- **Where to change it:** `version.properties`, and the same value in `backend/package.json` and `backend/package-lock.json` (the backend keeps its own copy because the server deploy only copies `backend/`; a backend test fails when they differ). The Android version code is derived as `MAJOR * 10000 + MINOR * 100 + PATCH`, so `0.2.0` is `200`.
+- **Tagging:** after merging a pull request that changes the version, tag its merge commit on `master`:
+
+  ```bash
+  git switch master && git pull
+  git tag -a v0.2.0 -m "Food Tracker 0.2.0"
+  git push origin v0.2.0
+  ```
+
 ## License
 
 [MIT](LICENSE)

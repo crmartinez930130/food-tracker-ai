@@ -246,6 +246,13 @@
     <string name="settings_server_connected">Connected.</string>
     <string name="settings_server_timeout">The server didn't answer in time.</string>
     <string name="settings_server_failed">Couldn't connect: %1$s</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_version_app">Version %1$s (%2$d)</string>
+    <string name="settings_version_app_debug">Version %1$s (%2$d) · %3$s</string>
+    <string name="settings_version_server">Server %1$s</string>
+    <string name="settings_version_server_loading">Server: checking…</string>
+    <string name="settings_version_server_older">Server: older than 0.2.0</string>
+    <string name="settings_version_server_unavailable">Server: not available</string>
     <string name="capture_description_label">Description (optional)</string>
     <string name="capture_description_placeholder">E.g. baked chicken with mashed potatoes, no oil</string>
     <string name="capture_description_counter">%1$d/%2$d</string>

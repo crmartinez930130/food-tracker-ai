@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.foodtracker.app.AppVersion
 import com.foodtracker.app.data.ApiException
 import com.foodtracker.app.data.FoodTrackerApiClient
 import com.foodtracker.app.data.createHttpClient
@@ -83,6 +85,13 @@ import food_tracker_frontend.composeapp.generated.resources.settings_theme_dark
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_light
 import food_tracker_frontend.composeapp.generated.resources.settings_theme_system
 import food_tracker_frontend.composeapp.generated.resources.settings_title
+import food_tracker_frontend.composeapp.generated.resources.settings_version
+import food_tracker_frontend.composeapp.generated.resources.settings_version_app
+import food_tracker_frontend.composeapp.generated.resources.settings_version_app_debug
+import food_tracker_frontend.composeapp.generated.resources.settings_version_server
+import food_tracker_frontend.composeapp.generated.resources.settings_version_server_loading
+import food_tracker_frontend.composeapp.generated.resources.settings_version_server_older
+import food_tracker_frontend.composeapp.generated.resources.settings_version_server_unavailable
 import food_tracker_frontend.composeapp.generated.resources.unknown_error
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
@@ -106,7 +115,7 @@ private val THEME_LABELS = listOf(
     ThemePreference.DARK to Res.string.settings_theme_dark,
 )
 
-/** Options: language, theme and the way into Reminders. Every choice applies (and persists) on tap. */
+/** Options: language, theme, the way into Reminders, the server and the versions. Every choice applies (and persists) on tap. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun SettingsScreen(
@@ -179,7 +188,46 @@ fun SettingsScreen(
                     )
                 }
             }
+            SettingsGroup(stringResource(Res.string.settings_version)) {
+                VersionSection(preferences, modifier = Modifier.padding(16.dp))
+            }
         }
+    }
+}
+
+/** This build's version (and commit, in debug builds) and the saved server's, refreshed when it changes. */
+@Composable
+private fun VersionSection(preferences: AppPreferences, modifier: Modifier = Modifier) {
+    val url = effectiveServerUrl(preferences)
+    val token = preferences.accessToken
+    var server by remember(url, token) { mutableStateOf<ServerVersionState>(ServerVersionState.Loading) }
+    LaunchedEffect(url, token) {
+        val httpClient = probeHttpClient(token)
+        try {
+            server = fetchServerVersion(FoodTrackerApiClient(httpClient) { url }, CONNECTION_TEST_TIMEOUT_MS)
+        } finally {
+            httpClient.close()
+        }
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            if (isDebugBuild()) {
+                stringResource(Res.string.settings_version_app_debug, AppVersion.NAME, AppVersion.CODE, AppVersion.COMMIT)
+            } else {
+                stringResource(Res.string.settings_version_app, AppVersion.NAME, AppVersion.CODE)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            when (val current = server) {
+                ServerVersionState.Loading -> stringResource(Res.string.settings_version_server_loading)
+                is ServerVersionState.Known -> stringResource(Res.string.settings_version_server, current.version)
+                ServerVersionState.Older -> stringResource(Res.string.settings_version_server_older)
+                ServerVersionState.Unavailable -> stringResource(Res.string.settings_version_server_unavailable)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -310,17 +358,22 @@ private fun ServerSection(
     }
 }
 
+/**
+ * A throwaway client for a quick check of a server with [token]. Timeouts at the engine level too: a
+ * blocking connect to a host that drops packets (firewall, sleeping PC) may not react to coroutine
+ * cancellation, which is all withTimeoutOrNull does.
+ */
+private fun probeHttpClient(token: String?) = createHttpClient(tokenProvider = { token }).config {
+    install(HttpTimeout) {
+        connectTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+        socketTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+        requestTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
+    }
+}
+
 /** Tries the typed (not necessarily saved) address and token with a throwaway client. */
 private suspend fun testConnection(url: String, token: String?): ServerStatus {
-    // Timeouts at the engine level too: a blocking connect to a host that drops packets (firewall,
-    // sleeping PC) may not react to coroutine cancellation, which is all withTimeoutOrNull does.
-    val httpClient = createHttpClient(tokenProvider = { token }).config {
-        install(HttpTimeout) {
-            connectTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
-            socketTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
-            requestTimeoutMillis = CONNECTION_TEST_TIMEOUT_MS
-        }
-    }
+    val httpClient = probeHttpClient(token)
     return try {
         withTimeoutOrNull(CONNECTION_TEST_TIMEOUT_MS) {
             FoodTrackerApiClient(httpClient) { url }.getGoals()

@@ -10,6 +10,7 @@ const ROUTES: Array<[string, string]> = [
   ["get", "/api/summary/range?startDate=2026-02-01&endDate=2026-02-02"],
   ["get", "/api/water?date=2026-02-01"],
   ["get", "/api/weight?startDate=2026-02-01&endDate=2026-02-02"],
+  ["get", "/api/version"],
   ["post", "/api/meals"],
   ["post", "/api/meals/analyze"],
   ["delete", "/api/meals/1"],

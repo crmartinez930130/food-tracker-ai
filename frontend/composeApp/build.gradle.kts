@@ -94,8 +94,9 @@ android {
         applicationId = "com.foodtracker.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        // From ../version.properties, parsed in the root build script.
+        versionCode = rootProject.extra["appVersionCode"] as Int
+        versionName = rootProject.extra["appVersionName"] as String
     }
 
     packaging {
