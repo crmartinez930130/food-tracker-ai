@@ -52,6 +52,7 @@ Personal and single-user: the app talks to a small backend that runs on your own
 - 🔔 **Reminders** — optional, quiet daily reminders for pre-workout, breakfast, lunch and dinner.
 - 📴 **Works offline** — recent days stay on the phone, and meals and water logged without a connection are sent once the backend is back.
 - 📤 **CSV export** — take your meal history to a spreadsheet.
+- 🤖 **MCP server** — let AI agents like Claude Code read your meals, goals, weight and water (read-only).
 - 🌗 **Light and dark**, 🌐 **English and Spanish**.
 
 ## How it works
@@ -123,6 +124,46 @@ npm test
 ### Reaching the backend from your phone
 
 The server binds to `0.0.0.0` by default, so it's reachable from other devices on your home network — not just `localhost`. Find your machine's LAN IP (e.g. `hostname -I` on Linux, or check your network settings) and enter `http://<that-ip>:3000` in the app's Options → Server, together with your access token. An Android emulator on the same machine reaches it at `http://10.0.2.2:3000` (the emulator's alias for the host's `localhost`); a phone on the same Wi-Fi needs the actual LAN IP.
+
+### MCP server for AI agents
+
+The backend also serves a **read-only [MCP](https://modelcontextprotocol.io/) server** at `/mcp` (Streamable HTTP, same port), so AI agents such as Claude Code or Claude Desktop can query your data, e.g. "how did my protein go this month against my goal?". It needs the same `API_TOKEN` as the app and can't create, change or delete anything.
+
+| Tool | Returns |
+| --- | --- |
+| `get_data_range` | The first day with meals and today's date on the server |
+| `get_goals` | Daily calorie, macro and water targets |
+| `get_daily_summary(date)` | One day's totals, meal count and water, with the goals |
+| `get_range_summary(startDate, endDate)` | Totals and water per day (up to 366 days) |
+| `list_meals(startDate, endDate, mealType?)` | Meals with their items and macros (up to 31 days) |
+| `get_meal(id)` | One meal with its items |
+| `list_favorite_meals` | The meals marked as favorite |
+| `list_weight_logs(startDate, endDate)` | Weighings (up to 366 days) |
+| `list_water_logs(startDate, endDate)` | Water entries per day (up to 31 days) |
+
+Dates are your local calendar days (`YYYY-MM-DD`), like in the app.
+
+**Claude Code** (use `localhost` on the same machine, or the backend's LAN IP):
+
+```bash
+claude mcp add --transport http food-tracker http://localhost:3000/mcp --header "Authorization: Bearer <API_TOKEN>"
+```
+
+**Claude Desktop** has no setting for a header on a local HTTP server, so it connects through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) bridge. In `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "food-tracker": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://192.168.1.10:3000/mcp", "--allow-http", "--header", "Authorization:${FOOD_TRACKER_AUTH}"],
+      "env": { "FOOD_TRACKER_AUTH": "Bearer <API_TOKEN>" }
+    }
+  }
+}
+```
+
+The token gives full access to the API, not only to `/mcp`: keep it out of shared or committed agent configs (`claude mcp add` stores it in your user config by default, outside the repository).
 
 ### Backing up your data
 
@@ -210,7 +251,7 @@ When the watch is connected to the phone by Bluetooth, its network traffic goes 
 The backend is meant for **your home network** and a single user.
 
 What protects it:
-- **Access token:** every `/api` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
+- **Access token:** every `/api` and `/mcp` request needs `Authorization: Bearer <API_TOKEN>`. Without it the server answers 401. That also blocks other devices on the Wi-Fi and web pages trying cross-site requests or DNS rebinding.
 - **Analysis limit:** at most `ANALYZE_RATE_LIMIT_PER_MINUTE` analyses per minute (20 by default), since each one is a paid API call.
 - **Upload checks:** only real JPEG/PNG photos up to 15 MB reach the image decoder.
 - **App data stays on the device:** the app's settings, including the token, are excluded from Android backups and device-to-device transfers, on the phone and on the watch. The phone sends them to the watch only over the Wear OS Data Layer, which connects nothing but this same app (same package and signature).
