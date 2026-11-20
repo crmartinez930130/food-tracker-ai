@@ -30,14 +30,22 @@ export function parseDateRange(query: { startDate?: unknown; endDate?: unknown }
   if (!isCalendarDate(startDate) || !isCalendarDate(endDate)) {
     throw new ValidationError(INVALID_RANGE_MESSAGE);
   }
+  checkRangeLength(startDate, endDate);
+  return { startDate, endDate };
+}
+
+/**
+ * Throws ValidationError unless the inclusive range of two real dates has its end not before its
+ * start and spans at most [maxDays] days.
+ */
+export function checkRangeLength(startDate: string, endDate: string, maxDays: number = MAX_RANGE_DAYS): void {
   const days = (Date.parse(endDate) - Date.parse(startDate)) / MS_PER_DAY + 1;
   if (days < 1) {
     throw new ValidationError("'endDate' must not be before 'startDate'");
   }
-  if (days > MAX_RANGE_DAYS) {
-    throw new ValidationError(`The range can't be longer than ${MAX_RANGE_DAYS} days`);
+  if (days > maxDays) {
+    throw new ValidationError(`The range can't be longer than ${maxDays} days`);
   }
-  return { startDate, endDate };
 }
 
 /**

@@ -11,6 +11,7 @@ import { createVersionRouter } from "./routes/version.js";
 import { AnalysisError, NotFoundError, ValidationError } from "./errors.js";
 import { logger } from "./logger.js";
 import { requireAccessToken } from "./http/access-token.js";
+import { createMcpRouter } from "./mcp/route.js";
 import type { RateLimiter } from "./http/rate-limit.js";
 
 export interface AppDeps {
@@ -28,6 +29,8 @@ export function createApp(deps: AppDeps): Express {
   app.disable("x-powered-by");
   // Before anything else under /api, so an unauthenticated request never reaches a router or parser.
   app.use("/api", requireAccessToken(deps.apiToken));
+  // Read-only MCP server for AI agents, behind the same token (checked before the body is parsed).
+  app.use("/mcp", requireAccessToken(deps.apiToken), express.json(), createMcpRouter(deps.db));
   app.use(express.json());
 
   app.use("/api/meals", createMealsRouter(deps));
