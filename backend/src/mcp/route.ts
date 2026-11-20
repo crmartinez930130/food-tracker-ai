@@ -17,13 +17,13 @@ export function createMcpRouter(db: AppDatabase): Router {
   const router = Router();
 
   router.post("/", async (req: Request, res: Response) => {
-    const server = createMcpServer(db);
-    const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    res.on("close", () => {
-      void transport.close();
-      void server.close();
-    });
     try {
+      const server = createMcpServer(db);
+      const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      res.on("close", () => {
+        void transport.close();
+        void server.close();
+      });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (err) {

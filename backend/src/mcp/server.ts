@@ -13,7 +13,7 @@ import { logger } from "../logger.js";
 import { BACKEND_VERSION } from "../version.js";
 
 /** Longest range for the tools that return every meal (with its items) or every water entry. */
-export const MAX_DETAIL_RANGE_DAYS = 31;
+const MAX_DETAIL_RANGE_DAYS = 31;
 
 /** Every tool only reads, so calling it again with the same arguments gives the same answer. */
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
